@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 export const useMetaStore = defineStore('metaStore', {
   state: () => {
     return {
-      title: 'aqi的小窝'
+      title: '七七的个人博客'
     }
   }
 })

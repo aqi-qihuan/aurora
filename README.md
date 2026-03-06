@@ -7,7 +7,7 @@
 ## 在线地址
 
 - 前台链接：[www.aqi125.cn](https://www.aqi125.cn)
-- 后台链接：[admin.linhaojun.top](https://admin.linhaojun.top)
+- 后台链接：[admin.aqi125.cn](https://admin.aqi125.cn)
 - 演示账号：test@163.com，密码：123456
 
 ## 相关技术

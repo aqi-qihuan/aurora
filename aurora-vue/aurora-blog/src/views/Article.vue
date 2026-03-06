@@ -93,7 +93,9 @@
     <div class="main-grid">
       <div>
         <template v-if="article.articleContent">
-          <div class="post-html" ref="articleRef" v-html="article.articleContent" />
+          <div class="post-html">
+            <div class="markdown-body" ref="articleRef" v-html="article.articleContent" />
+          </div>
         </template>
         <div v-else class="bg-ob-deep-800 px-14 py-16 rounded-2xl shadow-xl block min-h-screen">
           <ob-skeleton tag="div" :count="1" height="36px" width="150px" class="mb-6" />
@@ -177,7 +179,6 @@ export default defineComponent({
     const { t } = useI18n()
     const loading = ref(true)
     const articleRef = ref()
-    let md = require('markdown-it')()
     const reactiveData = reactive({
       articleId: '' as any,
       article: '' as any,
@@ -242,9 +243,6 @@ export default defineComponent({
       fetchComments()
     })
     const handlePreview = (index: any) => {
-      // console.log(index)
-      // console.log(reactiveData.images)
-      // alert(reactiveData.images.indexOf(index) )
       v3ImgPreviewFn({ images: reactiveData.images, index: reactiveData.images.indexOf(index) })
     }
     const initTocbot = () => {
@@ -262,8 +260,9 @@ export default defineComponent({
         tocSelector: '#toc1',
         contentSelector: '.post-html',
         headingSelector: 'h1, h2, h3',
+        collapseDepth: 3,
+        disableTocScrollSync: true,
         onClick: function (e) {
-
           e.preventDefault()
         }
       })
@@ -293,7 +292,6 @@ export default defineComponent({
         }
         commonStore.setHeaderImage(data.data.articleCover)
         new Promise((resolve) => {
-          //console.log(data.data.articleCover)
           data.data.articleContent = markdownToHtml(data.data.articleContent)
           resolve(data.data)
         }).then((article: any) => {
@@ -307,8 +305,7 @@ export default defineComponent({
           })
         })
         new Promise((resolve) => {
-          data.data.preArticleCard.articleContent = md
-            .render(data.data.preArticleCard.articleContent)
+          data.data.preArticleCard.articleContent = markdownToHtml(data.data.preArticleCard.articleContent)
             .replace(/<\/?[^>]*>/g, '')
             .replace(/[|]*\n/, '')
             .replace(/&npsp;/gi, '')
@@ -317,9 +314,7 @@ export default defineComponent({
           reactiveData.preArticleCard = preArticleCard
         })
         new Promise((resolve) => {
-          console.log(data.data.nextArticleCard.articleContent )
-          data.data.nextArticleCard.articleContent = md
-            .render(data.data.nextArticleCard.articleContent)
+          data.data.nextArticleCard.articleContent = markdownToHtml(data.data.nextArticleCard.articleContent)
             .replace(/<\/?[^>]*>/g, '')
             .replace(/[|]*\n/, '')
             .replace(/&npsp;/gi, '')
@@ -386,6 +381,10 @@ export default defineComponent({
 .post-html {
   word-wrap: break-word;
   word-break: break-all;
+}
+#toc1 {
+  max-height: 470px;
+  overflow: hidden scroll;
 }
 #toc1 > ol {
   list-style: none;
@@ -476,6 +475,12 @@ export default defineComponent({
       margin-top: 13px;
     }
   }
+}
+.markdown-body .hljs-center {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>
 <style lang="scss" scoped>

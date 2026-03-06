@@ -63,7 +63,7 @@ export default defineComponent({
     const appStore = useAppStore()
     const { t } = useI18n()
     return {
-      default: 'https://www.ws.aqi125.cn/avatar/6d93c4e2a2690ce5f742f42f8d80e365.jpg',
+      default: 'https://static.aqi125.cn/aurora/config/52a81cd2772167b645569342e81ce312.jpg',
       avatarClass: computed(() => {
         return {
           'ob-avatar': true,
