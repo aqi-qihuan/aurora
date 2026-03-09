@@ -1,0 +1,128 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0.32
+    container_name: aurora-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: aqi1015
+      MYSQL_DATABASE: aurora
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - /opt/aurora/mysql/data:/var/lib/mysql
+    networks:
+      - aurora-network
+    restart: always
+    command: --innodb_buffer_pool_size=128M --innodb_log_buffer_size=8M --innodb_flush_log_at_trx_commit=2 --sync_binlog=100 --max_connections=50 --table_open_cache=200 --thread_cache_size=10 --performance_schema=OFF --skip-name-resolve --tmp_table_size=8M --max_heap_table_size=8M --innodb_flush_method=O_DSYNC
+
+  redis:
+    image: redis:7.0.8
+    container_name: aurora-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - /opt/aurora/redis/data:/data
+    networks:
+      - aurora-network
+    restart: always
+    command: redis-server --requirepass aqi1015 --maxmemory 32mb --maxmemory-policy allkeys-lru --save ""
+
+  rabbitmq:
+    image: rabbitmq:3.11.9-management
+    container_name: aurora-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: myroot
+      RABBITMQ_DEFAULT_PASS: myaqi1015
+      TZ: Asia/Shanghai
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - /opt/aurora/rabbitmq/data:/var/lib/rabbitmq
+    networks:
+      - aurora-network
+    restart: always
+
+  elasticsearch:
+    image: elasticsearch:8.13.4
+    container_name: aurora-elasticsearch
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms64m -Xmx128m"
+      TZ: Asia/Shanghai
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - /opt/aurora/elasticsearch/data:/usr/share/elasticsearch/data
+    networks:
+      - aurora-network
+    restart: always
+
+  minio:
+    image: bitnami/minio:2023.12.7
+    container_name: aurora-minio
+    hostname: minio-server
+    environment:
+      MINIO_ROOT_USER: "aqi1015."
+      MINIO_ROOT_PASSWORD: "aqi1015."
+      MINIO_DEFAULT_BUCKETS: "aurora"
+      MINIO_SERVER_URL: "http://127.0.0.1:9000"
+      TZ: Asia/Shanghai
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - /minio/data:/bitnami/minio/data
+    networks:
+      - aurora-network
+    restart: always
+
+  nginx:
+    image: nginx:1.23.3
+    container_name: aurora-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/aurora/nginx/conf:/etc/nginx
+      - /opt/aurora/nginx/html:/usr/share/nginx/html
+      - /opt/aurora/vue/blog:/usr/share/nginx/blog
+      - /opt/aurora/vue/admin:/usr/share/nginx/admin
+      - /opt/aurora/nginx/cert:/etc/nginx/cert
+    networks:
+      - aurora-network
+    restart: always
+
+  springboot:
+    image: eclipse-temurin:25-jre-alpine
+    container_name: aurora-springboot
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      TZ: Asia/Shanghai
+    ports:
+      - "8080:8080"
+    volumes:
+      - /opt/aurora/app/aurora-springboot-0.0.1.jar:/app/blog.jar
+    networks:
+      - aurora-network
+    restart: always
+    command: >
+      java -Xms96m -Xmx192m -XX:+UseSerialGC
+          -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=256m
+          -XX:ReservedCodeCacheSize=64m -Xss256k
+          -XX:+UseCompressedOops
+          -XX:+UseCompressedClassPointers
+          -XX:+UseStringDeduplication
+          -XX:+OptimizeStringConcat
+          -XX:+AlwaysPreTouch
+          -Djava.security.egd=file:/dev/./urandom
+          -Dspring.jmx.enabled=false
+          -Dspring.backgroundpreinitializer.ignore=true
+          -jar /app/blog.jar
+
+networks:
+  aurora-network:
+    external: true
+

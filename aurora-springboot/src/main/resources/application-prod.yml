@@ -1,0 +1,147 @@
+# Aurora 博客系统 - 生产环境配置
+
+# ==================== 服务器配置 ====================
+server:
+  port: 8080
+
+# ==================== Spring 核心配置 ====================
+spring:
+  # MVC 配置
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+  # 数据源配置
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://134.175.206.158:3306/aurora?serverTimezone=Asia/Shanghai&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: aqi1015
+    hikari:
+      minimum-idle: 10
+      idle-timeout: 180000
+      maximum-pool-size: 100
+      auto-commit: true
+      pool-name: MyHikariCP
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      connection-test-query: SELECT 1
+      keepalive-time: 300000
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+        useLocalSessionState: true
+        rewriteBatchedStatements: true
+        cacheResultSetMetadata: true
+        cacheServerConfiguration: true
+        elideSetAutoCommits: true
+        maintainTimeStats: false
+        connectTimeout: 20000
+        socketTimeout: 20000
+
+  # Redis 配置
+  data:
+    redis:
+      host: 134.175.206.158
+      port: 6379
+      password: aqi1015
+      database: 1
+      lettuce:
+        pool:
+          min-idle: 10
+          max-idle: 100
+          max-active: 100
+          max-wait: 10000
+
+  # RabbitMQ 配置
+  rabbitmq:
+    host: 134.175.206.158
+    port: 5672
+    username: myroot
+    password: myaqi1015
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 3000
+
+  # 邮件配置
+  mail:
+    host: smtp.qq.com
+    username: a4i.icu@qq.com
+    password: xydwwqkthweuecdf
+    default-encoding: UTF-8
+    protocol: smtp
+    port: 465
+    properties:
+      mail:
+        smtp:
+          auth: true
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+            port: 465
+          ssl:
+            enable: true
+          starttls:
+            enable: true
+            required: true
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# ==================== Elasticsearch 配置 ====================
+elasticsearch:
+  rest:
+    uris: http://134.175.206.158:9200
+    username: user_admin
+    password: user_aqi125.cn
+
+# ==================== MyBatis-Plus 配置 ====================
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+# ==================== JWT 配置 ====================
+jwt:
+  secret: YXVyb3JhLXNlY3JldC1rZXktZm9yLXNwcmluZy1ib290LTMtMi0xMg==  # Base64 编码的密钥，至少 256 位
+
+# ==================== 搜索模式配置 ====================
+search:
+  mode: elasticsearch
+
+# ==================== 文件上传配置 ====================
+upload:
+  mode: minio
+  oss:
+    url: http://Bucket域名/
+    endpoint: OSS 配置 endpoint
+    accessKeyId: OSS 配置 accessKeyId
+    accessKeySecret: OSS 配置 accessKeySecret
+    bucketName: OSS 配置 bucketName
+  minio:
+    url: https://ws.aqi125.cn/
+    endpoint: http://134.175.206.158:9000/
+    accesskey: aqi125
+    secretKey: aqi1015.
+    bucketName: aurora
+
+# ==================== 网站配置 ====================
+website:
+  url: https://www.aqi125.cn
+
+# ==================== QQ 登录配置 ====================
+qq:
+  app-id: 102007196
+  check-token-url: https://graph.qq.com/oauth2.0/me?access_token={access_token}
+  user-info-url: https://graph.qq.com/user/get_user_info?openid={openid}&access_token={access_token}&oauth_consumer_key={oauth_consumer_key}
+
