@@ -51,6 +51,10 @@ services:
       discovery.type: single-node
       ES_JAVA_OPTS: "-Xms64m -Xmx128m"
       TZ: Asia/Shanghai
+      # 内存优化参数
+      bootstrap.memory_lock: "true"
+      xpack.security.enabled: "false"
+      indices.query.bool.max_clause_count: "1024"
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -59,6 +63,10 @@ services:
     networks:
       - aurora-network
     restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
 
   minio:
     image: bitnami/minio:2023.12.7
@@ -70,6 +78,9 @@ services:
       MINIO_DEFAULT_BUCKETS: "aurora"
       MINIO_SERVER_URL: "http://127.0.0.1:9000"
       TZ: Asia/Shanghai
+      # MinIO 内存优化
+      MINIO_CACHE_DRIVES: /tmp/cache
+      MINIO_CACHE_EXPIRY: 90
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -121,6 +132,22 @@ services:
           -Dspring.jmx.enabled=false
           -Dspring.backgroundpreinitializer.ignore=true
           -jar /app/blog.jar
+
+  maxwell:
+    image: zendesk/maxwell:latest
+    container_name: aurora-maxwell
+    volumes:
+      - /opt/aurora/maxwell/config/config.properties:/app/config.properties
+    networks:
+      - aurora-network
+    restart: always
+    command: >
+      bin/maxwell --host=aurora-mysql --user=root --password=aqi1015
+        --producer=rabbitmq --rabbitmq_host=aurora-rabbitmq
+        --rabbitmq_user=myroot --rabbitmq_pass=myaqi1015
+        --rabbitmq_exchange=maxwell --rabbitmq_exchange_type=topic
+        --rabbitmq_routing_key_template=%{database}.%{table}
+        --client_id=maxwell_prod
 
 networks:
   aurora-network:
