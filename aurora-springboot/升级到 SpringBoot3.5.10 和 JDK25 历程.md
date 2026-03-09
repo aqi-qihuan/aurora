@@ -2,8 +2,8 @@
 
 ## 📋 升级概述
 
-**升级时间**: 2026-03-08  
-**升级目标**: 从 Spring Boot 3.2.12 + JDK 21 升级到 Spring Boot 3.5.10 + JDK 25  
+**升级时间**: 2026-03-08
+**升级目标**: 从 Spring Boot 3.2.12 + JDK 21 升级到 Spring Boot 3.5.10 + JDK 25
 **升级原因**: 追求最新特性、性能优化和安全更新
 
 ---
@@ -89,7 +89,7 @@ Could not find artifact eu.bitwalker:UserAgentUtils:1.25
 
 **原因**: Maven Central 上最新版本为 1.21
 
-**解决方案**: 
+**解决方案**:
 ```xml
 <useragentutils.version>1.21</useragentutils.version>
 ```
@@ -119,7 +119,7 @@ WARNING: sun.misc.Unsafe::objectFieldOffset has been called
 cannot find symbol: class HttpUrl
 ```
 
-**原因**: OkHttp 5.x 使用 Kotlin 重写，API 重大变更
+**原因**: OkHttp 5.x 使用 Kotlin 重写,API 重大变更
 
 **解决方案**: 保持使用 OkHttp 4.12.0
 ```xml
@@ -132,13 +132,13 @@ cannot find symbol: class HttpUrl
 
 **错误信息**:
 ```
-UnsupportedClassVersionError: class file version 69.0, 
+UnsupportedClassVersionError: class file version 69.0,
 this version of the Java Runtime only recognizes class file versions up to 65.0
 ```
 
-**原因**: 使用 JDK 25 编译，但尝试用 JDK 21 运行
+**原因**: 使用 JDK 25 编译,但尝试用 JDK 21 运行
 
-**解决方案**: 
+**解决方案**:
 1. 确保运行环境使用 JDK 25
 2. 设置环境变量: `JAVA_HOME=D:\Java\jdk-25.0.1`
 3. Docker 镜像更新为 `eclipse-temurin:25-jre-alpine`
@@ -147,13 +147,13 @@ this version of the Java Runtime only recognizes class file versions up to 65.0
 
 ### 问题 5: 后台登录页面空白
 
-**现象**: 登录成功后页面空白，无菜单显示
+**现象**: 登录成功后页面空白,无菜单显示
 
 **原因**: 用户缺少 admin 角色权限
 
 **解决方案**: 在数据库中为用户分配 admin 角色
 ```sql
-INSERT INTO t_user_role (user_id, role_id) 
+INSERT INTO t_user_role (user_id, role_id)
 VALUES (1025, (SELECT id FROM t_role WHERE role_name = 'admin'));
 ```
 
@@ -176,27 +176,6 @@ all shards failed
 
 **原因**: Elasticsearch 服务不可用或索引损坏
 
-**排查步骤**:
-1. 检查 ES 服务状态：
-   ```bash
-   curl http://你的ip:9200/_cluster/health
-   ```
-
-2. 检查 ES 日志：
-   ```bash
-   docker logs aurora-elasticsearch --tail 100
-   ```
-
-3. 检查索引状态：
-   ```bash
-   curl http://你的ip:9200/_cat/indices?v
-   ```
-
-**问题根因**:
-- Elasticsearch 8.13.4 客户端在 Spring Boot 3.5.10 中存在兼容性问题
-- `elasticsearch-java` 客户端版本可能需要更新
-- 索引的分片状态异常
-
 **解决方案**:
 
 #### 方案 1: 临时降级到 MySQL 搜索（推荐）
@@ -211,63 +190,32 @@ search:
 
 #### 方案 2: 修复 Elasticsearch 服务
 
-1. 重启 Elasticsearch 容器：
+1. 重启 Elasticsearch 容器:
    ```bash
    docker restart aurora-elasticsearch
    ```
 
-2. 等待服务启动（约30-60秒）：
+2. 等待服务启动（约30-60秒）并检查健康状态:
    ```bash
    sleep 60
-   curl http://你的ip:9200/_cluster/health
+   curl -u 用户名:密码 http://你的ip:9200/_cluster/health?pretty
    ```
 
-3. 检查索引是否存在：
+3. 检查索引是否存在,若损坏则删除重建:
    ```bash
-   curl -X GET http://你的ip:9200/article
-   ```
-
-4. 如果索引损坏，重建索引：
-   ```bash
-   # 删除旧索引
-   curl -X DELETE http://你的ip:9200/article
-
-   # 重启应用让其自动创建索引
+   curl -X DELETE -u 用户名:密码 http://你的ip:9200/article
    docker restart aurora-springboot
    ```
 
 #### 方案 3: 升级 Elasticsearch 客户端依赖
 
-检查 `pom.xml` 中的 elasticsearch-java 版本，如果版本过旧，考虑升级：
-
 ```xml
 <dependency>
     <groupId>co.elastic.clients</groupId>
     <artifactId>elasticsearch-java</artifactId>
-    <version>8.17.2</version>  <!-- 升级到最新版本 -->
+    <version>8.17.2</version>
 </dependency>
 ```
-
-**验证修复**:
-1. 切换回 ES 搜索模式：
-   ```yaml
-   search:
-     mode: elasticsearch
-   ```
-
-2. 测试搜索功能：
-   ```bash
-   curl -X POST http://你的ip:8080/api/articles/search \
-     -H "Content-Type: application/json" \
-     -d '{"keywords":"部署"}'
-   ```
-
-3. 检查后端日志确认无 503 错误
-
-**生产环境建议**:
-- 使用 MySQL 搜索模式（稳定可靠，性能可接受）
-- 定期同步文章数据到 ES（使用定时任务）
-- 为 Elasticsearch 配置监控告警
 
 ---
 
@@ -344,7 +292,7 @@ java -Xms96m -Xmx192m \
 - ⚠️ Elasticsearch 搜索不可用（临时降级到 MySQL）
   - **原因**: ES 8.13.4 客户端与 Spring Boot 3.5.10 存在兼容性问题
   - **当前状态**: 使用 MySQL 搜索模式稳定运行
-  - **性能**: 小数据量下响应时间 < 500ms，可接受
+  - **性能**: 小数据量下响应时间 < 500ms,可接受
   - **计划**: 待 ES 客户端升级或兼容性修复后再启用
 
 ---
@@ -357,7 +305,7 @@ java -Xms96m -Xmx192m \
 | 内存占用 | ~200MB | ~180MB | 10% ⬇️ |
 | 响应速度 | 基准 | +5~8% | 5~8% ⬆️ |
 
-*注：性能数据基于实际运行环境测试*
+*注:性能数据基于实际运行环境测试*
 
 ---
 
@@ -366,7 +314,7 @@ java -Xms96m -Xmx192m \
 ### 成功经验
 
 1. **提前备份**: 升级前备份所有配置文件和数据库
-2. **逐步升级**: 先升级 Spring Boot，再升级 JDK
+2. **逐步升级**: 先升级 Spring Boot,再升级 JDK
 3. **依赖检查**: 检查所有第三方依赖的兼容性
 4. **充分测试**: 编译、打包、运行全流程测试
 5. **回滚方案**: 准备回滚脚本和备份镜像
@@ -524,52 +472,28 @@ docker restart aurora-springboot
 
 #### 根本原因分析
 
-1. **客户端版本不匹配**
-   - `elasticsearch-java` 8.13.4 与 Spring Boot 3.5.10 的自动配置存在冲突
-   - Spring Boot 3.5.10 内置的 Elasticsearch 自动配置可能不兼容 8.13.4
+1. **客户端版本不匹配**: `elasticsearch-java` 8.13.4 与 Spring Boot 3.5.10 的自动配置存在冲突
+2. **索引状态异常**: ES 集群重启后索引的分片可能处于 `INITIALIZING` 或 `UNASSIGNED` 状态
+3. **连接池配置问题**: ES 客户端连接池配置不当导致连接耗尽
 
-2. **索引状态异常**
-   - ES 集群重启后索引的分片可能处于 `INITIALIZING` 或 `UNASSIGNED` 状态
-   - 分片分配失败导致查询无法执行
-
-3. **连接池配置问题**
-   - ES 客户端连接池配置不当导致连接耗尽
-   - KeepAlive 连接超时设置过短
-
-#### 详细排查步骤
+#### 排查步骤
 
 **Step 1: 检查 ES 集群健康状态**
 ```bash
 curl -u 用户名:密码 http://你的ip:9200/_cluster/health?pretty
 ```
 
-正常输出:
-```json
-{
-  "cluster_name" : "elasticsearch",
-  "status" : "green",
-  "number_of_nodes" : 1,
-  "number_of_data_nodes" : 1,
-  "active_primary_shards" : 12,
-  "active_shards" : 12,
-  "relocating_shards" : 0,
-  "initializing_shards" : 0,
-  "unassigned_shards" : 0
-}
-```
-
-异常状态:
+正常输出应显示 `status: green`,异常状态包括:
 - `status: yellow` - 有副本分片未分配
 - `status: red` - 有主分片丢失
 - `unassigned_shards > 0` - 有未分配的分片
 
 **Step 2: 检查 article 索引状态**
 ```bash
+# 检查索引设置
 curl -u 用户名:密码 http://你的ip:9200/article/_settings?pretty
-```
 
-检查分片分配:
-```bash
+# 检查分片分配
 curl -u 用户名:密码 http://你的ip:9200/_cat/shards/article?v
 ```
 
@@ -582,22 +506,14 @@ curl -u 用户名:密码 http://你的ip:9200/_nodes/stats?pretty
 docker stats aurora-elasticsearch --no-stream
 ```
 
-**Step 4: 分析慢查询日志**
-```bash
-# 在 application-prod.yml 中开启 ES 日志
-logging:
-  level:
-    co.elastic.clients: DEBUG
-    org.elasticsearch.client: DEBUG
-```
-
-#### 完整修复方案
+#### 修复方案
 
 **方案 A: 索引重建（推荐）**
 
-1. 删除损坏的索引:
+删除损坏索引,应用会自动重建:
 ```bash
 curl -X DELETE -u 用户名:密码 http://你的ip:9200/article
+docker restart aurora-springboot
 ```
 
 2. 等待应用自动重建索引:
@@ -620,13 +536,11 @@ curl -X POST -u 用户名:密码 \
 
 **方案 B: 手动分配分片**
 
-如果分片未分配:
 ```bash
-# 1. 查看未分配的分片
-curl -u 用户名:密码 \
-  http://你的ip:9200/_cat/shards/article?v | grep UNASSIGNED
+# 查看未分配的分片
+curl -u 用户名:密码 http://你的ip:9200/_cat/shards/article?v | grep UNASSIGNED
 
-# 2. 手动分配（替换 index 和 shard）
+# 手动分配
 curl -X POST -u 用户名:密码 \
   http://你的ip:9200/_cluster/reroute?pretty \
   -H 'Content-Type: application/json' \
@@ -645,24 +559,19 @@ curl -X POST -u 用户名:密码 \
 **方案 C: 优化 ES 客户端配置**
 
 修改 `ElasticsearchConfig.java`:
-
 ```java
 @Bean
 public RestClient restClient() {
     return RestClient.builder(new HttpHost("你的ip", 9200, "http"))
             .setHttpClientConfigCallback(httpClientBuilder -> {
-                // 连接池配置
                 CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
                 credentialsProvider.setCredentials(AuthScope.ANY,
                     new UsernamePasswordCredentials("用户名", "密码"));
 
-                // 设置连接超时和 KeepAlive
                 httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-                httpClientBuilder.setMaxConnTotal(100);  // 最大连接数
-                httpClientBuilder.setMaxConnPerRoute(50); // 每个路由的最大连接数
-                httpClientBuilder.setKeepAliveStrategy((response, context) -> {
-                    return 300000; // 5分钟
-                });
+                httpClientBuilder.setMaxConnTotal(100);
+                httpClientBuilder.setMaxConnPerRoute(50);
+                httpClientBuilder.setKeepAliveStrategy((response, context) -> 300000);
 
                 return httpClientBuilder;
             })
@@ -680,30 +589,19 @@ search:
   mode: mysql
 ```
 
-**优点**:
-- ✅ 稳定可靠，依赖关系简单
-- ✅ 实时性好，数据同步无需额外操作
-- ✅ 维护成本低
-
-**缺点**:
-- ❌ 大数据量下性能较差
-- ❌ 不支持全文检索的高级特性
-- ❌ 排序和分页效率较低
+**优点**: 稳定可靠,实时性好,维护成本低
+**缺点**: 大数据量下性能较差,不支持高级全文检索
 
 #### 混合搜索策略（推荐生产使用）
 
-实现方案:
-
-1. **优先使用 ES 搜索**
+1. **配置优先使用 ES,失败自动降级**:
    ```yaml
    search:
      mode: elasticsearch
-     fallback: mysql  # ES 不可用时降级
+     fallback: mysql
    ```
 
-2. **SearchStrategy 降级逻辑**
-
-   在 `EsSearchStrategyImpl` 中添加重试机制:
+2. **SearchStrategy 降级逻辑**:
    ```java
    @Override
    public PageResultDTO<ArticleSearchDTO> searchArticles(String keywords) {
@@ -716,21 +614,14 @@ search:
    }
    ```
 
-3. **健康检查定时任务**
-
-   定期检查 ES 健康状态:
+3. **健康检查定时任务**:
    ```java
-   @Scheduled(fixedRate = 60000) // 每分钟检查一次
+   @Scheduled(fixedRate = 60000)
    public void checkElasticsearchHealth() {
        try {
            ClusterHealthResponse response = elasticsearchClient.cluster()
                .health(HealthRequest.of(h -> h.timeout("5s")));
-           if (response.status() == HealthStatus.Red) {
-               log.error("Elasticsearch 集群状态异常，自动降级");
-               searchMode = "mysql";
-           } else {
-               searchMode = "elasticsearch";
-           }
+           searchMode = (response.status() == HealthStatus.Red) ? "mysql" : "elasticsearch";
        } catch (Exception e) {
            log.error("Elasticsearch 健康检查失败", e);
            searchMode = "mysql";
@@ -744,27 +635,16 @@ search:
 
 **Maxwell 配置文件** (`maxwell.properties`):
 ```properties
-# MySQL 配置
 host=你的ip
 port=3306
 user=用户名
 password=密码
 database=aurora
-
-# Kafka 配置（如果使用）
-# kafka.bootstrap.servers=localhost:9092
-# kafka.topic=aurora.article
-
-# Elasticsearch 配置
 producer=elasticsearch
 elasticsearch_hosts=http://你的ip:9200
 elasticsearch_user=用户名
 elasticsearch_password=密码
-
-# 过滤配置
 filter=exclude: aurora.*, include: aurora.t_article
-
-# 其他配置
 replicator=master
 log_level=INFO
 ```
@@ -777,6 +657,101 @@ docker run -d --name aurora-maxwell \
   zendesk/maxwell:latest \
   bin/maxwell --config=/app/config/maxwell.properties
 ```
+
+---
+
+## 🚨 快速故障排除
+
+### Elasticsearch 故障排查表
+
+| 症状 | 可能原因 | 解决方案 |
+|------|----------|----------|
+| 搜索返回 503 | ES 服务不可用 | 降级到 MySQL: `search.mode=mysql` |
+| 索引不存在 | ES 集群重启 | 重启应用让其自动创建索引 |
+| 分片未分配 | 节点资源不足 | 增加内存或删除旧索引 |
+| 连接超时 | 客户端配置问题 | 检查连接池配置和超时设置 |
+| 数据不同步 | Maxwell 配置错误 | 检查 Maxwell 配置和日志 |
+
+### 常用 ES 命令
+
+```bash
+# 检查集群健康
+curl -u 用户名:密码 http://你的ip:9200/_cluster/health?pretty
+
+# 检查索引列表
+curl -u 用户名:密码 http://你的ip:9200/_cat/indices?v
+
+# 检查分片状态
+curl -u 用户名:密码 http://你的ip:9200/_cat/shards/article?v
+
+# 删除索引
+curl -X DELETE -u 用户名:密码 http://你的ip:9200/article
+
+# 查看索引映射
+curl -u 用户名:密码 http://你的ip:9200/article/_mapping?pretty
+
+# 测试搜索
+curl -X POST -u 用户名:密码 \
+  http://你的ip:9200/article/_search?pretty \
+  -H 'Content-Type: application/json' \
+  -d '{"query":{"match_all":{}}, "size":1}'
+
+# 查看 ES 日志
+docker logs aurora-elasticsearch --tail 100 -f
+
+# 重启 ES 服务
+docker restart aurora-elasticsearch
+
+# 查看 ES 资源使用
+docker stats aurora-elasticsearch --no-stream
+```
+
+### MySQL 搜索切换流程
+
+**临时切换到 MySQL 搜索**:
+```yaml
+# application-prod.yml
+search:
+  mode: mysql
+```
+
+**切换回 Elasticsearch**:
+```yaml
+# application-prod.yml
+search:
+  mode: elasticsearch
+```
+
+**重启应用**:
+```bash
+docker restart aurora-springboot
+```
+
+### 应用重启流程
+
+1. **停止应用**
+   ```bash
+   docker stop aurora-springboot
+   ```
+
+2. **更新配置或代码**
+   - 修改 `application-prod.yml`
+   - 上传新的 jar 包到 `/opt/aurora/app/`
+
+3. **启动应用**
+   ```bash
+   docker start aurora-springboot
+   ```
+
+4. **检查日志**
+   ```bash
+   docker logs aurora-springboot -f
+   ```
+
+5. **验证健康**
+   ```bash
+   curl http://localhost:8080/api/articles/topAndFeatured
+   ```
 
 ### 监控和告警
 
@@ -829,6 +804,16 @@ groups:
 
 ---
 
-**文档版本**: v2.0  
-**最后更新**: 2026-03-08  
+## 📚 参考资料
+
+- [Spring Boot 3.5 Release Notes](https://spring.io/blog/spring-boot-3-5-0-available-now)
+- [JDK 25 Release Notes](https://openjdk.org/projects/jdk/25/)
+- [MyBatis-Plus 3.5.x Documentation](https://baomidou.com/)
+- [ip2region 3.x GitHub](https://github.com/lionsoul2014/ip2region)
+- [Lombok 1.18.42 Release](https://projectlombok.org/changelog)
+
+---
+
+**文档版本**: v3.0
+**最后更新**: 2026-03-09
 **维护者**: Aurora Team
