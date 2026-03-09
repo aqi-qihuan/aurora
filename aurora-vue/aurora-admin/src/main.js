@@ -24,6 +24,7 @@ import 'mavon-editor/dist/css/index.css'
 import VueCalendarHeatmap from 'vue-calendar-heatmap'
 import tagCloud from './components/tag-cloud'
 import dayjs from 'dayjs'
+import CountTo from 'vue-count-to'
 import Md_Katex from '@iktakahiro/markdown-it-katex'
 import mermaidPlugin from "@agoose77/markdown-it-mermaid";
 
@@ -35,6 +36,7 @@ Vue.use(tagCloud)
 Vue.use(VueCalendarHeatmap)
 Vue.use(VueAxios, axios)
 Vue.component('v-chart', ECharts)
+Vue.component('count-to', CountTo)
 Vue.prototype.$moment = dayjs
 mavonEditor.markdownIt.set({}).use(Md_Katex).use(mermaidPlugin);
 

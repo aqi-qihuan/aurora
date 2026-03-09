@@ -1,14 +1,24 @@
+/* ==================== Aurora Admin 全局样式 ==================== */
+
+@import './theme.css';
+@import './animations.css';
+@import './responsive.css';
+
 body {
   padding: 0;
   margin: 0;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
 }
+
 html {
   scroll-behavior: smooth;
 }
+
+/* 卡片阴影优化 */
 .el-card.is-always-shadow,
 .el-card.is-hover-shadow:focus,
 .el-card.is-hover-shadow:hover {
-  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  box-shadow: var(--shadow-base);
 }
 .main-card {
   min-height: calc(100vh - 126px);

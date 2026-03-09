@@ -18,34 +18,38 @@
         </div>
       </div>
       <div class="operation">
-        <div class="all-check">
-          <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">
-            全选
-          </el-checkbox>
-          <div class="check-count">已选择{{ selectphotoIds.length }}张</div>
+        <div class="operation-top">
+          <div class="all-check">
+            <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">
+              全选
+            </el-checkbox>
+            <div class="check-count">已选择{{ selectphotoIds.length }}张</div>
+          </div>
         </div>
-        <el-button
-          type="success"
-          @click="movePhoto = true"
-          :disabled="selectphotoIds.length == 0"
-          size="small"
-          icon="el-icon-deleteItem">
-          移动到
-        </el-button>
-        <el-button
-          type="danger"
-          @click="batchDeletePhoto = true"
-          :disabled="selectphotoIds.length == 0"
-          size="small"
-          icon="el-icon-deleteItem">
-          批量删除
-        </el-button>
+        <div class="operation-buttons">
+          <el-button
+            type="success"
+            @click="movePhoto = true"
+            :disabled="selectphotoIds.length == 0"
+            size="small"
+            icon="el-icon-deleteItem">
+            移动到
+          </el-button>
+          <el-button
+            type="danger"
+            @click="batchDeletePhoto = true"
+            :disabled="selectphotoIds.length == 0"
+            size="small"
+            icon="el-icon-deleteItem">
+            批量删除
+          </el-button>
+        </div>
       </div>
     </div>
     <el-row class="photo-container" :gutter="10" v-loading="loading">
       <el-empty v-if="photos.length == 0" description="暂无照片" />
       <el-checkbox-group v-model="selectphotoIds" @change="handleCheckedPhotoChange">
-        <el-col :md="4" v-for="item of photos" :key="item.id">
+        <el-col :xs="12" :sm="8" :md="6" :lg="4" v-for="item of photos" :key="item.id">
           <el-checkbox :label="item.id">
             <div class="photo-item">
               <div class="photo-opreation">

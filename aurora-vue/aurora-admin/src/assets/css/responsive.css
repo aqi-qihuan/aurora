@@ -1,0 +1,492 @@
+/* ==================== Aurora Admin 响应式样式 ==================== */
+
+/* 移动端断点 */
+@media (max-width: 768px) {
+  /* Element UI 表格响应式 */
+  .el-table {
+    font-size: 12px;
+  }
+
+  .el-table th,
+  .el-table td {
+    padding: 8px 4px !important;
+  }
+
+  /* 隐藏次要列 */
+  .el-table__body-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 表格操作列优化 */
+  .el-table .el-table__body-wrapper .el-table__cell {
+    white-space: nowrap;
+  }
+
+  /* 操作按钮列 */
+  .el-table .el-button--mini {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  /* 表格固定列宽移动端自动调整 */
+  .el-table th[colwidth],
+  .el-table td[colwidth] {
+    width: auto !important;
+    min-width: 60px;
+    max-width: 120px;
+  }
+
+  /* 隐藏非关键列 */
+  .el-table .hide-mobile {
+    display: none;
+  }
+
+  /* 表格封面列移动端优化 */
+  .article-cover-wrapper {
+    width: 50px;
+    height: 50px;
+  }
+
+  .article-cover {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  /* 标签列优化 */
+  .el-table .el-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    margin: 2px;
+  }
+
+  /* 开关组件优化 */
+  .el-switch {
+    transform: scale(0.85);
+  }
+
+  /* 图片预览优化 */
+  .el-image {
+    width: 50px;
+    height: 50px;
+  }
+
+  /* 按钮组优化 */
+  .el-button-group {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  /* 分页器优化 */
+  .el-pagination {
+    justify-content: center;
+  }
+
+  .el-pagination.is-background .el-pager li {
+    min-width: 28px;
+    height: 28px;
+    line-height: 26px;
+  }
+
+  .el-pagination .el-pagination__sizes .el-select .el-input__inner {
+    font-size: 12px;
+  }
+}
+
+/* 平板断点 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .el-table {
+    font-size: 13px;
+  }
+
+  .el-table th,
+  .el-table td {
+    padding: 10px 6px !important;
+  }
+}
+
+/* 移动端表单优化 */
+@media (max-width: 768px) {
+  .el-form-item {
+    margin-bottom: 15px;
+  }
+
+  .el-form-item__label {
+    width: 80px !important;
+    font-size: 13px;
+  }
+
+  .el-form-item__content {
+    margin-left: 80px !important;
+  }
+
+  .el-input__inner,
+  .el-textarea__inner {
+    font-size: 13px;
+  }
+
+  .el-select {
+    width: 100%;
+  }
+
+  .el-date-editor {
+    width: 100%;
+  }
+
+  /* 对话框优化 */
+  .el-dialog {
+    width: 95% !important;
+    margin: 5vh auto !important;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .el-dialog__body {
+    padding: 15px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .el-dialog__body {
+    padding: 15px;
+  }
+
+  .el-dialog__header {
+    padding: 15px 15px 10px;
+  }
+
+  .el-dialog__footer {
+    padding: 10px 15px 15px;
+  }
+}
+
+/* 移动端卡片优化 */
+@media (max-width: 768px) {
+  .el-card__body {
+    padding: 15px;
+  }
+
+  .el-card__header {
+    padding: 15px;
+    font-size: 15px;
+  }
+}
+
+/* 移动端下拉菜单优化 */
+@media (max-width: 768px) {
+  .el-dropdown-menu {
+    min-width: 120px;
+  }
+
+  .el-dropdown-menu__item {
+    padding: 0 15px;
+    height: 36px;
+    line-height: 36px;
+    font-size: 13px;
+  }
+}
+
+/* 移动端标签页优化 */
+@media (max-width: 768px) {
+  .el-tabs__item {
+    padding: 0 15px;
+    font-size: 13px;
+  }
+}
+
+/* 移动端消息提示优化 */
+@media (max-width: 768px) {
+  .el-message {
+    min-width: 280px;
+    font-size: 13px;
+  }
+}
+
+/* 移动端Loading优化 */
+@media (max-width: 768px) {
+  .el-loading-mask {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* 移动端树形控件优化 */
+@media (max-width: 768px) {
+  .el-tree-node__label {
+    font-size: 13px;
+  }
+}
+
+/* 移动端穿梭框优化 */
+@media (max-width: 768px) {
+  .el-transfer {
+    font-size: 13px;
+  }
+
+  .el-transfer-panel {
+    width: 45%;
+  }
+}
+
+/* 移动端上传组件优化 */
+@media (max-width: 768px) {
+  .el-upload {
+    width: 100%;
+  }
+
+  .el-upload-dragger {
+    width: 100% !important;
+    height: 150px !important;
+  }
+}
+
+/* 移动端步骤条优化 */
+@media (max-width: 768px) {
+  .el-step__title {
+    font-size: 13px;
+  }
+
+  .el-step__description {
+    font-size: 12px;
+  }
+}
+
+/* 移动端抽屉优化 */
+@media (max-width: 768px) {
+  .el-drawer {
+    width: 90% !important;
+  right: 0;
+    left: auto;
+  }
+}
+
+/* 移动端进度条优化 */
+@media (max-width: 768px) {
+  .el-progress__text {
+    font-size: 12px;
+  }
+}
+
+/* 移动端时间轴优化 */
+@media (max-width: 768px) {
+  .el-timeline-item__timestamp {
+    font-size: 12px;
+  }
+
+  .el-timeline-item__content {
+    font-size: 13px;
+  }
+}
+
+/* 移动端面包屑优化 */
+@media (max-width: 768px) {
+  .el-breadcrumb__item {
+    font-size: 13px;
+  }
+
+  .el-breadcrumb__inner {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* 移动端Tag优化 */
+@media (max-width: 768px) {
+  .el-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    margin: 3px;
+  }
+}
+
+/* 移动端Badge优化 */
+@media (max-width: 768px) {
+  .el-badge__content {
+    font-size: 10px;
+    padding: 0 5px;
+    height: 16px;
+    line-height: 16px;
+  }
+}
+
+/* 移动端Alert优化 */
+@media (max-width: 768px) {
+  .el-alert {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .el-alert__title {
+    font-size: 14px;
+  }
+}
+
+/* 移动端Notification优化 */
+@media (max-width: 768px) {
+  .el-notification {
+    width: 320px;
+    font-size: 13px;
+  }
+}
+
+/* 移动端Tooltip优化 */
+@media (max-width: 768px) {
+  .el-tooltip__popper {
+    max-width: 250px;
+  }
+
+  .el-tooltip__popper.is-dark {
+    background: rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* 移动端Popover优化 */
+@media (max-width: 768px) {
+  .el-popover {
+    min-width: 150px;
+    font-size: 13px;
+  }
+}
+
+/* 移动端RadioGroup优化 */
+@media (max-width: 768px) {
+  .el-radio {
+    margin-right: 15px;
+    font-size: 13px;
+  }
+
+  .el-radio__label {
+    font-size: 13px;
+  }
+}
+
+/* 移动端CheckboxGroup优化 */
+@media (max-width: 768px) {
+  .el-checkbox {
+    margin-right: 15px;
+    font-size: 13px;
+  }
+
+  .el-checkbox__label {
+    font-size: 13px;
+  }
+}
+
+/* 移动端Switch优化 */
+@media (max-width: 768px) {
+  .el-switch__label {
+    font-size: 13px;
+  }
+}
+
+/* 移动端Slider优化 */
+@media (max-width: 768px) {
+  .el-slider__runway {
+    height: 4px;
+  }
+
+  .el-slider__button-wrapper {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* 移动端Rate优化 */
+@media (max-width: 768px) {
+  .el-rate__icon {
+    font-size: 18px;
+  }
+}
+
+/* 移动端Cascader优化 */
+@media (max-width: 768px) {
+  .el-cascader {
+    width: 100%;
+  }
+}
+
+/* 移动端ColorPicker优化 */
+@media (max-width: 768px) {
+  .el-color-picker__trigger {
+    width: 100%;
+  }
+}
+
+/* 移动端InputNumber优化 */
+@media (max-width: 768px) {
+  .el-input-number {
+    width: 100%;
+  }
+
+  .el-input-number .el-input__inner {
+    text-align: left;
+  }
+}
+
+/* 移动端Autocomplete优化 */
+@media (max-width: 768px) {
+  .el-autocomplete {
+    width: 100%;
+  }
+}
+
+/* 移动端DatePicker优化 */
+@media (max-width: 768px) {
+  .el-date-editor {
+    width: 100%;
+  }
+
+  .el-picker-panel {
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+}
+
+/* 移动端TimePicker优化 */
+@media (max-width: 768px) {
+  .el-time-panel {
+    width: 280px;
+  }
+
+  .el-time-spinner__list {
+    max-height: 180px;
+  }
+}
+
+/* 移动端Collapse优化 */
+@media (max-width: 768px) {
+  .el-collapse-item__header {
+    font-size: 14px;
+    padding: 0 15px;
+    height: 44px;
+  }
+
+  .el-collapse-item__content {
+    padding: 10px 15px;
+  }
+}
+
+/* 移动端Carousel优化 */
+@media (max-width: 768px) {
+  .el-carousel__container {
+    height: 200px;
+  }
+}
+
+/* 移动端Menu优化 */
+@media (max-width: 768px) {
+  .el-menu-item {
+    font-size: 14px;
+    height: 44px;
+    line-height: 44px;
+  }
+
+  .el-submenu__title {
+    font-size: 14px;
+    height: 44px;
+    line-height: 44px;
+  }
+}

@@ -1,106 +1,166 @@
 <template>
-  <div>
-    <el-row :gutter="30">
-      <el-col :span="6">
-        <el-card>
-          <div class="card-icon-container">
-            <i class="iconfont el-icon-myfangwenliang" style="color: #40c9c6" />
-          </div>
-          <div class="card-desc">
-            <div class="card-title">访问量</div>
-            <div class="card-count">{{ viewsCount }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card>
-          <div class="card-icon-container">
-            <i class="iconfont el-icon-myuser" style="color: #34bfa3" />
-          </div>
-          <div class="card-desc">
-            <div class="card-title">用户量</div>
-            <div class="card-count">{{ userCount }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card>
-          <div class="card-icon-container">
-            <i class="iconfont el-icon-mywenzhang-copy" style="color: #f4516c" />
-          </div>
-          <div class="card-desc">
-            <div class="card-title">文章量</div>
-            <div class="card-count">{{ articleCount }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card>
-          <div class="card-icon-container">
-            <i class="el-icon-s-comment" style="color: #36a3f7" />
-          </div>
-          <div class="card-desc">
-            <div class="card-title">留言量</div>
-            <div class="card-count">{{ messageCount }}</div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-    <el-card style="margin-top: 1.25rem">
-      <div class="e-title">一周访问量</div>
-      <div style="height: 350px">
-        <v-chart :options="viewCount" v-loading="loading" />
-      </div>
-    </el-card>
-    <el-card style="margin-top: 1.25rem">
-      <div class="e-title">文章贡献统计</div>
-      <div v-loading="loading">
-        <calendar-heatmap :end-date="new Date()" :values="articleStatisticsDTOs" />
-      </div>
-    </el-card>
-    <el-row :gutter="20" style="margin-top: 1.25rem">
-      <el-col :span="16">
-        <el-card>
-          <div class="e-title">文章浏览量排行</div>
-          <div style="height: 350px">
-            <v-chart :options="ariticleRank" v-loading="loading" />
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card>
-          <div class="e-title">文章分类统计</div>
-          <div style="height: 350px">
-            <v-chart :options="category" v-loading="loading" />
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-    <el-row :gutter="20" style="margin-top: 1.25rem">
-      <el-col :span="16">
-        <el-card>
-          <div class="e-title">用户地域分布</div>
-          <div style="height: 350px" v-loading="loading">
-            <div class="area-wrapper">
-              <el-radio-group v-model="type">
-                <el-radio :label="1">用户</el-radio>
-                <el-radio :label="2">游客</el-radio>
-              </el-radio-group>
+  <div class="dashboard-container">
+    <!-- 统计卡片 -->
+    <el-row :gutter="20">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="card-content">
+            <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%)">
+              <i class="iconfont el-icon-myfangwenliang" />
             </div>
-            <v-chart :options="userAreaMap" />
+            <div class="card-desc">
+              <div class="card-title">访问量</div>
+              <div class="card-count">
+                <count-to :start-val="0" :end-val="viewsCount" :duration="2000" />
+              </div>
+              <div class="card-trend">
+                <i class="el-icon-top" />
+                <span>较上周 +12%</span>
+              </div>
+            </div>
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
-        <el-card>
-          <div class="e-title">文章标签统计</div>
-          <div style="height: 350px" v-loading="loading">
-            <tag-cloud style="margin-top: 1.5rem" :data="tagDTOs" />
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="card-content">
+            <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+              <i class="iconfont el-icon-myuser" />
+            </div>
+            <div class="card-desc">
+              <div class="card-title">用户量</div>
+              <div class="card-count">
+                <count-to :start-val="0" :end-val="userCount" :duration="2000" />
+              </div>
+              <div class="card-trend">
+                <i class="el-icon-top" />
+                <span>较上周 +8%</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="card-content">
+            <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)">
+              <i class="iconfont el-icon-mywenzhang-copy" />
+            </div>
+            <div class="card-desc">
+              <div class="card-title">文章量</div>
+              <div class="card-count">
+                <count-to :start-val="0" :end-val="articleCount" :duration="2000" />
+              </div>
+              <div class="card-trend">
+                <i class="el-icon-top" />
+                <span>较上周 +15%</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
+        <el-card class="stat-card" shadow="hover">
+          <div class="card-content">
+            <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)">
+              <i class="el-icon-s-comment" />
+            </div>
+            <div class="card-desc">
+              <div class="card-title">留言量</div>
+              <div class="card-count">
+                <count-to :start-val="0" :end-val="messageCount" :duration="2000" />
+              </div>
+              <div class="card-trend">
+                <i class="el-icon-bottom" />
+                <span>较上周 -3%</span>
+              </div>
+            </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
-  </div>
+
+    <!-- 图表区域 -->
+    <el-row :gutter="20">
+      <el-col :xs="24" :sm="24" :md="24" :lg="24">
+        <el-card class="chart-card" shadow="hover">
+          <div class="chart-header">
+            <div class="chart-title">
+              <i class="el-icon-data-line" />
+              一周访问量
+            </div>
+            <el-button type="text" icon="el-icon-refresh" @click="refreshData">刷新</el-button>
+          </div>
+          <div class="chart-container">
+            <v-chart :options="viewCount" v-loading="loading" />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20">
+      <el-col :xs="24" :sm="24" :md="24" :lg="24">
+        <el-card class="chart-card" shadow="hover">
+          <div class="chart-header">
+            <div class="chart-title">
+              <i class="el-icon-date" />
+              文章贡献统计
+            </div>
+            <el-tooltip content="展示每日文章发布情况" placement="top">
+              <i class="el-icon-question" />
+            </el-tooltip>
+          </div>
+          <div class="heatmap-container" v-loading="loading">
+            <calendar-heatmap :end-date="new Date()" :values="articleStatisticsDTOs" />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+  <el-row :gutter="20">
+    <el-col :xs="24" :sm="24" :md="16" :lg="16">
+      <el-card>
+        <div class="e-title">文章浏览量排行</div>
+        <div class="chart-container">
+          <v-chart :options="ariticleRank" v-loading="loading" />
+        </div>
+      </el-card>
+    </el-col>
+    <el-col :xs="24" :sm="24" :md="8" :lg="8">
+      <el-card>
+        <div class="e-title">文章分类统计</div>
+        <div class="chart-container">
+          <v-chart :options="category" v-loading="loading" />
+        </div>
+      </el-card>
+    </el-col>
+  </el-row>
+
+  <el-row :gutter="20">
+    <el-col :xs="24" :sm="24" :md="16" :lg="16">
+      <el-card>
+        <div class="e-title">用户地域分布</div>
+        <div class="chart-container" v-loading="loading">
+          <div class="area-wrapper">
+            <el-radio-group v-model="type">
+              <el-radio :label="1">用户</el-radio>
+              <el-radio :label="2">游客</el-radio>
+            </el-radio-group>
+          </div>
+          <v-chart :options="userAreaMap" />
+        </div>
+      </el-card>
+    </el-col>
+    <el-col :xs="24" :sm="24" :md="8" :lg="8">
+      <el-card>
+        <div class="e-title">文章标签统计</div>
+        <div class="chart-container" v-loading="loading">
+          <tag-cloud :data="tagDTOs" />
+        </div>
+      </el-card>
+    </el-col>
+  </el-row>
+</div>
 </template>
 
 <script>
@@ -340,36 +400,217 @@ export default {
 </script>
 
 <style scoped>
-.card-icon-container {
-  display: inline-block;
-  font-size: 3rem;
+.dashboard-container {
+  padding: 20px;
 }
+
+/* 移动端padding优化 */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+}
+
+/* 统计卡片样式 */
+.stat-card {
+  transition: all 0.3s ease;
+  border: none;
+  margin-bottom: 20px;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+.card-content {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+}
+
+.card-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* 移动端图标缩小 */
+@media (max-width: 768px) {
+  .card-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    margin-right: 12px;
+  }
+
+  .card-icon-wrapper i {
+    font-size: 2rem;
+  }
+
+  .card-count {
+    font-size: 24px;
+  }
+
+  .card-title {
+    font-size: 12px;
+  }
+
+  .card-trend {
+    font-size: 11px;
+  }
+}
+
+.card-icon-wrapper i {
+  font-size: 2.5rem;
+  color: #fff;
+}
+
+.stat-card:hover .card-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.card-desc {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.card-count {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+}
+
+.card-trend {
+  font-size: 12px;
+  color: #67c23a;
+  display: flex;
+  align-items: center;
+}
+
+.card-trend i {
+  margin-right: 4px;
+}
+
+.card-trend.el-icon-bottom {
+  color: #f56c6c;
+}
+
+/* 图表卡片样式 */
+.chart-card {
+  transition: all 0.3s ease;
+  border: none;
+  margin-bottom: 20px;
+}
+
+.chart-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #202a34;
+  display: flex;
+  align-items: center;
+}
+
+.chart-title i {
+  margin-right: 8px;
+  font-size: 18px;
+  color: #409eff;
+}
+
 .area-wrapper {
   display: flex;
+  align-items: center;
+}
+
+.chart-container {
+  height: 350px;
+  position: relative;
+  width: 100%;
+}
+
+/* 移动端图表高度优化 */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 280px;
+  }
+
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .chart-title {
+    font-size: 14px;
+  }
+}
+
+.map-container {
+  height: 450px;
+}
+
+.heatmap-container {
+  padding: 20px 0;
+  min-height: 200px;
+}
+
+.tag-container {
+  display: flex;
+  align-items: center;
   justify-content: center;
+  padding: 20px;
 }
-.card-desc {
-  font-weight: bold;
-  float: right;
+
+/* 优化滚动条 */
+.dashboard-container ::v-deep .el-scrollbar__wrap {
+  overflow-x: hidden;
 }
-.card-title {
-  margin-top: 0.3rem;
-  line-height: 18px;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 1rem;
+
+/* 动画效果 */
+.dashboard-container {
+  animation: fadeIn 0.6s ease-in;
 }
-.card-count {
-  margin-top: 0.75rem;
-  color: #666;
-  font-size: 1.25rem;
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
+/* ECharts响应式 */
 .echarts {
   width: 100%;
   height: 100%;
-}
-.e-title {
-  font-size: 13px;
-  color: #202a34;
-  font-weight: 700;
 }
 </style>

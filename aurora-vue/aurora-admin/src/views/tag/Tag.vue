@@ -24,28 +24,61 @@
         </el-button>
       </div>
     </div>
-    <el-table border :data="tags" v-loading="loading" @selection-change="selectionChange">
-      <el-table-column type="selection" width="55" />
-      <el-table-column prop="tagName" label="标签名" align="center">
+    <el-table
+      border
+      :data="tags"
+      v-loading="loading"
+      @selection-change="selectionChange"
+      class="tag-table"
+      :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }">
+      <el-table-column type="selection" width="55" align="center" />
+      <el-table-column prop="tagName" label="标签名" align="center" min-width="150">
         <template slot-scope="scope">
-          <el-tag>
+          <el-tag
+            size="medium"
+            :type="getTagType(scope.row.tagName)"
+            effect="plain"
+            class="tag-item">
+            <i class="el-icon-price-tag" style="margin-right: 5px" />
             {{ scope.row.tagName }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="articleCount" label="文章量" align="center" />
-      <el-table-column prop="createTime" label="创建时间" align="center">
+      <el-table-column prop="articleCount" label="文章量" align="center" width="120" sortable>
         <template slot-scope="scope">
-          <i class="el-icon-time" style="margin-right: 5px" />
-          {{ scope.row.createTime | date }}
+          <el-tag size="small" :type="getArticleCountType(scope.row.articleCount)" effect="plain">
+            {{ scope.row.articleCount }} 篇
+          </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="160">
+      <el-table-column prop="createTime" label="创建时间" align="center" width="160" sortable>
         <template slot-scope="scope">
-          <el-button type="primary" size="mini" @click="openModel(scope.row)"> 编辑 </el-button>
-          <el-popconfirm title="确定删除吗？" style="margin-left: 1rem" @confirm="deleteTag(scope.row.id)">
-            <el-button size="mini" type="danger" slot="reference"> 删除 </el-button>
-          </el-popconfirm>
+          <div class="create-time">
+            <i class="el-icon-time" />
+            {{ scope.row.createTime | date }}
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" width="150">
+        <template slot-scope="scope">
+          <div class="action-buttons">
+            <el-button
+              type="primary"
+              size="mini"
+              icon="el-icon-edit"
+              @click="openModel(scope.row)"
+              circle />
+            <el-popconfirm
+              title="确定删除吗？"
+              @confirm="deleteTag(scope.row.id)">
+              <el-button
+                size="mini"
+                type="danger"
+                icon="el-icon-delete"
+                slot="reference"
+                circle />
+            </el-popconfirm>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -192,9 +225,148 @@ export default {
             message: data.message
           })
         }
+        this.addOrEdit = false
       })
-      this.addOrEdit = false
+    }
+  },
+  computed: {
+    getTagType() {
+      return function (name) {
+        const colors = ['primary', 'success', 'info', 'warning', 'danger']
+        const index = name.length % colors.length
+        return colors[index]
+      }
+    },
+    getArticleCountType() {
+      return function (count) {
+        if (count >= 50) return 'danger'
+        if (count >= 30) return 'warning'
+        if (count >= 10) return 'success'
+        return 'info'
+      }
     }
   }
 }
 </script>
+
+<style scoped>
+/* 操作区域 */
+.operation-container {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* 标签表格 */
+.tag-table {
+  margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.tag-table ::v-deep .el-table__body tr:hover > td {
+  background-color: #f5f7fa !important;
+}
+
+/* 标签样式 */
+.tag-item {
+  font-size: 14px;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.tag-item:hover {
+  transform: scale(1.05);
+}
+
+/* 创建时间 */
+.create-time {
+  font-size: 13px;
+  color: #909399;
+}
+
+.create-time i {
+  margin-right: 4px;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-buttons .el-button {
+  transition: all 0.3s ease;
+}
+
+.action-buttons .el-button:hover {
+  transform: translateY(-2px);
+}
+
+/* 对话框 */
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dialog-title-container i {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+/* 表单优化 */
+.el-input ::v-deep .el-input__inner {
+  border-radius: 20px;
+}
+
+.el-button {
+  border-radius: 20px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 分页 */
+.pagination-container {
+  float: right;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 加载动画 */
+.tag-table ::v-deep .el-loading-mask {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* 表格动画 */
+.tag-table ::v-deep .el-table__body tr {
+  transition: all 0.3s ease;
+}
+
+.tag-table ::v-deep .el-table__row {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+</style>

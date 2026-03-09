@@ -40,69 +40,108 @@
         </el-button>
       </div>
     </div>
-    <el-table border :data="comments" @selection-change="selectionChange" v-loading="loading">
-      <el-table-column type="selection" width="55" />
-      <el-table-column prop="avatar" label="头像" align="center" width="120">
+    <el-table
+      border
+      :data="comments"
+      @selection-change="selectionChange"
+      v-loading="loading"
+      class="comment-table"
+      :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }">
+      <el-table-column type="selection" width="55" align="center" />
+      <el-table-column prop="avatar" label="头像" align="center" width="100">
         <template slot-scope="scope">
-          <img :src="scope.row.avatar" width="40" height="40" />
+          <el-avatar :size="40" :src="scope.row.avatar" />
         </template>
       </el-table-column>
-      <el-table-column prop="nickname" label="评论人" align="center" width="120" />
+      <el-table-column prop="nickname" label="评论人" align="center" width="120">
+        <template slot-scope="scope">
+          <div class="nickname">
+            <i class="el-icon-user" style="margin-right: 5px; color: #409eff" />
+            {{ scope.row.nickname }}
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="replyNickname" label="回复人" align="center" width="120">
         <template slot-scope="scope">
-          <span v-if="scope.row.replyNickname">
-            {{ scope.row.replyNickname }}
-          </span>
-          <span v-else>无</span>
+          <div class="reply-nickname">
+            <i v-if="scope.row.replyNickname" class="el-icon-chat-line-round" style="margin-right: 5px" />
+            {{ scope.row.replyNickname || '无' }}
+          </div>
         </template>
       </el-table-column>
-      <el-table-column prop="articleTitle" label="文章标题" align="center">
+      <el-table-column prop="articleTitle" label="文章标题" align="center" min-width="180">
         <template slot-scope="scope">
-          <span v-if="scope.row.articleTitle">
-            {{ scope.row.articleTitle }}
-          </span>
-          <span v-else>无</span>
+          <el-tooltip :content="scope.row.articleTitle" placement="top" :disabled="!scope.row.articleTitle || scope.row.articleTitle.length <= 20">
+            <div class="article-title">
+              <i class="el-icon-document" style="margin-right: 5px" />
+              {{ scope.row.articleTitle || '无' }}
+            </div>
+          </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column prop="commentContent" label="评论内容" align="center">
+      <el-table-column prop="commentContent" label="评论内容" align="center" min-width="200">
         <template slot-scope="scope">
-          <span v-html="scope.row.commentContent" class="comment-content" />
+          <div class="comment-content" v-html="scope.row.commentContent" />
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="评论时间" width="150" align="center">
+      <el-table-column prop="createTime" label="评论时间" width="160" align="center" sortable>
         <template slot-scope="scope">
-          <i class="el-icon-time" style="margin-right: 5px" />
-          {{ scope.row.createTime | date }}
+          <div class="create-time">
+            <i class="el-icon-time" />
+            {{ scope.row.createTime | date }}
+          </div>
         </template>
       </el-table-column>
-      <el-table-column prop="isReview" label="状态" width="80" align="center">
+      <el-table-column prop="isReview" label="状态" width="100" align="center">
         <template slot-scope="scope">
-          <el-tag v-if="scope.row.isReview == 0" type="warning">审核中</el-tag>
-          <el-tag v-if="scope.row.isReview == 1" type="success">正常</el-tag>
+          <el-tag
+            v-if="scope.row.isReview == 0"
+            type="warning"
+            size="small"
+            effect="plain">
+            <i class="el-icon-loading" /> 审核中
+          </el-tag>
+          <el-tag
+            v-if="scope.row.isReview == 1"
+            type="success"
+            size="small"
+            effect="plain">
+            <i class="el-icon-check" /> 正常
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="来源" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag v-if="scope.row.type == 1">文章</el-tag>
-          <el-tag v-if="scope.row.type == 2" type="danger">留言</el-tag>
-          <el-tag v-if="scope.row.type == 3" type="success">关于我</el-tag>
-          <el-tag v-if="scope.row.type == 4" type="warning">友链</el-tag>
-          <el-tag v-if="scope.row.type == 5" type="warning">说说</el-tag>
+          <el-tag
+            :type="getSourceType(scope.row.type).tagType"
+            size="small"
+            effect="plain">
+            <i :class="getSourceType(scope.row.type).icon" />
+            {{ getSourceType(scope.row.type).name }}
+          </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" align="center">
+      <el-table-column label="操作" align="center" width="180" fixed="right">
         <template slot-scope="scope">
-          <el-button
-            v-if="scope.row.isReview == 0"
-            size="mini"
-            type="success"
-            slot="reference"
-            @click="updateCommentReview(scope.row.id)">
-            通过
-          </el-button>
-          <el-popconfirm style="margin-left: 10px" title="确定删除吗？" @confirm="deleteComments(scope.row.id)">
-            <el-button size="mini" type="danger" slot="reference"> 删除 </el-button>
-          </el-popconfirm>
+          <div class="action-buttons">
+            <el-button
+              v-if="scope.row.isReview == 0"
+              type="success"
+              size="mini"
+              icon="el-icon-check"
+              circle
+              @click="updateCommentReview(scope.row.id)" />
+            <el-popconfirm
+              title="确定删除吗？"
+              @confirm="deleteComments(scope.row.id)">
+              <el-button
+                size="mini"
+                type="danger"
+                icon="el-icon-delete"
+                slot="reference"
+                circle />
+            </el-popconfirm>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -153,6 +192,10 @@ export default {
         {
           value: 4,
           label: '友链'
+        },
+        {
+          value: 5,
+          label: '说说'
         }
       ],
       comments: [],
@@ -253,6 +296,20 @@ export default {
         })
     }
   },
+  computed: {
+    getSourceType() {
+      return function (type) {
+        const types = {
+          1: { name: '文章', tagType: 'primary', icon: 'el-icon-document' },
+          2: { name: '留言', tagType: 'danger', icon: 'el-icon-chat-line-round' },
+          3: { name: '关于我', tagType: 'success', icon: 'el-icon-user' },
+          4: { name: '友链', tagType: 'warning', icon: 'el-icon-link' },
+          5: { name: '说说', tagType: 'info', icon: 'el-icon-edit-outline' }
+        }
+        return types[type] || { name: '未知', tagType: 'info', icon: 'el-icon-question' }
+      }
+    }
+  },
   watch: {
     isReview() {
       this.current = 1
@@ -267,26 +324,220 @@ export default {
 </script>
 
 <style scoped>
+/* 评论内容 */
 .comment-content {
   display: inline-block;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.comment-content:hover {
+  white-space: normal;
+  overflow: visible;
+}
+
+/* 操作区域 */
 .operation-container {
   margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
+
+/* 审核菜单 */
 .review-menu {
   font-size: 14px;
   margin-top: 40px;
   color: #999;
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 2px solid #f0f0f0;
 }
+
 .review-menu span {
   margin-right: 24px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  position: relative;
 }
+
 .review {
   cursor: pointer;
+  color: #999;
 }
+
+.review:hover {
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.05);
+}
+
 .active-review {
   cursor: pointer;
-  color: #333;
+  color: #409eff;
   font-weight: bold;
+  background: rgba(64, 158, 255, 0.1);
+}
+
+.active-review::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 3px;
+  background: #409eff;
+  border-radius: 2px;
+}
+
+/* 评论表格 */
+.comment-table {
+  margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.comment-table ::v-deep .el-table__body tr:hover > td {
+  background-color: #f5f7fa !important;
+}
+
+/* 昵称 */
+.nickname {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.reply-nickname {
+  font-size: 13px;
+  color: #909399;
+}
+
+/* 文章标题 */
+.article-title {
+  font-size: 13px;
+  color: #606266;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.article-title:hover {
+  color: #409eff;
+}
+
+/* 创建时间 */
+.create-time {
+  font-size: 13px;
+  color: #909399;
+}
+
+.create-time i {
+  margin-right: 4px;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-buttons .el-button {
+  transition: all 0.3s ease;
+}
+
+.action-buttons .el-button:hover {
+  transform: translateY(-2px);
+}
+
+/* 对话框 */
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dialog-title-container i {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+/* 选择器和输入框 */
+.el-select ::v-deep .el-input__inner,
+.el-input ::v-deep .el-input__inner {
+  border-radius: 20px;
+}
+
+/* 按钮优化 */
+.el-button {
+  border-radius: 20px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 分页 */
+.pagination-container {
+  float: right;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 加载动画 */
+.comment-table ::v-deep .el-loading-mask {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* 表格动画 */
+.comment-table ::v-deep .el-table__body tr {
+  transition: all 0.3s ease;
+}
+
+.comment-table ::v-deep .el-table__row {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 头像动画 */
+.el-avatar {
+  transition: transform 0.3s ease;
+}
+
+.el-avatar:hover {
+  transform: scale(1.1);
+}
+
+/* 标签动画 */
+.el-tag {
+  transition: all 0.3s ease;
+}
+
+.el-tag:hover {
+  transform: translateY(-2px);
 }
 </style>

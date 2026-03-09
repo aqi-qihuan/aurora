@@ -89,20 +89,50 @@
         </el-button>
       </div>
     </div>
-    <el-table border :data="articles" @selection-change="selectionChange" v-loading="loading">
-      <el-table-column type="selection" width="55" />
-      <el-table-column prop="articleCover" label="文章封面" width="180" align="center">
+    <el-table
+      border
+      :data="articles"
+      @selection-change="selectionChange"
+      v-loading="loading"
+      class="article-table"
+      :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: '600' }">
+      <el-table-column type="selection" width="55" align="center" />
+      <el-table-column prop="articleCover" label="文章封面" width="200" align="center">
         <template slot-scope="scope">
-          <el-image
-            class="article-cover"
-            :src="
-              scope.row.articleCover
-                ? scope.row.articleCover
-                : 'https://static.talkxj.com/articles/c5cc2b2561bd0e3060a500198a4ad37d.png'
-            " />
-          <i v-if="scope.row.status == 1" class="iconfont el-icon-mygongkai article-status-icon" />
-          <i v-if="scope.row.status == 2" class="iconfont el-icon-mymima article-status-icon" />
-          <i v-if="scope.row.status == 3" class="iconfont el-icon-mycaogaoxiang article-status-icon" />
+          <div class="article-cover-wrapper">
+            <el-image
+              class="article-cover"
+              :src="
+                scope.row.articleCover
+                  ? scope.row.articleCover
+                  : 'https://static.talkxj.com/articles/c5cc2b2561bd0e3060a500198a4ad37d.png'
+              "
+              :preview-src-list="[scope.row.articleCover]"
+              fit="cover" />
+            <div class="article-status-badge">
+              <el-tag
+                v-if="scope.row.status == 1"
+                size="small"
+                type="success"
+                effect="dark">
+                <i class="iconfont el-icon-mygongkai" /> 公开
+              </el-tag>
+              <el-tag
+                v-if="scope.row.status == 2"
+                size="small"
+                type="info"
+                effect="dark">
+                <i class="iconfont el-icon-mymima" /> 私密
+              </el-tag>
+              <el-tag
+                v-if="scope.row.status == 3"
+                size="small"
+                type="warning"
+                effect="dark">
+                <i class="iconfont el-icon-mycaogaoxiang" /> 草稿
+              </el-tag>
+            </div>
+          </div>
         </template>
       </el-table-column>
       <el-table-column prop="articleTitle" label="标题" align="center" />
@@ -525,45 +555,246 @@ export default {
 </script>
 
 <style scoped>
+/* 操作区域样式优化 */
 .operation-container {
   margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
+
+/* 状态菜单优化 */
 .article-status-menu {
   font-size: 14px;
   margin-top: 40px;
   color: #999;
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 2px solid #f0f0f0;
 }
+
 .article-status-menu span {
   margin-right: 24px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  position: relative;
 }
+
 .status {
   cursor: pointer;
+  color: #999;
 }
+
+.status:hover {
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.05);
+}
+
 .active-status {
   cursor: pointer;
-  color: #333;
+  color: #409eff;
   font-weight: bold;
+  background: rgba(64, 158, 255, 0.1);
 }
-.article-cover {
+
+.active-status::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 3px;
+  background: #409eff;
+  border-radius: 2px;
+}
+
+/* 文章表格优化 */
+.article-table {
+  margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.article-table ::v-deep .el-table__body tr:hover > td {
+  background-color: #f5f7fa !important;
+}
+
+.article-table ::v-deep .el-table__header-wrapper {
+  background: #f5f7fa;
+}
+
+/* 文章封面优化 */
+.article-cover-wrapper {
   position: relative;
   width: 100%;
-  height: 90px;
-  border-radius: 4px;
+  height: 120px;
+  overflow: hidden;
+  border-radius: 6px;
 }
-.article-cover::after {
-  content: '';
-  background: rgba(0, 0, 0, 0.3);
+
+.article-cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.article-cover:hover {
+  transform: scale(1.05);
+}
+
+.article-status-badge {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 8px;
+  right: 8px;
+  z-index: 10;
 }
-.article-status-icon {
-  color: #fff;
+
+.article-status-badge .el-tag {
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* 文章标题优化 */
+.article-title {
+  font-size: 14px;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-title:hover {
+  color: #409eff;
+}
+
+/* 标签列表优化 */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+}
+
+/* 浏览量优化 */
+.views-count {
+  font-size: 14px;
+  color: #67c23a;
+  font-weight: 600;
+}
+
+.views-count i {
+  margin-right: 4px;
+}
+
+/* 创建时间优化 */
+.create-time {
+  font-size: 13px;
+  color: #909399;
+}
+
+.create-time i {
+  margin-right: 4px;
+}
+
+/* 操作按钮优化 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-buttons .el-button {
+  transition: all 0.3s ease;
+}
+
+.action-buttons .el-button:hover {
+  transform: translateY(-2px);
+}
+
+.action-buttons .el-popconfirm {
+  display: inline-flex;
+}
+
+/* 分页优化 */
+.pagination-container {
+  float: right;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 对话框优化 */
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dialog-title-container i {
   font-size: 1.5rem;
-  position: absolute;
-  right: 1rem;
-  bottom: 1.4rem;
+  margin-right: 0.5rem;
+}
+
+/* 选择器优化 */
+.el-select ::v-deep .el-input__inner {
+  border-radius: 20px;
+}
+
+.el-input ::v-deep .el-input__inner {
+  border-radius: 20px;
+}
+
+/* 按钮优化 */
+.el-button {
+  border-radius: 20px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 加载动画 */
+.article-table ::v-deep .el-loading-mask {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* 响应式优化 */
+@media (max-width: 1400px) {
+  .article-table {
+    font-size: 13px;
+  }
+}
+
+/* 动画效果 */
+.article-table ::v-deep .el-table__body tr {
+  transition: all 0.3s ease;
+}
+
+.article-table ::v-deep .el-table__row {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 </style>
