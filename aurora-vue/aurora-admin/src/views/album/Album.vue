@@ -134,12 +134,17 @@ export default {
         this.albumForum = {
           id: null,
           albumName: '',
-          albumLabel: '',
+          albumDesc: '',
           albumCover: '',
           status: 1
         }
         this.$refs.albumTitle.innerHTML = '新建相册'
       }
+      this.$nextTick(() => {
+        if (this.$refs.albumTitle) {
+          this.$refs.albumTitle.innerHTML = item ? '修改相册' : '新建相册'
+        }
+      })
       this.addOrEdit = true
     },
     checkPhoto(item) {
@@ -212,7 +217,6 @@ export default {
         this.albumForum.id = data
         this.isdelete = true
       } else {
-        console.log(data)
         this.openModel(data)
       }
     },
@@ -231,6 +235,10 @@ export default {
           })
         }
         this.isdelete = false
+      })
+      .catch(error => {
+        this.$message.error('删除相册失败')
+        console.error('API Error:', error)
       })
     },
     searchAlbums() {

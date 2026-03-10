@@ -359,6 +359,10 @@ export default {
         }
         this.remove = false
       })
+      .catch(error => {
+        this.$message.error('删除文章失败')
+        console.error('API Error:', error)
+      })
     },
     exportArticles(id) {
       var param = {}
@@ -385,6 +389,10 @@ export default {
         }
         this.isExport = false
       })
+      .catch(error => {
+        this.$message.error('导出文章失败')
+        console.error('API Error:', error)
+      })
     },
     downloadFile(url) {
       const iframe = document.createElement('iframe')
@@ -394,7 +402,7 @@ export default {
       document.body.appendChild(iframe)
       setTimeout(() => {
         iframe.remove()
-      }, 5 * 60 * 1000)
+      }, 30000)
     },
     uploadArticle(data) {
       if (data.flag) {
@@ -485,6 +493,11 @@ export default {
           this.articles = data.data.records
           this.count = data.data.count
           this.loading = false
+        })
+        .catch(error => {
+          this.loading = false
+          this.$message.error('获取文章列表失败')
+          console.error('API Error:', error)
         })
     },
     listCategories() {

@@ -163,14 +163,22 @@ export default {
     openModel(link) {
       if (link != null) {
         this.linkForm = JSON.parse(JSON.stringify(link))
-        this.$refs.linkTitle.innerHTML = '修改友链'
+        this.$nextTick(() => {
+          if (this.$refs.linkTitle) {
+            this.$refs.linkTitle.innerHTML = '修改友链'
+          }
+        })
       } else {
         this.linkForm.id = null
         this.linkForm.linkName = ''
         this.linkForm.linkAvatar = ''
         this.linkForm.linkIntro = ''
         this.linkForm.linkAddress = ''
-        this.$refs.linkTitle.innerHTML = '添加友链'
+        this.$nextTick(() => {
+          if (this.$refs.linkTitle) {
+            this.$refs.linkTitle.innerHTML = '添加友链'
+          }
+        })
       }
       this.addOrEdit = true
     },

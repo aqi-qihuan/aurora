@@ -177,16 +177,28 @@ export default {
               parentId: null,
               isHidden: 0
             }
-            this.$refs.menuTitle.innerHTML = '新增菜单'
+            this.$nextTick(() => {
+              if (this.$refs.menuTitle) {
+                this.$refs.menuTitle.innerHTML = '新增菜单'
+              }
+            })
             this.menuForm.parentId = JSON.parse(JSON.stringify(menu.id))
             break
           case 2:
-            this.$refs.menuTitle.innerHTML = '修改菜单'
+            this.$nextTick(() => {
+              if (this.$refs.menuTitle) {
+                this.$refs.menuTitle.innerHTML = '修改菜单'
+              }
+            })
             this.menuForm = JSON.parse(JSON.stringify(menu))
             break
         }
       } else {
-        this.$refs.menuTitle.innerHTML = '新增菜单'
+        this.$nextTick(() => {
+          if (this.$refs.menuTitle) {
+            this.$refs.menuTitle.innerHTML = '新增菜单'
+          }
+        })
         this.show = true
         this.menuForm = {
           id: null,

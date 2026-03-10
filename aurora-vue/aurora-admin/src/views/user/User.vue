@@ -129,6 +129,10 @@ export default {
         {
           type: 2,
           desc: 'QQ'
+        },
+        {
+          type: 3,
+          desc: '微博'
         }
       ],
       keywords: null,
@@ -167,7 +171,6 @@ export default {
     },
     editUserRole() {
       this.userForm.roleIds = this.roleIds
-      console.log(this.userForm)
       this.axios.put('/api/admin/users/role', this.userForm).then(({ data }) => {
         if (data.flag) {
           this.$notify.success({
@@ -203,6 +206,10 @@ export default {
     listRoles() {
       this.axios.get('/api/admin/users/role').then(({ data }) => {
         this.userRoles = data.data
+      })
+      .catch(error => {
+        this.$message.error('获取角色列表失败')
+        console.error('API Error:', error)
       })
     }
   },

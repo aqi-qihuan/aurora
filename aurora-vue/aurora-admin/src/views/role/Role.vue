@@ -204,9 +204,15 @@ export default {
     },
     openMenuModel(role) {
       this.$nextTick(function () {
-        this.$refs.menuTree.setCheckedKeys([])
+        if (this.$refs.menuTree) {
+          this.$refs.menuTree.setCheckedKeys([])
+        }
       })
-      this.$refs.roleTitle.innerHTML = role ? '修改角色' : '新增角色'
+      this.$nextTick(() => {
+        if (this.$refs.roleTitle) {
+          this.$refs.roleTitle.innerHTML = role ? '修改角色' : '新增角色'
+        }
+      })
       if (role != null) {
         this.roleForm = JSON.parse(JSON.stringify(role))
       } else {

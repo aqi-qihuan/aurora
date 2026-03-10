@@ -389,6 +389,11 @@ export default {
         .then(({ data }) => {
           this.userAreaMap.series[0].data = data.data
         })
+    },
+    refreshData() {
+      this.loading = true
+      this.getData()
+      this.listUserArea()
     }
   },
   watch: {

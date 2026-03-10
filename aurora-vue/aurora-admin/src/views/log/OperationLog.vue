@@ -28,7 +28,7 @@
       <el-table-column prop="optModule" label="系统模块" align="center" width="120" />
       <el-table-column width="100" prop="optType" label="操作类型" align="center" />
       <el-table-column prop="optDesc" label="操作描述" align="center" width="150" />
-      <el-table-column prop="requetMethod" label="请求方式" align="center" width="100">
+      <el-table-column prop="requestMethod" label="请求方式" align="center" width="100">
         <template slot-scope="scope" v-if="scope.row.requestMethod">
           <el-tag :type="tagType(scope.row.requestMethod)">
             {{ scope.row.requestMethod }}

@@ -199,11 +199,19 @@ export default {
     openModel(tag) {
       if (tag != null) {
         this.tagForm = JSON.parse(JSON.stringify(tag))
-        this.$refs.tagTitle.innerHTML = '修改标签'
+        this.$nextTick(() => {
+          if (this.$refs.tagTitle) {
+            this.$refs.tagTitle.innerHTML = '修改标签'
+          }
+        })
       } else {
         this.tagForm.id = null
         this.tagForm.tagName = ''
-        this.$refs.tagTitle.innerHTML = '添加标签'
+        this.$nextTick(() => {
+          if (this.$refs.tagTitle) {
+            this.$refs.tagTitle.innerHTML = '添加标签'
+          }
+        })
       }
       this.addOrEdit = true
     },

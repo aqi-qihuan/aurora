@@ -23,7 +23,7 @@
       :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
       <el-table-column prop="resourceName" label="资源名" width="220" />
       <el-table-column prop="url" label="资源路径" width="300" />
-      <el-table-column prop="requetMethod" label="请求方式">
+      <el-table-column prop="requestMethod" label="请求方式">
         <template slot-scope="scope" v-if="scope.row.requestMethod">
           <el-tag :type="tagType(scope.row.requestMethod)">
             {{ scope.row.requestMethod }}
@@ -160,14 +160,21 @@ export default {
         return false
       }
       this.resourceForm = JSON.parse(JSON.stringify(resource))
-      this.$refs.resourceTitle.innerHTML = '修改资源'
+      this.$nextTick(() => {
+        if (this.$refs.resourceTitle) {
+          this.$refs.resourceTitle.innerHTML = '修改资源'
+        }
+      })
       this.addResource = true
     },
     openAddResourceModel(resource) {
-      console.log(resource)
       this.resourceForm = {}
       this.resourceForm.parentId = resource.id
-      this.$refs.resourceTitle.innerHTML = '添加资源'
+      this.$nextTick(() => {
+        if (this.$refs.resourceTitle) {
+          this.$refs.resourceTitle.innerHTML = '添加资源'
+        }
+      })
       this.addResource = true
     },
     deleteResource(id) {
@@ -206,6 +213,10 @@ export default {
         }
         this.addModule = false
         this.addResource = false
+      })
+      .catch(error => {
+        this.$message.error('保存资源失败')
+        console.error('API Error:', error)
       })
     }
   },

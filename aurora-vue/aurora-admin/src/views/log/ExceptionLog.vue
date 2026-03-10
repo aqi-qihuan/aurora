@@ -27,7 +27,7 @@
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column prop="optUri" label="请求接口" align="center" width="160" />
       <el-table-column prop="optDesc" label="操作描述" align="center" width="150" />
-      <el-table-column prop="requetMethod" label="请求方式" align="center" width="150">
+      <el-table-column prop="requestMethod" label="请求方式" align="center" width="150">
         <template slot-scope="scope" v-if="scope.row.requestMethod">
           <el-tag :type="tagType(scope.row.requestMethod)">
             {{ scope.row.requestMethod }}

@@ -128,7 +128,7 @@
           <el-input v-model="article.password" placeholder="请填写文章访问密码" />
         </el-form-item>
         <el-form-item label="文章摘要">
-          <el-input type="textarea" autosize="true" v-model="article.articleAbstract" placeholder="默认取文章前500个字符" />
+          <el-input type="textarea" :autosize="true" v-model="article.articleAbstract" placeholder="默认取文章前500个字符" />
         </el-form-item>
       </el-form>
       <div slot="footer">

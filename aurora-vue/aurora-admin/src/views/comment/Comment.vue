@@ -277,6 +277,10 @@ export default {
         }
         this.remove = false
       })
+      .catch(error => {
+        this.$message.error('删除评论失败')
+        console.error('API Error:', error)
+      })
     },
     listComments() {
       this.axios

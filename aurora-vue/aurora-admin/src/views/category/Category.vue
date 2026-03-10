@@ -200,11 +200,19 @@ export default {
     openModel(category) {
       if (category != null) {
         this.categoryForm = JSON.parse(JSON.stringify(category))
-        this.$refs.categoryTitle.innerHTML = '修改分类'
+        this.$nextTick(() => {
+          if (this.$refs.categoryTitle) {
+            this.$refs.categoryTitle.innerHTML = '修改分类'
+          }
+        })
       } else {
         this.categoryForm.id = null
         this.categoryForm.categoryName = ''
-        this.$refs.categoryTitle.innerHTML = '添加分类'
+        this.$nextTick(() => {
+          if (this.$refs.categoryTitle) {
+            this.$refs.categoryTitle.innerHTML = '添加分类'
+          }
+        })
       }
       this.addOrEdit = true
     },
