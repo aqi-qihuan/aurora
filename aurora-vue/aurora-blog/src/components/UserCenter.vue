@@ -119,6 +119,13 @@ export default defineComponent({
           userStore.userInfo.email = reactiveData.email
           reactiveData.emailDialogVisible = false
         }
+      }).catch((error) => {
+        console.error('邮箱绑定失败:', error)
+        proxy.$notify({
+          title: 'Error',
+          message: '绑定失败，请重试',
+          type: 'error'
+        })
       })
     }
     const handleSuccess = (data: any) => {

@@ -46,7 +46,7 @@
             :pageSize="pagination.size"
             :pageTotal="pagination.total"
             :page="pagination.current"
-            @pageChange="pageChangeHanlder" />
+            @pageChange="pageChangeHandler" />
         </div>
         <div class="col-span-1">
           <Sidebar>
@@ -116,7 +116,7 @@ export default defineComponent({
         top: 0
       })
     }
-    const pageChangeHanlder = (current: number) => {
+    const pageChangeHandler = (current: number) => {
       reactiveData.talks = ''
       toPageTop()
       pagination.current = current
@@ -129,7 +129,7 @@ export default defineComponent({
       pagination,
       ...toRefs(reactiveData),
       formatTime,
-      pageChangeHanlder,
+      pageChangeHandler,
       handlePreview,
       toTalk,
       t

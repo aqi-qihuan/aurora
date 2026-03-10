@@ -42,7 +42,7 @@
         :pageSize="pagination.size"
         :pageTotal="pagination.total"
         :page="pagination.current"
-        @pageChange="pageChangeHanlder" />
+        @pageChange="pageChangeHandler" />
     </div>
   </div>
 </template>
@@ -95,14 +95,14 @@ export default defineComponent({
               article.articleContent = markdownToHtml(article.articleContent)
                 .replace(/<\/?[^>]*>/g, '')
                 .replace(/[|]*\n/, '')
-                .replace(/&npsp;/gi, '')
+                .replace(/&nbsp;/gi, '')
             })
           })
           articleStore.archives = data.data.records
           pagination.total = data.data.count
         })
     }
-    const pageChangeHanlder = (current: number) => {
+    const pageChangeHandler = (current: number) => {
       pagination.current = current
       toPageTop()
       fetchArchives()
@@ -134,7 +134,7 @@ export default defineComponent({
       }
     }
     return {
-      pageChangeHanlder,
+      pageChangeHandler,
       toArticle,
       pagination,
       archives: toRef(articleStore.$state, 'archives'),

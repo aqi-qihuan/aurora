@@ -161,18 +161,22 @@ export default defineComponent({
         size: pageInfo.size
       }
       api.getComments(params).then(({ data }) => {
-        if (reactiveData.isReload) {
-          reactiveData.comments = data.data.records
-          reactiveData.isReload = false
-        } else {
-          reactiveData.comments.push(...data.data.records)
+        if (data.data && data.data.records) {
+          if (reactiveData.isReload) {
+            reactiveData.comments = data.data.records
+            reactiveData.isReload = false
+          } else {
+            reactiveData.comments.push(...data.data.records)
+          }
+          if (data.data.count <= reactiveData.comments.length) {
+            reactiveData.haveMore = false
+          } else {
+            reactiveData.haveMore = true
+          }
+          pageInfo.current++
         }
-        if (data.data.count <= reactiveData.comments.length) {
-          reactiveData.haveMore = false
-        } else {
-          reactiveData.haveMore = true
-        }
-        pageInfo.current++
+      }).catch((error) => {
+        console.error('获取评论失败:', error)
       })
     }
     const fetchReplies = (index: any) => {

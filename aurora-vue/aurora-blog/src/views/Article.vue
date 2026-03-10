@@ -178,7 +178,8 @@ export default defineComponent({
     const router = useRouter()
     const { t } = useI18n()
     const loading = ref(true)
-    const articleRef = ref()
+    const articleRef = ref<HTMLElement | null>(null)
+    let imageClickHandlers: (() => void)[] = []
     const reactiveData = reactive({
       articleId: '' as any,
       article: '' as any,
@@ -206,6 +207,9 @@ export default defineComponent({
       commonStore.resetHeaderImage()
       reactiveData.article = ''
       tocbot.destroy()
+      // 清理图片点击事件监听器
+      imageClickHandlers.forEach(cleanup => cleanup())
+      imageClickHandlers = []
     })
     onBeforeRouteUpdate((to) => {
       reactiveData.article = ''
@@ -246,13 +250,15 @@ export default defineComponent({
       v3ImgPreviewFn({ images: reactiveData.images, index: reactiveData.images.indexOf(index) })
     }
     const initTocbot = () => {
-      let nodes = articleRef.value.children
-      if (nodes.length) {
-        for (let i = 0; i < nodes.length; i++) {
-          let node = nodes[i]
-          let reg = /^H[1-4]{1}$/
-          if (reg.exec(node.tagName)) {
-            node.id = i
+      if (articleRef.value) {
+        let nodes = articleRef.value.children
+        if (nodes.length) {
+          for (let i = 0; i < nodes.length; i++) {
+            let node = nodes[i]
+            let reg = /^H[1-4]{1}$/
+            if (reg.exec(node.tagName)) {
+              node.id = String(i)
+            }
           }
         }
       }
@@ -266,12 +272,22 @@ export default defineComponent({
           e.preventDefault()
         }
       })
-      const imgs = articleRef.value.getElementsByTagName('img')
-      for (var i = 0; i < imgs.length; i++) {
-        reactiveData.images.push(imgs[i].src)
-        imgs[i].addEventListener('click', function (e: any) {
-          handlePreview(e.target.currentSrc)
-        })
+      if (articleRef.value) {
+        const imgs = articleRef.value.getElementsByTagName('img')
+        for (var i = 0; i < imgs.length; i++) {
+          if (imgs[i]) {
+            reactiveData.images.push(imgs[i].src)
+            const handler = function (e: any) {
+              handlePreview(e.target.currentSrc)
+            }
+            imgs[i].addEventListener('click', handler)
+            imageClickHandlers.push(() => {
+              if (imgs[i]) {
+                imgs[i].removeEventListener('click', handler)
+              }
+            })
+          }
+        }
       }
     }
     const fetchArticle = () => {
@@ -317,10 +333,12 @@ export default defineComponent({
           data.data.nextArticleCard.articleContent = markdownToHtml(data.data.nextArticleCard.articleContent)
             .replace(/<\/?[^>]*>/g, '')
             .replace(/[|]*\n/, '')
-            .replace(/&npsp;/gi, '')
+            .replace(/&nbsp;/gi, '')
           resolve(data.data.nextArticleCard)
         }).then((nextArticleCard) => {
           reactiveData.nextArticleCard = nextArticleCard
+        }).catch((error) => {
+          console.error('下一篇文章处理失败:', error)
         })
       })
     }
@@ -332,23 +350,29 @@ export default defineComponent({
         size: pageInfo.size
       }
       api.getComments(params).then(({ data }) => {
-        if (reactiveData.isReload) {
-          reactiveData.comments = data.data.records
-          reactiveData.isReload = false
-        } else {
-          reactiveData.comments.push(...data.data.records)
+        if (data.data && data.data.records) {
+          if (reactiveData.isReload) {
+            reactiveData.comments = data.data.records
+            reactiveData.isReload = false
+          } else {
+            reactiveData.comments.push(...data.data.records)
+          }
+          if (data.data.count <= reactiveData.comments.length) {
+            reactiveData.haveMore = false
+          } else {
+            reactiveData.haveMore = true
+          }
+          pageInfo.current++
         }
-        if (data.data.count <= reactiveData.comments.length) {
-          reactiveData.haveMore = false
-        } else {
-          reactiveData.haveMore = true
-        }
-        pageInfo.current++
+      }).catch((error) => {
+        console.error('获取评论失败:', error)
       })
     }
     const fetchReplies = (index: any) => {
       api.getRepliesByCommentId(reactiveData.comments[index].id).then(({ data }) => {
         reactiveData.comments[index].replyDTOs = data.data
+      }).catch((error) => {
+        console.error('获取回复失败:', error)
       })
     }
     const handleAuthorClick = (link: string) => {

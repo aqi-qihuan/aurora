@@ -20,7 +20,7 @@
         :pageSize="pagination.size"
         :pageTotal="pagination.total"
         :page="pagination.current"
-        @pageChange="pageChangeHanlder" />
+        @pageChange="pageChangeHandler" />
     </div>
   </div>
 </template>
@@ -65,7 +65,7 @@ export default defineComponent({
             item.articleContent = markdownToHtml(item.articleContent)
               .replace(/<\/?[^>]*>/g, '')
               .replace(/[|]*\n/, '')
-              .replace(/&npsp;/gi, '')
+              .replace(/&nbsp;/gi, '')
           })
           reactiveData.articles = data.data.records
           pagination.total = data.data.count
@@ -77,7 +77,7 @@ export default defineComponent({
         top: 0
       })
     }
-    const pageChangeHanlder = (current: number) => {
+    const pageChangeHandler = (current: number) => {
       reactiveData.articles = []
       pagination.current = current
       backToPageTop()
@@ -85,7 +85,7 @@ export default defineComponent({
     }
     return {
       pagination,
-      pageChangeHanlder,
+      pageChangeHandler,
       ...toRefs(reactiveData)
     }
   }

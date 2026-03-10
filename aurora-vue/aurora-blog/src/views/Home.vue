@@ -28,7 +28,7 @@
               </b>
             </li>
           </template>
-          <template v-else-if="(categories.length = 0)">
+          <template v-else-if="categories.length === 0">
             <li v-for="i in 6" :key="i" style="position: relative; top: -4px">
               <ob-skeleton tag="span" width="60px" height="33px" />
             </li>
@@ -53,7 +53,7 @@
           :pageSize="pagination.size"
           :pageTotal="pagination.total"
           :page="pagination.current"
-          @pageChange="pageChangeHanlder" />
+          @pageChange="pageChangeHandler" />
       </div>
       <div>
         <Sidebar>
@@ -188,7 +188,7 @@ export default defineComponent({
             item.articleContent = markdownToHtml(item.articleContent)
               .replace(/<\/?[^>]*>/g, '')
               .replace(/[|]*\n/, '')
-              .replace(/&npsp;/gi, '')
+              .replace(/&nbsp;/gi, '')
           })
           articleStore.articles = data.data.records
           pagination.total = data.data.count
@@ -223,11 +223,11 @@ export default defineComponent({
         top: articleOffset.value
       })
     }
-    const activeTabStyle = (catagoryId: any) => {
-      if (catagoryId === activeTab.value) return { background: appStore.themeConfig.header_gradient_css }
+    const activeTabStyle = (categoryId: any) => {
+      if (categoryId === activeTab.value) return { background: appStore.themeConfig.header_gradient_css }
       return {}
     }
-    const pageChangeHanlder = (current: number) => {
+    const pageChangeHandler = (current: number) => {
       userStore.page = current
       pagination.current = current
       toArticleOffset()
@@ -253,7 +253,7 @@ export default defineComponent({
       activeTabStyle,
       activeTab,
       pagination,
-      pageChangeHanlder,
+      pageChangeHandler,
       t
     }
   }

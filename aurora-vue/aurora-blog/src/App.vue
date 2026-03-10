@@ -59,7 +59,7 @@ export default defineComponent({
     const appStore = useAppStore()
     const commonStore = useCommonStore()
     const metaStore = useMetaStore()
-    const MOBILE_WITH = 996
+    const MOBILE_WIDTH = 996
     const appWrapperClass = 'app-wrapper'
     const loadingBarClass = ref({
       'nprogress-custom-parent': false
@@ -73,11 +73,11 @@ export default defineComponent({
     })
     onUnmounted(() => {
       document.removeEventListener('copy', copyEventHandler)
-      window.removeEventListener('resize', resizeHander)
+      window.removeEventListener('resize', resizeHandler)
     })
     const initialApp = () => {
       initResizeEvent()
-      intialCopy()
+      initialCopy()
       initWindowOnload()
       fetchWebsiteConfig()
       let wrapperHeight = screen.height
@@ -100,6 +100,8 @@ export default defineComponent({
         appStore.tagCount = data.data.tagCount
         appStore.websiteConfig = data.data.websiteConfigDTO
         initFavicon(data.data.websiteConfigDTO.favicon)
+      }).catch((error) => {
+        console.error('获取网站配置失败:', error)
       })
     }
     const copyEventHandler = (event: any) => {
@@ -110,17 +112,17 @@ export default defineComponent({
         }
       }
     }
-    const intialCopy = () => {
+    const initialCopy = () => {
       document.addEventListener('copy', copyEventHandler)
     }
-    const resizeHander = () => {
+    const resizeHandler = () => {
       const rect = document.body.getBoundingClientRect()
-      const mobileState = rect.width - 1 < MOBILE_WITH
+      const mobileState = rect.width - 1 < MOBILE_WIDTH
       if (isMobile.value !== mobileState) commonStore.changeMobileState(mobileState)
     }
     const initResizeEvent = () => {
-      resizeHander()
-      window.addEventListener('resize', resizeHander)
+      resizeHandler()
+      window.addEventListener('resize', resizeHandler)
     }
     const initWindowOnload = () => {
       window.onload = () => {
