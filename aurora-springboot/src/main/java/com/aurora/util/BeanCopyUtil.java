@@ -1,20 +1,22 @@
 package com.aurora.util;
 
+import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Log4j2
 public class BeanCopyUtil {
 
     public static <T> T copyObject(Object source, Class<T> target) {
         T temp = null;
         try {
-            temp = target.newInstance();
+            temp = target.getDeclaredConstructor().newInstance();
             if (null != source) {
                 org.springframework.beans.BeanUtils.copyProperties(source, temp);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to copy object to {}", target.getName(), e);
         }
         return temp;
     }

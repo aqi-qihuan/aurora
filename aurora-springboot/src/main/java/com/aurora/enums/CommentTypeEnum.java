@@ -33,6 +33,9 @@ public enum CommentTypeEnum {
     }
 
     public static CommentTypeEnum getCommentEnum(Integer type) {
+        if (type == null) {
+            return null;
+        }
         for (CommentTypeEnum value : CommentTypeEnum.values()) {
             if (value.getType().equals(type)) {
                 return value;

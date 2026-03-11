@@ -18,7 +18,6 @@ public class BizExceptionController {
     @RequestMapping("/bizException")
     public void handleBizException(HttpServletRequest request) {
         if (request.getAttribute("bizException") instanceof BizException) {
-            System.out.println(request.getAttribute("bizException"));
             throw ((BizException) request.getAttribute("bizException"));
         } else {
             throw new Exception();

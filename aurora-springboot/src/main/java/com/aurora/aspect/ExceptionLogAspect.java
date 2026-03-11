@@ -36,17 +36,23 @@ public class ExceptionLogAspect {
     @AfterThrowing(value = "exceptionLogPointcut()", throwing = "e")
     public void saveExceptionLog(JoinPoint joinPoint, Exception e) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = (HttpServletRequest) Objects.requireNonNull(requestAttributes).resolveReference(RequestAttributes.REFERENCE_REQUEST);
+        if (requestAttributes == null) {
+            return;
+        }
+        HttpServletRequest request = (HttpServletRequest) requestAttributes.resolveReference(RequestAttributes.REFERENCE_REQUEST);
+        if (request == null) {
+            return;
+        }
         ExceptionLog exceptionLog = new ExceptionLog();
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         Operation operation = method.getAnnotation(Operation.class);
-        exceptionLog.setOptUri(Objects.requireNonNull(request).getRequestURI());
+        exceptionLog.setOptUri(request.getRequestURI());
         String className = joinPoint.getTarget().getClass().getName();
         String methodName = method.getName();
         methodName = className + "." + methodName;
         exceptionLog.setOptMethod(methodName);
-        exceptionLog.setRequestMethod(Objects.requireNonNull(request).getMethod());
+        exceptionLog.setRequestMethod(request.getMethod());
         if (joinPoint.getArgs().length > 0) {
             if (joinPoint.getArgs()[0] instanceof MultipartFile) {
                 exceptionLog.setRequestParam("file");

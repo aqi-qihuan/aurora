@@ -124,7 +124,7 @@ onUnmounted(() => {
 ```typescript
 if (process.env.NODE_ENV === 'development') {
   console.log('%c 网站作者:七七', 'color:#bada55')
-  console.log('%c qq:1909925152', 'color:#bada55')
+  console.log('%c qq:2316364297', 'color:#bada55')
 }
 if (process.env.NODE_ENV === 'production') {
   api.report()

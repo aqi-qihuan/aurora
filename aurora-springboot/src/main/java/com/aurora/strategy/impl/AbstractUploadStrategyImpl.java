@@ -22,8 +22,7 @@ public abstract class AbstractUploadStrategyImpl implements UploadStrategy {
             }
             return getFileAccessUrl(path + fileName);
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new BizException("文件上传失败");
+            throw new BizException("文件上传失败", e);
         }
     }
 
@@ -33,8 +32,7 @@ public abstract class AbstractUploadStrategyImpl implements UploadStrategy {
             upload(path, fileName, inputStream);
             return getFileAccessUrl(path + fileName);
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new BizException("文件上传失败");
+            throw new BizException("文件上传失败", e);
         }
     }
 

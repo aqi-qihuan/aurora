@@ -65,7 +65,6 @@ public class QQLoginStrategyImpl extends AbstractSocialLoginStrategyImpl {
                 throw new BizException(QQ_LOGIN_ERROR);
             }
         } catch (Exception e) {
-            e.printStackTrace();
             throw new BizException(QQ_LOGIN_ERROR);
         }
     }

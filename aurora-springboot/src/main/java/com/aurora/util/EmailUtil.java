@@ -1,6 +1,7 @@
 package com.aurora.util;
 
 import com.aurora.model.dto.EmailDTO;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -13,6 +14,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 @Component
+@Log4j2
 public class EmailUtil {
 
     @Value("${spring.mail.username}")
@@ -37,7 +39,7 @@ public class EmailUtil {
             mimeMessageHelper.setText(process, true);
             javaMailSender.send(mimeMessage);
         } catch (MessagingException e) {
-            e.printStackTrace();
+            log.error("Failed to send email to: {}", emailDTO.getEmail(), e);
         }
     }
 

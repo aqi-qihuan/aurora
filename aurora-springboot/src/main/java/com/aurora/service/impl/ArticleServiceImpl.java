@@ -308,8 +308,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 String url = uploadStrategyContext.executeUploadStrategy(article.getArticleTitle() + FileExtEnum.MD.getExtName(), inputStream, FilePathEnum.MD.getPath());
                 urls.add(url);
             } catch (Exception e) {
-                e.printStackTrace();
-                throw new BizException("导出文章失败");
+                throw new BizException("导出文章失败", e);
             }
         }
         return urls;

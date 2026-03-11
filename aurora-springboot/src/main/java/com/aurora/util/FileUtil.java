@@ -22,7 +22,7 @@ public class FileUtil {
             }
             return new String(Hex.encodeHex(md5.digest()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to calculate MD5", e);
             return null;
         } finally {
             try {
@@ -30,7 +30,7 @@ public class FileUtil {
                     inputStream.close();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Failed to close input stream", e);
             }
         }
     }
@@ -51,7 +51,7 @@ public class FileUtil {
             multipartFile.transferTo(file);
             file.deleteOnExit();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to convert MultipartFile to File", e);
         }
         return file;
     }

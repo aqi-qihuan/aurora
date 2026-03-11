@@ -22,7 +22,9 @@ public class ControllerAdviceHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResultVO<?> errorHandler(MethodArgumentNotValidException e) {
-        return ResultVO.fail(StatusCodeEnum.VALID_ERROR.getCode(), Objects.requireNonNull(e.getBindingResult().getFieldError()).getDefaultMessage());
+        var fieldError = e.getBindingResult().getFieldError();
+        return ResultVO.fail(StatusCodeEnum.VALID_ERROR.getCode(), 
+            fieldError != null ? fieldError.getDefaultMessage() : "参数校验失败");
     }
 
     @ExceptionHandler(value = Exception.class)

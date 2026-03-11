@@ -39,7 +39,13 @@ public class OperationLogAspect {
     @SuppressWarnings("unchecked")
     public void saveOperationLog(JoinPoint joinPoint, Object keys) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = (HttpServletRequest) Objects.requireNonNull(requestAttributes).resolveReference(RequestAttributes.REFERENCE_REQUEST);
+        if (requestAttributes == null) {
+            return;
+        }
+        HttpServletRequest request = (HttpServletRequest) requestAttributes.resolveReference(RequestAttributes.REFERENCE_REQUEST);
+        if (request == null) {
+            return;
+        }
         OperationLog operationLog = new OperationLog();
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
@@ -52,7 +58,7 @@ public class OperationLogAspect {
         String className = joinPoint.getTarget().getClass().getName();
         String methodName = method.getName();
         methodName = className + "." + methodName;
-        operationLog.setRequestMethod(Objects.requireNonNull(request).getMethod());
+        operationLog.setRequestMethod(request.getMethod());
         operationLog.setOptMethod(methodName);
         if (joinPoint.getArgs().length > 0) {
             if (joinPoint.getArgs()[0] instanceof MultipartFile) {
