@@ -109,7 +109,7 @@ services:
   springboot:
     image: tencentcloud/tencentkona25:jre-alpine
     container_name: aurora-springboot
-    environment:
+    environment: 
       SPRING_PROFILES_ACTIVE: prod
       TZ: Asia/Shanghai
       # Docker网络内部服务名覆盖配置
