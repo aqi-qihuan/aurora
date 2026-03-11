@@ -11,8 +11,8 @@
               <b class="font-extrabold">&nbsp;{{ websiteConfig.author }}</b>
             </li>
             <li v-if="websiteConfig.gonganBeianNumber != '' && websiteConfig.gonganBeianNumber != undefined" class="flex flex-row mx-auto">
-              <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11011402013558" target="_blank">
-                <img src="https://oss.supermouse.cn/aurora/config/gongan-beian-icon.png" style="float:left;"/> &nbsp;
+              <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=41072802000219" target="_blank">
+                <img src="https://ws.aqi125.cn/aurora/config/gongan-beian-icon.png" style="float:left;"/> &nbsp;
                 <b class="font-extrabold border-b-2 border-ob hover:text-ob"> {{ websiteConfig.gonganBeianNumber }} </b>
               </a>
             </li>

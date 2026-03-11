@@ -391,8 +391,10 @@ export default defineComponent({
     align-items: center;
     color: #fff;
     cursor: pointer;
-    transition: opacity 250ms ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     padding-right: 0.5rem;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     &[no-hover-effect] {
       &:hover {
         opacity: 1;
@@ -400,6 +402,10 @@ export default defineComponent({
     }
     &:hover {
       opacity: 0.5;
+    }
+    &:active {
+      transform: scale(0.95);
+      opacity: 0.7;
     }
     .svg-icon {
       stroke: #fff;
@@ -437,6 +443,19 @@ export default defineComponent({
     }
   }
 }
+
+// 移动端优化
+@media (max-width: 640px) {
+  .header-controls {
+    span {
+      .svg-icon {
+        height: 1.75rem;
+        width: 1.75rem;
+      }
+    }
+  }
+}
+
 .avatar-img {
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

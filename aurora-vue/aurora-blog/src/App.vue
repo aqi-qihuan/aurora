@@ -59,7 +59,14 @@ export default defineComponent({
     const appStore = useAppStore()
     const commonStore = useCommonStore()
     const metaStore = useMetaStore()
-    const MOBILE_WIDTH = 996
+    // 优化断点设置，更符合现代移动端标准
+    const BREAKPOINTS = {
+      xs: 640,  // 小屏手机
+      sm: 768,  // 手机横屏/小平板
+      md: 1024, // 平板
+      lg: 1280  // 桌面
+    }
+    const MOBILE_WIDTH = BREAKPOINTS.md
     const appWrapperClass = 'app-wrapper'
     const loadingBarClass = ref({
       'nprogress-custom-parent': false

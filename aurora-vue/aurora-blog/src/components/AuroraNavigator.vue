@@ -167,6 +167,9 @@ export default defineComponent({
   @apply fixed flex justify-center items-center bottom-4 right-4 w-12 h-12 rounded-full z-40 shadow-lg text-white text-2xl stroke-0 border-2 border-ob-deep-900 cursor-pointer;
   transition: all 0.55s cubic-bezier(0, 1.8, 1, 1.2);
   opacity: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
   svg {
     pointer-events: none;
     stroke: currentColor !important;
@@ -177,12 +180,20 @@ export default defineComponent({
       @apply flex justify-center items-center bg-ob-deep-900 absolute rounded-full w-12 h-12 p-0.5;
       opacity: 0;
       transition: all 0.55s cubic-bezier(0, 1.8, 1, 1.2);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      
       &:hover {
         .Ob-Navigator-tips {
           opacity: 1;
           transform: translateX(-15%);
         }
       }
+      
+      &:active {
+        transform: scale(0.95) !important;
+      }
+      
       div {
         @apply flex justify-center items-center bg-ob-deep-800 w-full h-full rounded-full;
       }
@@ -220,6 +231,12 @@ export default defineComponent({
     @apply relative flex justify-center items-center bg-ob-deep-800 w-full h-full p-0.5 rounded-full;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 12px 28px rgba(0, 0, 0, 0.2);
     z-index: 200;
+    transition: transform 0.2s ease;
+    
+    &:active {
+      transform: scale(0.9);
+    }
+    
     div {
       @apply flex justify-center items-center w-full h-full rounded-full;
     }
@@ -229,8 +246,53 @@ export default defineComponent({
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 12px 28px rgba(0, 0, 0, 0.2);
     top: calc(3rem * -1.1);
     left: 0;
+    transition: transform 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    
+    &:active {
+      transform: scale(0.9);
+    }
+    
     div {
       @apply flex justify-center items-center w-full h-full rounded-full;
+    }
+  }
+}
+
+// 移动端优化
+@media (max-width: 768px) {
+  #Ob-Navigator {
+    @apply bottom-6 right-6;
+    width: 3.5rem;
+    height: 3.5rem;
+    
+    .Ob-Navigator-ball,
+    .Ob-Navigator-btt {
+      @apply w-full h-full;
+    }
+    
+    .Ob-Navigator-submenu {
+      li {
+        @apply w-12 h-12;
+      }
+    }
+    
+    &.Ob-Navigator--open .Ob-Navigator-submenu {
+      li {
+        &:first-of-type {
+          transform: translateX(calc(3.5rem * -1.4));
+        }
+        &:nth-of-type(2) {
+          transform: translate(calc(3.5rem * -1.1), calc(3.5rem * -1.1));
+        }
+        &:nth-of-type(3) {
+          transform: translateY(calc(3.5rem * -1.4));
+        }
+        &:nth-of-type(4) {
+          transform: translateY(calc(3.5rem * -2.4));
+        }
+      }
     }
   }
 }

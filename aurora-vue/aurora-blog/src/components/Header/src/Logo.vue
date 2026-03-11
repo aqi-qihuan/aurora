@@ -53,5 +53,17 @@ export default defineComponent({
   left: -60px;
   opacity: 0.05;
   @apply absolute mr-2 rounded-full;
+  pointer-events: none;
+}
+
+// 移动端优化
+@media (max-width: 640px) {
+  .logo-image {
+    height: 150px;
+    width: 150px;
+    max-width: 150px;
+    top: -45px;
+    left: -45px;
+  }
 }
 </style>

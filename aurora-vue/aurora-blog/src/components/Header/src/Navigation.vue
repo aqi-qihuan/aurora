@@ -6,7 +6,7 @@
         v-for="route in routes"
         :key="route.path">
         <div
-          class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase cursor-pointer"
+          class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase cursor-pointer transition-all duration-200 ease-out"
           @click="pushPage(route.path)"
           v-if="route.children && route.children.length === 0"
           :data-menu="route.name">
@@ -22,7 +22,7 @@
           @command="pushPage"
           hover
           v-else
-          class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase">
+          class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase transition-all duration-200 ease-out">
           <span class="relative z-50" v-if="$i18n.locale === 'cn' && route.i18n.cn">
             {{ route.i18n.cn }}
           </span>
@@ -46,7 +46,7 @@
       <li
         class="not-italic font-medium text-xs h-full relative flex flex-col items-center justify-center cursor-pointer text-center py-4 px-2"
         data-menu="PhotoAlbums">
-        <Dropdown hover class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase">
+        <Dropdown hover class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase transition-all duration-200 ease-out">
           <span class="relative z-50" v-if="$i18n.locale === 'cn'"> 相册 </span>
           <span class="relative z-50" v-else-if="$i18n.locale === 'en'"> PhotoAlbums </span>
           <DropdownMenu>
@@ -118,9 +118,13 @@ export default defineComponent({
     &:before {
       @apply opacity-60;
     }
+    transform: translateY(-2px);
+  }
+  &:active {
+    transform: translateY(0);
   }
   &:before {
-    @apply absolute rounded-lg opacity-0 transition bg-ob-deep-800 z-40;
+    @apply absolute rounded-lg opacity-0 transition-all duration-200 ease-out bg-ob-deep-800 z-40;
     content: '';
     top: -4px;
     left: -4px;

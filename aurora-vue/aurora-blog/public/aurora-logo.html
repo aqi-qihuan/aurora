@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aurora Logo - 极光博客</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    }
+
+    .logo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+
+    /* 主 Logo */
+    .logo {
+      position: relative;
+      font-size: 72px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      background: linear-gradient(90deg,
+        #00d4ff 0%,
+        #7b2ff7 25%,
+        #f107a3 50%,
+        #7b2ff7 75%,
+        #00d4ff 100%
+      );
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: aurora-glow 4s ease-in-out infinite;
+      text-shadow: 0 0 20px rgba(123, 47, 247, 0.3);
+    }
+
+    @keyframes aurora-glow {
+      0%, 100% {
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.4));
+      }
+      50% {
+        background-position: 100% 50%;
+        filter: drop-shadow(0 0 30px rgba(241, 7, 163, 0.5));
+      }
+    }
+
+    /* 副标题 */
+    .logo-subtitle {
+      font-size: 24px;
+      font-weight: 300;
+      letter-spacing: 15px;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      margin-top: -10px;
+    }
+
+    /* 极光装饰线条 */
+    .aurora-lines {
+      position: relative;
+      width: 300px;
+      height: 3px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .aurora-lines::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg,
+        transparent,
+        #00d4ff,
+        #7b2ff7,
+        #f107a3,
+        #7b2ff7,
+        #00d4ff,
+        transparent
+      );
+      background-size: 200% 100%;
+      animation: aurora-flow 3s linear infinite;
+    }
+
+    @keyframes aurora-flow {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    /* 小版本 Logo (用于导航栏等) */
+    .logo-small {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 25px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .logo-small-letter {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-small-text {
+      font-size: 18px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      letter-spacing: 2px;
+    }
+
+    /* Favicon 风格 Logo */
+    .favicon-container {
+      display: flex;
+      gap: 20px;
+    }
+
+    .favicon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      border-radius: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 36px;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 4px 20px rgba(123, 47, 247, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .favicon::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg,
+        rgba(255, 255, 255, 0.2),
+        transparent
+      );
+    }
+
+    .favicon-small {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 2px 10px rgba(123, 47, 247, 0.4);
+    }
+
+    .favicon-tiny {
+      width: 16px;
+      height: 16px;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 说明文字 */
+    .info {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      text-align: center;
+      margin-top: 40px;
+      line-height: 2;
+    }
+
+    .info h3 {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <!-- 主 Logo -->
+    <div class="logo">AURORA</div>
+    <div class="logo-subtitle">Blog</div>
+    <div class="aurora-lines"></div>
+
+    <!-- 小版本 Logo -->
+    <div class="logo-small">
+      <span class="logo-small-letter">A</span>
+      <span class="logo-small-text">Aurora</span>
+    </div>
+
+    <!-- Favicon 系列 -->
+    <div class="favicon-container">
+      <div class="favicon">A</div>
+      <div class="favicon-small">A</div>
+      <div class="favicon-tiny">A</div>
+    </div>
+
+    <!-- 说明 -->
+    <div class="info">
+      <h3>Aurora 极光博客 Logo</h3>
+      <p>主 Logo: 用于网站首页和标题</p>
+      <p>小 Logo: 用于导航栏和页头</p>
+      <p>Favicon: 用于浏览器标签页和书签</p>
+    </div>
+  </div>
+</body>
+</html>

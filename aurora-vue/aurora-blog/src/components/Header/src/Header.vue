@@ -30,6 +30,19 @@ export default defineComponent({
   .site-header {
     max-width: var(--max-width);
     @apply relative flex z-50 my-0 mx-auto py-4;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    
+    @media (max-width: 640px) {
+      padding: 0.75rem;
+    }
+  }
+}
+
+// 移动端优化
+@media (max-width: 1024px) {
+  .site-header {
+    justify-content: space-between;
   }
 }
 </style>

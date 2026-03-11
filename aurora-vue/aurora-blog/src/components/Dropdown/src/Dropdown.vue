@@ -4,6 +4,8 @@
     @click="toggle"
     @mouseover="hoverHandler"
     @mouseleave="leaveHandler"
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
     v-click-away="onClickAway">
     <slot />
   </div>
@@ -28,6 +30,7 @@ export default defineComponent({
     const mouseHover = toRefs(props).hover
     const dropdownStore = useDropdownStore()
     const eventId = ref(0)
+    const touchStartTime = ref(0)
     let sharedState: { active: boolean } = reactive({
       active: false
     })
@@ -59,7 +62,29 @@ export default defineComponent({
         eventId.value = 0
       }
     }
-    return { toggle, onClickAway, hoverHandler, leaveHandler }
+    
+    // 移动端触摸处理
+    const handleTouchStart = () => {
+      touchStartTime.value = Date.now()
+    }
+    
+    const handleTouchEnd = () => {
+      const touchDuration = Date.now() - touchStartTime.value
+      // 防止长按误触
+      if (touchDuration < 500) {
+        toggle()
+      }
+    }
+    
+    return { toggle, onClickAway, hoverHandler, leaveHandler, handleTouchStart, handleTouchEnd }
   }
 })
 </script>
+
+<style lang="scss" scoped>
+.ob-dropdown {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+</style>
