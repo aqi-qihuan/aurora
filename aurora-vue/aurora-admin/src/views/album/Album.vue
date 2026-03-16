@@ -258,12 +258,125 @@ export default {
 </script>
 
 <style scoped>
+/* ==================== Album Page Modern Styles ====================
+ * 基于 UI/UX Pro Max 设计系统
+ * 配色: Primary #2563EB, CTA #F97316
+ */
+
+/* 页面标题 */
+.title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.title::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border-radius: var(--radius-full);
+}
+
+/* 操作区域 - 现代化工具栏 */
+.operation-container {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-6);
+}
+
+.operation-container .el-button {
+  border-radius: var(--radius-base);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.operation-container .el-button--primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border: none;
+}
+
+/* 搜索区域 */
+.operation-container > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.operation-container .el-input {
+  width: 200px;
+}
+
+.operation-container .el-input ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  background: var(--color-bg-card);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-input ::v-deep .el-input__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.operation-container .el-button--text {
+  color: var(--color-text-secondary);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-button--text:hover {
+  color: var(--color-error);
+  background: var(--color-error-light);
+}
+
+/* 相册容器 */
+.album-container {
+  margin-top: var(--space-6);
+}
+
+/* 相册项 - 现代化卡片 */
+.album-item {
+  position: relative;
+  cursor: pointer;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: all var(--duration-base) var(--ease-out);
+  background: var(--color-bg-card);
+}
+
+.album-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* 相册封面 */
 .album-cover {
   position: relative;
-  border-radius: 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   width: 100%;
   height: 170px;
+  overflow: hidden;
 }
+
 .album-cover::before {
   content: '';
   position: absolute;
@@ -271,34 +384,265 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+  z-index: 1;
+  transition: all var(--duration-base) var(--ease-out);
 }
+
+.album-item:hover .album-cover::before {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.album-cover ::v-deep img {
+  transition: all var(--duration-slow) var(--ease-out);
+}
+
+.album-item:hover .album-cover ::v-deep img {
+  transform: scale(1.05);
+}
+
+/* 照片数量 */
 .album-photo-count {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 1.5rem;
-  z-index: 1000;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  z-index: 10;
   position: absolute;
-  left: 0;
-  right: 0;
-  padding: 0 0.5rem;
-  bottom: 2.6rem;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: var(--space-12);
   color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
+
+.album-photo-count i {
+  font-size: var(--text-lg);
+  opacity: 0.9;
+}
+
+/* 相册名称 */
 .album-name {
   text-align: center;
-  margin-top: 0.5rem;
+  padding: var(--space-3);
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  background: var(--color-bg-card);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.album-item {
-  position: relative;
-  cursor: pointer;
-  margin-bottom: 1rem;
-}
+
+/* 操作下拉菜单 */
 .album-opreation {
   position: absolute;
-  z-index: 1000;
-  top: 0.5rem;
-  right: 0.8rem;
+  z-index: 10;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+.album-opreation .el-dropdown {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  border-radius: var(--radius-base);
+  padding: var(--space-1) var(--space-2);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.album-opreation .el-dropdown:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.album-opreation i {
+  font-size: var(--text-lg);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 空状态 */
+.el-empty {
+  padding: var(--space-12) 0;
+}
+
+/* 分页 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-8);
+}
+
+.pagination-container ::v-deep .el-pagination {
+  font-weight: var(--font-medium);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li {
+  border-radius: var(--radius-base);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li.active {
+  background: var(--color-primary);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li:hover {
+  transform: translateY(-1px);
+}
+
+/* 对话框 */
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+  font-weight: var(--font-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+}
+
+/* 表单样式 */
+.el-form-item__label {
+  font-weight: var(--font-medium);
+  color: var(--color-text);
+}
+
+.el-input ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.el-input ::v-deep .el-input__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* 上传组件 */
+.upload-cover ::v-deep .el-upload {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-hover);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.upload-cover ::v-deep .el-upload:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-50);
+}
+
+.upload-cover ::v-deep .el-upload-dragger {
+  width: 360px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+}
+
+.upload-cover ::v-deep .el-icon-upload {
+  font-size: var(--text-3xl);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-2);
+}
+
+.upload-cover ::v-deep .el-upload__text {
+  color: var(--color-text-secondary);
+}
+
+.upload-cover ::v-deep .el-upload__text em {
+  color: var(--color-primary);
+  font-style: normal;
+}
+
+/* 单选按钮组 */
+.el-radio-group {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.el-radio {
+  margin-right: 0;
+}
+
+/* 加载动画 */
+.album-container ::v-deep .el-loading-mask {
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* ==================== Dark Mode ==================== */
+[data-theme="dark"] .operation-container {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .album-name {
+  background: var(--color-bg-card);
+}
+
+[data-theme="dark"] .album-container ::v-deep .el-loading-mask {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+[data-theme="dark"] .upload-cover ::v-deep .el-upload {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .operation-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .operation-container > div:last-child {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .operation-container .el-input {
+    width: 100%;
+  }
+
+  .operation-container .el-button {
+    width: 100%;
+  }
+
+  .album-cover {
+    height: 140px;
+  }
+
+  .upload-cover ::v-deep .el-upload-dragger {
+    width: 100%;
+    height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .album-cover {
+    height: 120px;
+  }
+
+  .album-photo-count {
+    font-size: var(--text-lg);
+    bottom: var(--space-10);
+  }
+
+  .album-name {
+    font-size: var(--text-xs);
+    padding: var(--space-2);
+  }
+
+  .el-dialog {
+    width: 90% !important;
+  }
 }
 </style>

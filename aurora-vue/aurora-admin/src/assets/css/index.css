@@ -1,5 +1,7 @@
 /* ==================== Aurora Admin 全局样式 ==================== */
 
+@import './design-system.css';
+@import './forms.css';
 @import './theme.css';
 @import './animations.css';
 @import './responsive.css';
@@ -7,19 +9,16 @@
 body {
   padding: 0;
   margin: 0;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-/* 卡片阴影优化 */
-.el-card.is-always-shadow,
-.el-card.is-hover-shadow:focus,
-.el-card.is-hover-shadow:hover {
-  box-shadow: var(--shadow-base);
-}
+/* 卡片阴影优化 - 已在 design-system.css 中定义 */
 .main-card {
   min-height: calc(100vh - 126px);
 }

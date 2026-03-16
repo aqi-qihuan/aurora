@@ -328,123 +328,331 @@ export default {
 </script>
 
 <style scoped>
-/* 评论内容 */
-.comment-content {
-  display: inline-block;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ==================== Comment Page Modern Styles ====================
+ * 基于 UI/UX Pro Max 设计系统
+ * 配色: Primary #2563EB, CTA #F97316
+ */
 
-.comment-content:hover {
-  white-space: normal;
-  overflow: visible;
-}
-
-/* 操作区域 */
-.operation-container {
-  margin-top: 1.5rem;
+/* 页面标题 */
+.title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-6);
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-/* 审核菜单 */
+.title::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border-radius: var(--radius-full);
+}
+
+/* 审核菜单 - 现代化标签页样式 */
 .review-menu {
-  font-size: 14px;
-  margin-top: 40px;
-  color: #999;
+  font-size: var(--text-sm);
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 2px solid #f0f0f0;
+  padding: var(--space-3) 0;
+  border-bottom: 2px solid var(--color-border);
+  gap: var(--space-2);
+}
+
+.review-menu > span:first-child {
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  margin-right: var(--space-4);
 }
 
 .review-menu span {
-  margin-right: 24px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  transition: all 0.3s ease;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  transition: all var(--duration-base) var(--ease-out);
   position: relative;
+  cursor: pointer;
 }
 
 .review {
-  cursor: pointer;
-  color: #999;
+  color: var(--color-text-secondary);
+  background: transparent;
 }
 
 .review:hover {
-  color: #409eff;
-  background: rgba(64, 158, 255, 0.05);
+  color: var(--color-primary);
+  background: var(--color-primary-50);
 }
 
 .active-review {
-  cursor: pointer;
-  color: #409eff;
-  font-weight: bold;
-  background: rgba(64, 158, 255, 0.1);
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
+  background: var(--color-primary-50);
 }
 
 .active-review::after {
   content: '';
   position: absolute;
-  bottom: -10px;
+  bottom: -11px;
   left: 50%;
   transform: translateX(-50%);
-  width: 30px;
+  width: 24px;
   height: 3px;
-  background: #409eff;
-  border-radius: 2px;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
 }
 
-/* 评论表格 */
+/* 操作区域 - 现代化工具栏 */
+.operation-container {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.operation-container .el-button {
+  border-radius: var(--radius-base);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.operation-container .el-button--danger {
+  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
+  border: none;
+}
+
+.operation-container .el-button--success {
+  background: linear-gradient(135deg, var(--color-success) 0%, #34d399 100%);
+  border: none;
+}
+
+.operation-container .el-button--primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border: none;
+}
+
+/* 搜索区域 */
+.operation-container > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.operation-container .el-select,
+.operation-container .el-input {
+  width: 180px;
+}
+
+.operation-container .el-input ::v-deep .el-input__inner,
+.operation-container .el-select ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  background: var(--color-bg-card);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-input ::v-deep .el-input__inner:focus,
+.operation-container .el-select ::v-deep .el-input__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* 评论表格 - 现代化数据表格 */
 .comment-table {
-  margin-top: 20px;
-  border-radius: 8px;
+  margin-top: var(--space-6);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card);
+  background: var(--color-bg-card);
+}
+
+.comment-table ::v-deep .el-table__header-wrapper {
+  background: var(--color-bg-hover);
+}
+
+.comment-table ::v-deep .el-table__header th {
+  background: var(--color-bg-hover) !important;
+  color: var(--color-text);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-3) var(--space-4) !important;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.comment-table ::v-deep .el-table__body td {
+  padding: var(--space-4) !important;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.comment-table ::v-deep .el-table__body tr {
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .comment-table ::v-deep .el-table__body tr:hover > td {
-  background-color: #f5f7fa !important;
+  background-color: var(--color-primary-50) !important;
+}
+
+.comment-table ::v-deep .el-table__row {
+  animation: slideIn var(--duration-base) var(--ease-out);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 头像 */
+.comment-table ::v-deep .el-avatar {
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.comment-table ::v-deep .el-avatar:hover {
+  transform: scale(1.15);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
 }
 
 /* 昵称 */
 .nickname {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: var(--font-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.nickname i {
+  color: var(--color-primary);
 }
 
 .reply-nickname {
-  font-size: 13px;
-  color: #909399;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.reply-nickname i {
+  color: var(--color-secondary);
 }
 
 /* 文章标题 */
 .article-title {
-  font-size: 13px;
-  color: #606266;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 180px;
+  max-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.article-title i {
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .article-title:hover {
-  color: #409eff;
+  color: var(--color-primary);
+}
+
+/* 评论内容 */
+.comment-content {
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: var(--leading-relaxed);
+  padding: var(--space-2);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.comment-content:hover {
+  white-space: normal;
+  overflow: visible;
+  max-width: 400px;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+  position: relative;
 }
 
 /* 创建时间 */
 .create-time {
-  font-size: 13px;
-  color: #909399;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
 }
 
 .create-time i {
-  margin-right: 4px;
+  color: var(--color-secondary);
+}
+
+/* 状态标签 */
+.comment-table ::v-deep .el-tag {
+  border-radius: var(--radius-base);
+  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.comment-table ::v-deep .el-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.comment-table ::v-deep .el-tag--warning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.comment-table ::v-deep .el-tag--success {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success);
 }
 
 /* 操作按钮 */
@@ -452,96 +660,194 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .action-buttons .el-button {
-  transition: all 0.3s ease;
+  transition: all var(--duration-fast) var(--ease-out);
+  border-radius: var(--radius-base);
 }
 
 .action-buttons .el-button:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+.action-buttons .el-button--success {
+  background: linear-gradient(135deg, var(--color-success) 0%, #34d399 100%);
+  border: none;
+}
+
+.action-buttons .el-button--danger {
+  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
+  border: none;
+}
+
+/* 分页 - 现代化样式 */
+.pagination-container {
+  float: right;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.pagination-container ::v-deep .el-pagination {
+  font-weight: var(--font-medium);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li {
+  border-radius: var(--radius-base);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li.active {
+  background: var(--color-primary);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li:hover {
+  transform: translateY(-1px);
+}
+
+.pagination-container ::v-deep .el-pagination button {
+  border-radius: var(--radius-base);
 }
 
 /* 对话框 */
 .dialog-title-container {
   display: flex;
   align-items: center;
-  font-weight: bold;
-  font-size: 16px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
 }
 
 .dialog-title-container i {
-  font-size: 1.5rem;
-  margin-right: 0.5rem;
-}
-
-/* 选择器和输入框 */
-.el-select ::v-deep .el-input__inner,
-.el-input ::v-deep .el-input__inner {
-  border-radius: 20px;
-}
-
-/* 按钮优化 */
-.el-button {
-  border-radius: 20px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 分页 */
-.pagination-container {
-  float: right;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
+  font-size: var(--text-2xl);
+  margin-right: var(--space-2);
+  color: var(--color-warning);
 }
 
 /* 加载动画 */
 .comment-table ::v-deep .el-loading-mask {
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* 表格动画 */
-.comment-table ::v-deep .el-table__body tr {
-  transition: all 0.3s ease;
+/* ==================== Dark Mode ==================== */
+[data-theme="dark"] .operation-container {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
 }
 
-.comment-table ::v-deep .el-table__row {
-  animation: slideIn 0.3s ease;
+[data-theme="dark"] .comment-content {
+  background: var(--color-bg-active);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
+[data-theme="dark"] .comment-content:hover {
+  background: var(--color-bg-card);
+}
+
+[data-theme="dark"] .comment-table ::v-deep .el-loading-mask {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .title {
+    font-size: var(--text-xl);
   }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+
+  .review-menu {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .review-menu span {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .operation-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .operation-container > div:last-child {
+    margin-left: 0;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .operation-container .el-select,
+  .operation-container .el-input {
+    width: 100%;
+  }
+
+  .operation-container .el-button {
+    width: 100%;
+  }
+
+  .comment-content {
+    max-width: 150px;
+  }
+
+  .article-title {
+    max-width: 120px;
+  }
+
+  .action-buttons {
+    flex-direction: row;
+  }
+
+  .pagination-container {
+    float: none;
+    display: flex;
+    justify-content: center;
   }
 }
 
-/* 头像动画 */
-.el-avatar {
-  transition: transform 0.3s ease;
-}
+@media (max-width: 480px) {
+  .review-menu > span:first-child {
+    width: 100%;
+    margin-bottom: var(--space-2);
+  }
 
-.el-avatar:hover {
-  transform: scale(1.1);
-}
+  .comment-table ::v-deep .el-table__header {
+    display: none;
+  }
 
-/* 标签动画 */
-.el-tag {
-  transition: all 0.3s ease;
-}
+  .comment-table ::v-deep .el-table__row {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+    margin-bottom: var(--space-3);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
 
-.el-tag:hover {
-  transform: translateY(-2px);
+  .comment-table ::v-deep .el-table__row td {
+    border: none;
+    padding: var(--space-2) 0 !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .comment-table ::v-deep .el-table__row td::before {
+    content: attr(data-label);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+  }
+
+  .comment-content {
+    max-width: none;
+    white-space: normal;
+  }
+
+  .article-title {
+    max-width: none;
+  }
 }
 </style>

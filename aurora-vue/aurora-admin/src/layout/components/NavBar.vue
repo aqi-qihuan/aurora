@@ -47,7 +47,7 @@
       </div>
       <div class="tabs-close-item" @click="closeAllTab">全部关闭</div>
     </div>
-    <theme-settings :visible.sync="themeSettingsVisible" />
+    <theme-settings ref="themeSettings" :visible.sync="themeSettingsVisible" />
   </div>
 </template>
 
@@ -143,6 +143,13 @@ export default {
     },
     showThemeSettings() {
       this.themeSettingsVisible = true
+      // 确保子组件能正确响应
+      this.$nextTick(() => {
+        const themeSettings = this.$refs.themeSettings
+        if (themeSettings && themeSettings.open) {
+          themeSettings.open()
+        }
+      })
     },
     initShortcutKeys() {
       document.addEventListener('keydown', this.handleKeyDown)

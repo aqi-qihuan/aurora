@@ -277,3 +277,310 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* ==================== Role Page Modern Styles ====================
+ * 基于 UI/UX Pro Max 设计系统
+ * 配色: Primary #2563EB, CTA #F97316
+ */
+
+/* 页面标题 */
+.title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.title::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border-radius: var(--radius-full);
+}
+
+/* 操作区域 - 现代化工具栏 */
+.operation-container {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-6);
+}
+
+.operation-container .el-button {
+  border-radius: var(--radius-base);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.operation-container .el-button--primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border: none;
+}
+
+.operation-container .el-button--danger {
+  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
+  border: none;
+}
+
+/* 搜索区域 */
+.operation-container > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.operation-container .el-input {
+  width: 200px;
+}
+
+.operation-container .el-input ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  background: var(--color-bg-card);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.operation-container .el-input ::v-deep .el-input__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* 角色表格 - 现代化数据表格 */
+.el-table {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  background: var(--color-bg-card);
+}
+
+.el-table ::v-deep .el-table__header-wrapper {
+  background: var(--color-bg-hover);
+}
+
+.el-table ::v-deep .el-table__header th {
+  background: var(--color-bg-hover) !important;
+  color: var(--color-text);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-3) var(--space-4) !important;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.el-table ::v-deep .el-table__body td {
+  padding: var(--space-3) var(--space-4) !important;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.el-table ::v-deep .el-table__body tr {
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.el-table ::v-deep .el-table__body tr:hover > td {
+  background-color: var(--color-primary-50) !important;
+}
+
+/* 角色标签 */
+.el-table ::v-deep .el-tag {
+  border-radius: var(--radius-base);
+  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-3);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.el-table ::v-deep .el-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 操作按钮 */
+.el-button--text {
+  font-weight: var(--font-medium);
+  transition: all var(--duration-fast) var(--ease-out);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-base);
+  color: var(--color-primary);
+}
+
+.el-button--text:hover {
+  background: var(--color-primary-50);
+  transform: translateY(-1px);
+}
+
+.el-button--text i {
+  margin-right: var(--space-1);
+}
+
+/* 分页 - 现代化样式 */
+.pagination-container {
+  float: right;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.pagination-container ::v-deep .el-pagination {
+  font-weight: var(--font-medium);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li {
+  border-radius: var(--radius-base);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li.active {
+  background: var(--color-primary);
+}
+
+.pagination-container ::v-deep .el-pagination .el-pager li:hover {
+  transform: translateY(-1px);
+}
+
+.pagination-container ::v-deep .el-pagination button {
+  border-radius: var(--radius-base);
+}
+
+/* 对话框 */
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+  font-weight: var(--font-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+}
+
+.dialog-title-container i {
+  font-size: var(--text-2xl);
+  margin-right: var(--space-2);
+  color: var(--color-warning);
+}
+
+/* 表单样式 */
+.el-form-item__label {
+  font-weight: var(--font-medium);
+  color: var(--color-text);
+}
+
+.el-input ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.el-input ::v-deep .el-input__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* 树形控件 */
+.el-tree {
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-base);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+}
+
+.el-tree ::v-deep .el-tree-node__content {
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.el-tree ::v-deep .el-tree-node__content:hover {
+  background: var(--color-primary-50);
+}
+
+/* 加载动画 */
+.el-table ::v-deep .el-loading-mask {
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* ==================== Dark Mode ==================== */
+[data-theme="dark"] .operation-container {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .el-table ::v-deep .el-loading-mask {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+[data-theme="dark"] .el-tree {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .operation-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .operation-container > div:last-child {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .operation-container .el-input {
+    width: 100%;
+  }
+
+  .operation-container .el-button {
+    width: 100%;
+  }
+
+  .pagination-container {
+    float: none;
+    display: flex;
+    justify-content: center;
+  }
+
+  .el-button--text {
+    padding: var(--space-1) var(--space-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .el-dialog {
+    width: 90% !important;
+  }
+
+  .el-form-item__label {
+    float: none;
+    display: block;
+    text-align: left;
+    margin-bottom: var(--space-2);
+  }
+
+  .el-form-item__content {
+    margin-left: 0 !important;
+  }
+
+  .el-input {
+    width: 100% !important;
+  }
+}
+</style>

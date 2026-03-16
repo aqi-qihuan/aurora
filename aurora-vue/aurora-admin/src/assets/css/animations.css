@@ -1,157 +1,102 @@
-/* ==================== 全局动画配置文件 ==================== */
+/* ==================== Aurora Admin Animation System ====================
+ * 基于 UI/UX Pro Max 推荐
+ * 风格: Data-Dense Dashboard 动效
+ * 特点: 专业、流畅、数据驱动
+ */
 
-/* 页面切换动画 */
-.page-enter-active,
-.page-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* ==================== Keyframes ==================== */
 
-.page-enter {
-  opacity: 0;
-  transform: translateY(20px) scale(0.98);
-}
-
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-20px) scale(0.98);
-}
-
-/* 淡入淡出动画 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* 滑入滑出动画 */
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-enter {
-  transform: translateX(100%);
-}
-
-.slide-leave-to {
-  transform: translateX(-100%);
-}
-
-/* 缩放动画 */
-.zoom-enter-active,
-.zoom-leave-active {
-  transition: all 0.3s ease;
-}
-
-.zoom-enter,
-.zoom-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-/* 列表项滑入动画 */
-.list-slide-enter-active {
-  animation: listSlideIn 0.5s ease;
-}
-
-@keyframes listSlideIn {
-  0% {
+/* Fade In */
+@keyframes fadeIn {
+  from {
     opacity: 0;
-    transform: translateY(-20px);
   }
-  100% {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade In Up */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* 表格行动画 */
-.table-row-enter-active {
-  animation: tableRowIn 0.4s ease;
+/* Fade In Down */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-@keyframes tableRowIn {
-  0% {
+/* Fade In Left */
+@keyframes fadeInLeft {
+  from {
     opacity: 0;
     transform: translateX(-20px);
   }
-  100% {
+  to {
     opacity: 1;
     transform: translateX(0);
   }
 }
 
-/* 卡片悬浮效果 */
-.card-hover-effect {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-}
-
-.card-hover-effect:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
-  border-color: #409eff;
-}
-
-/* 按钮悬停效果 */
-.button-hover-effect {
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.button-hover-effect::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s ease, height 0.6s ease;
-}
-
-.button-hover-effect:active::after {
-  width: 200px;
-  height: 200px;
-}
-
-/* 输入框聚焦效果 */
-.input-focus-effect {
-  transition: all 0.3s ease;
-}
-
-.input-focus-effect:focus {
-  border-color: #409eff !important;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-/* 加载动画 */
-.loading-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
+/* Fade In Right */
+@keyframes fadeInRight {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateX(20px);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
-/* 脉冲动画 */
-.pulse-animation {
-  animation: pulse 2s ease-in-out infinite;
+/* Scale In */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
+/* Slide In Up */
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Slide In Down */
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Pulse */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -161,11 +106,7 @@
   }
 }
 
-/* 弹跳动画 */
-.bounce-animation {
-  animation: bounce 1s ease infinite;
-}
-
+/* Bounce */
 @keyframes bounce {
   0%, 100% {
     transform: translateY(0);
@@ -175,76 +116,31 @@
   }
 }
 
-/* 旋转进入动画 */
-.rotate-in-animation {
-  animation: rotateIn 0.5s ease;
-}
-
-@keyframes rotateIn {
+/* Spin */
+@keyframes spin {
   from {
-    opacity: 0;
-    transform: rotate(-180deg) scale(0.5);
+    transform: rotate(0deg);
   }
   to {
-    opacity: 1;
-    transform: rotate(0deg) scale(1);
+    transform: rotate(360deg);
   }
 }
 
-/* 渐变背景动画 */
-.gradient-animation {
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-
-@keyframes gradientShift {
+/* Shimmer (Loading) */
+@keyframes shimmer {
   0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
+    background-position: -200% 0;
   }
   100% {
-    background-position: 0% 50%;
+    background-position: 200% 0;
   }
 }
 
-/* 打字机效果 */
-.typewriter {
-  overflow: hidden;
-  border-right: 2px solid #409eff;
-  white-space: nowrap;
-  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
-}
-
-@keyframes typing {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
-}
-
-@keyframes blink-caret {
-  from, to {
-    border-color: transparent;
-  }
-  50% {
-    border-color: #409eff;
-  }
-}
-
-/* 工具类 */
-.fade-in {
-  animation: fadeIn 0.6s ease;
-}
-
-@keyframes fadeIn {
+/* Count Up */
+@keyframes countUp {
   from {
     opacity: 0;
-  transform: translateY(20px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -252,52 +148,440 @@
   }
 }
 
-.slide-in-left {
-  animation: slideInLeft 0.5s ease;
+/* Ripple */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
 }
 
-@keyframes slideInLeft {
+/* Progress Bar */
+@keyframes progress {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: var(--progress-width, 100%);
+  }
+}
+
+/* ==================== Animation Classes ==================== */
+
+/* Entrance Animations */
+.animate-fade-in {
+  animation: fadeIn var(--duration-slow) var(--ease-out) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--duration-slow) var(--ease-out) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown var(--duration-slow) var(--ease-out) forwards;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft var(--duration-slow) var(--ease-out) forwards;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight var(--duration-slow) var(--ease-out) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--duration-slow) var(--ease-spring) forwards;
+}
+
+/* Utility Animations */
+.animate-pulse {
+  animation: pulse 2s var(--ease-in-out) infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s var(--ease-in-out) infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Stagger Delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* ==================== Hover Effects ==================== */
+
+/* Card Hover */
+.hover-lift {
+  transition: transform var(--duration-base) var(--ease-out),
+              box-shadow var(--duration-base) var(--ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Scale Hover */
+.hover-scale {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* Glow Hover */
+.hover-glow {
+  transition: box-shadow var(--duration-base) var(--ease-out);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+/* Brightness Hover */
+.hover-brightness {
+  transition: filter var(--duration-fast) var(--ease-out);
+}
+
+.hover-brightness:hover {
+  filter: brightness(1.1);
+}
+
+/* Underline Hover */
+.hover-underline {
+  position: relative;
+}
+
+.hover-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-primary);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.hover-underline:hover::after {
+  width: 100%;
+}
+
+/* ==================== Focus Effects ==================== */
+
+/* Focus Ring */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* Focus Visible */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ==================== Loading States ==================== */
+
+/* Skeleton Loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-hover) 25%,
+    var(--color-bg-active) 50%,
+    var(--color-bg-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-base);
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 1.5px;
+}
+
+.spinner-lg {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+/* ==================== Page Transitions ==================== */
+
+/* Page Enter */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--duration-slow) var(--ease-out),
+              transform var(--duration-slow) var(--ease-out);
+}
+
+/* Page Leave */
+.page-leave {
+  opacity: 1;
+}
+
+.page-leave-active {
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+/* ==================== Card Animations ==================== */
+
+/* Card Entrance */
+.card-enter {
+  animation: fadeInUp var(--duration-slow) var(--ease-out) forwards;
+  opacity: 0;
+}
+
+/* Card Hover Effects */
+.card-hover {
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* ==================== Table Animations ==================== */
+
+/* Row Hover */
+.table-row-hover {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.table-row-hover:hover {
+  background-color: var(--color-bg-hover);
+}
+
+/* Row Entrance */
+.table-row-enter {
+  animation: fadeIn var(--duration-base) var(--ease-out) forwards;
+}
+
+/* ==================== Button Animations ==================== */
+
+/* Button Press */
+.btn-press {
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* Button Ripple */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+}
+
+.btn-ripple:active::after {
+  animation: ripple 0.6s ease-out;
+}
+
+/* ==================== Chart Animations ==================== */
+
+/* Chart Line Draw */
+@keyframes chartLineDraw {
   from {
-    opacity: 0;
-    transform: translateX(-30px);
+    stroke-dashoffset: 1000;
   }
   to {
-    opacity: 1;
-    transform: translateX(0);
+    stroke-dashoffset: 0;
   }
 }
 
-.slide-in-right {
-  animation: slideInRight 0.5s ease;
+.chart-line-animate {
+  stroke-dasharray: 1000;
+  animation: chartLineDraw 2s var(--ease-out) forwards;
 }
 
+/* Chart Bar Grow */
+@keyframes chartBarGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.chart-bar-animate {
+  transform-origin: bottom;
+  animation: chartBarGrow 0.8s var(--ease-out) forwards;
+}
+
+/* ==================== Notification Animations ==================== */
+
+/* Slide In Right */
 @keyframes slideInRight {
   from {
+    transform: translateX(100%);
     opacity: 0;
-    transform: translateX(30px);
   }
   to {
-    opacity: 1;
     transform: translateX(0);
+    opacity: 1;
   }
 }
 
-.scale-in {
-  animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.notification-enter {
+  animation: slideInRight var(--duration-slow) var(--ease-out) forwards;
 }
 
-@keyframes scaleIn {
+/* Slide Out Right */
+@keyframes slideOutRight {
   from {
-    opacity: 0;
-    transform: scale(0.5);
+    transform: translateX(0);
+    opacity: 1;
   }
   to {
-    opacity: 1;
-    transform: scale(1);
+    transform: translateX(100%);
+    opacity: 0;
   }
 }
 
-/* 响应式动画优化 */
+.notification-leave {
+  animation: slideOutRight var(--duration-base) var(--ease-out) forwards;
+}
+
+/* ==================== Tooltip Animations ==================== */
+
+/* Tooltip Fade In */
+.tooltip-enter {
+  animation: fadeIn var(--duration-fast) var(--ease-out) forwards;
+}
+
+/* Tooltip Arrow */
+.tooltip-arrow {
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+/* ==================== Modal Animations ==================== */
+
+/* Modal Backdrop */
+.modal-backdrop-enter {
+  animation: fadeIn var(--duration-base) var(--ease-out) forwards;
+}
+
+.modal-backdrop-leave {
+  animation: fadeIn var(--duration-base) var(--ease-out) reverse forwards;
+}
+
+/* Modal Content */
+.modal-content-enter {
+  animation: scaleIn var(--duration-slow) var(--ease-spring) forwards;
+}
+
+.modal-content-leave {
+  animation: scaleIn var(--duration-base) var(--ease-out) reverse forwards;
+}
+
+/* ==================== Scroll Animations ==================== */
+
+/* Scroll Reveal */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity var(--duration-slow) var(--ease-out),
+              transform var(--duration-slow) var(--ease-out);
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==================== Status Indicator Animations ==================== */
+
+/* Live Indicator Pulse */
+.live-indicator {
+  position: relative;
+}
+
+.live-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-success);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 2s var(--ease-in-out) infinite;
+}
+
+/* ==================== Data Update Animations ==================== */
+
+/* Number Count Up */
+.count-up {
+  animation: countUp var(--duration-slow) var(--ease-out) forwards;
+}
+
+/* Value Change Flash */
+@keyframes valueFlash {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: var(--color-primary-100);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.value-changed {
+  animation: valueFlash 1s var(--ease-out);
+}
+
+/* ==================== Reduced Motion ==================== */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

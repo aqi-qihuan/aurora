@@ -290,28 +290,285 @@ export default {
 }
 </script>
 
-<style>
-.avatar-uploader .el-upload {
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
+<style scoped>
+/* ==================== Website Config Page Modern Styles ====================
+ * 基于 UI/UX Pro Max 设计系统
+ * 配色: Primary #2563EB, CTA #F97316
+ */
+
+/* 标签页样式 */
+.el-tabs ::v-deep .el-tabs__header {
+  margin-bottom: var(--space-6);
+}
+
+.el-tabs ::v-deep .el-tabs__nav-wrap::after {
+  background: var(--color-border);
+}
+
+.el-tabs ::v-deep .el-tabs__item {
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  transition: all var(--duration-fast) var(--ease-out);
+  padding: 0 var(--space-6);
+  height: 40px;
+  line-height: 40px;
+}
+
+.el-tabs ::v-deep .el-tabs__item:hover {
+  color: var(--color-primary);
+}
+
+.el-tabs ::v-deep .el-tabs__item.is-active {
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
+}
+
+.el-tabs ::v-deep .el-tabs__active-bar {
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  height: 3px;
+  border-radius: var(--radius-full);
+}
+
+/* 表单样式 */
+.el-form {
+  max-width: 600px;
+}
+
+.el-form-item {
+  margin-bottom: var(--space-6);
+}
+
+.el-form-item__label {
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  padding-right: var(--space-4);
+}
+
+/* 输入框样式 */
+.el-input ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  background: var(--color-bg-card);
+  transition: all var(--duration-fast) var(--ease-out);
+  padding: 0 var(--space-4);
+}
+
+.el-input ::v-deep .el-input__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.el-input ::v-deep .el-input__inner:hover {
+  border-color: var(--color-primary-light);
+}
+
+/* 文本域样式 */
+.el-textarea ::v-deep .el-textarea__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+  background: var(--color-bg-card);
+  transition: all var(--duration-fast) var(--ease-out);
+  padding: var(--space-3) var(--space-4);
+}
+
+.el-textarea ::v-deep .el-textarea__inner:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* 日期选择器 */
+.el-date-editor {
+  width: 100%;
+}
+
+.el-date-editor ::v-deep .el-input__inner {
+  border-radius: var(--radius-base);
+  border-color: var(--color-border);
+}
+
+/* 单选按钮组 */
+.el-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+.el-radio {
+  margin-right: 0;
+  font-weight: var(--font-medium);
+}
+
+.el-radio ::v-deep .el-radio__input.is-checked .el-radio__inner {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.el-radio ::v-deep .el-radio__input.is-checked + .el-radio__label {
+  color: var(--color-primary);
+}
+
+/* 上传组件 */
+.avatar-uploader ::v-deep .el-upload {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   position: relative;
   overflow: hidden;
-}
-.avatar-uploader .el-upload:hover {
-  border-color: #409eff;
-}
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
+  background: var(--color-bg-hover);
+  transition: all var(--duration-fast) var(--ease-out);
   width: 120px;
   height: 120px;
-  line-height: 120px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.avatar-uploader ::v-deep .el-upload:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-50);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.avatar-uploader-icon {
+  font-size: var(--text-2xl);
+  color: var(--color-text-muted);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.avatar-uploader ::v-deep .el-upload:hover .avatar-uploader-icon {
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
 .avatar {
   width: 120px;
   height: 120px;
   display: block;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+
+/* 提交按钮 */
+.el-button--primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border: none;
+  border-radius: var(--radius-base);
+  font-weight: var(--font-semibold);
+  padding: var(--space-3) var(--space-8);
+  transition: all var(--duration-fast) var(--ease-out);
+  box-shadow: var(--shadow-sm);
+}
+
+.el-button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+}
+
+.el-button--primary:active {
+  transform: translateY(0);
+}
+
+/* 提示文字 */
+.el-tab-pane > div:first-child {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-base);
+  border-left: 3px solid var(--color-primary);
+}
+
+/* 两列布局 */
+.el-row {
+  margin-bottom: var(--space-4);
+}
+
+/* ==================== Dark Mode ==================== */
+[data-theme="dark"] .el-tabs ::v-deep .el-tabs__nav-wrap::after {
+  background: var(--color-border);
+}
+
+[data-theme="dark"] .el-input ::v-deep .el-input__inner,
+[data-theme="dark"] .el-textarea ::v-deep .el-textarea__inner {
+  background: var(--color-bg-card);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .avatar-uploader ::v-deep .el-upload {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .el-tab-pane > div:first-child {
+  background: var(--color-bg-hover);
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .el-form {
+    max-width: 100%;
+  }
+
+  .el-form-item__label {
+    float: none;
+    display: block;
+    text-align: left;
+    margin-bottom: var(--space-2);
+  }
+
+  .el-form-item__content {
+    margin-left: 0 !important;
+  }
+
+  .el-input,
+  .el-textarea,
+  .el-date-editor {
+    width: 100% !important;
+  }
+
+  .el-radio-group {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .el-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .el-col {
+    width: 100% !important;
+  }
+
+  .el-button--primary {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .el-tabs ::v-deep .el-tabs__item {
+    padding: 0 var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .avatar-uploader ::v-deep .el-upload {
+    width: 100px;
+    height: 100px;
+  }
+
+  .avatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .avatar-uploader-icon {
+    font-size: var(--text-xl);
+  }
 }
 </style>
