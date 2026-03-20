@@ -107,11 +107,17 @@ services:
     restart: always
 
   springboot:
-    image: eclipse-temurin:25-jre-alpine
+    image: tencentcloud/tencentkona25:jre-alpine
     container_name: aurora-springboot
-    environment:
+    environment: 
       SPRING_PROFILES_ACTIVE: prod
       TZ: Asia/Shanghai
+      # Docker网络内部服务名覆盖配置
+      SPRING_DATASOURCE_URL: jdbc:mysql://aurora-mysql:3306/aurora?serverTimezone=Asia/Shanghai&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATA_REDIS_HOST: aurora-redis
+      SPRING_RABBITMQ_HOST: aurora-rabbitmq
+      ELASTICSEARCH_REST_URIS: http://aurora-elasticsearch:9200
+      UPLOAD_MINIO_ENDPOINT: http://aurora-minio:9000/
     ports:
       - "8080:8080"
     volumes:
