@@ -27,10 +27,43 @@ let dynamicRoutesLoaded = false
 
 /**
  * 动态导入视图组件
- * 使用 Vite 的 import.meta.glob 实现动态导入
- * 注意：使用 eager: true 避免 Windows 路径问题
+ * 显式导入所有需要动态加载的组件（避免 Windows 路径问题）
  */
-const modules = import.meta.glob('/src/views/**/*.vue', { eager: true })
+const modules = {
+  // 文章模块
+  '/src/views/article/Article.vue': () => import('@/views/article/Article.vue'),
+  '/src/views/article/ArticleList.vue': () => import('@/views/article/ArticleList.vue'),
+  // 用户模块
+  '/src/views/user/User.vue': () => import('@/views/user/User.vue'),
+  '/src/views/user/Online.vue': () => import('@/views/user/Online.vue'),
+  // 分类和标签
+  '/src/views/category/Category.vue': () => import('@/views/category/Category.vue'),
+  '/src/views/tag/Tag.vue': () => import('@/views/tag/Tag.vue'),
+  // 评论和留言
+  '/src/views/comment/Comment.vue': () => import('@/views/comment/Comment.vue'),
+  '/src/views/talk/Talk.vue': () => import('@/views/talk/Talk.vue'),
+  '/src/views/talk/TalkList.vue': () => import('@/views/talk/TalkList.vue'),
+  // 友链和相册
+  '/src/views/friendLink/FriendLink.vue': () => import('@/views/friendLink/FriendLink.vue'),
+  '/src/views/album/Album.vue': () => import('@/views/album/Album.vue'),
+  '/src/views/album/Photo.vue': () => import('@/views/album/Photo.vue'),
+  // 资源和日志
+  '/src/views/resource/Resource.vue': () => import('@/views/resource/Resource.vue'),
+  '/src/views/log/OperationLog.vue': () => import('@/views/log/OperationLog.vue'),
+  '/src/views/log/ExceptionLog.vue': () => import('@/views/log/ExceptionLog.vue'),
+  // 定时任务
+  '/src/views/quartz/Quartz.vue': () => import('@/views/quartz/Quartz.vue'),
+  // 系统配置
+  '/src/views/website/Website.vue': () => import('@/views/website/Website.vue'),
+  '/src/views/setting/Setting.vue': () => import('@/views/setting/Setting.vue'),
+  '/src/views/role/Role.vue': () => import('@/views/role/Role.vue'),
+  '/src/views/menu/Menu.vue': () => import('@/views/menu/Menu.vue'),
+  // 其他
+  '/src/views/about/About.vue': () => import('@/views/about/About.vue'),
+  '/src/views/album/Delete.vue': () => import('@/views/album/Delete.vue'),
+  '/src/views/error/404.vue': () => import('@/views/error/404.vue'),
+  '/src/views/error/403.vue': () => import('@/views/error/403.vue')
+}
 
 /**
  * 根据组件路径动态加载组件
@@ -50,15 +83,14 @@ const loadView = (componentPath) => {
 
   // 尝试精确匹配
   if (modules[fullPath]) {
-    // eager 模式下直接返回组件
-    return () => Promise.resolve(modules[fullPath])
+    return modules[fullPath]
   }
 
   // 如果精确匹配失败，遍历查找（处理大小写问题）
   const normalizedFullPath = fullPath.toLowerCase()
-  for (const [key, module] of Object.entries(modules)) {
+  for (const [key, moduleLoader] of Object.entries(modules)) {
     if (key.toLowerCase() === normalizedFullPath) {
-      return () => Promise.resolve(module)
+      return moduleLoader
     }
   }
 
@@ -67,7 +99,7 @@ const loadView = (componentPath) => {
   // 返回404组件
   const notFoundPath = '/src/views/error/404.vue'
   if (modules[notFoundPath]) {
-    return () => Promise.resolve(modules[notFoundPath])
+    return modules[notFoundPath]
   }
 
   // 如果404组件也不存在，返回一个空组件
