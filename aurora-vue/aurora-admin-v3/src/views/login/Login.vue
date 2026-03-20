@@ -114,7 +114,7 @@ const handleLogin = async () => {
   bottom: 0;
   right: 0;
   left: 0;
-  background: url(https://ws.aqi125.cn/aurora/photos/525b7ec22916c978a5e06915cf6afbba.jpg) center center / cover
+  background: url(https://ws.aqi125.cn/aurora/articles/12f138cdc95482591d354088fe37ec32.jpg) center center / cover
     no-repeat;
 }
 

@@ -42,41 +42,53 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    
+
     // 代码分割优化
     rollupOptions: {
       output: {
-        // 手动分割代码块
+        // 手动分割代码块 - 解决循环依赖问题
         manualChunks: (id) => {
-          // Element Plus
-          if (id.includes('element-plus')) {
+          // Vue 核心（必须优先处理，避免循环依赖）
+          if (id.includes('node_modules/vue/') ||
+              id.includes('node_modules/@vue/') ||
+              id.includes('node_modules/vue-router/') ||
+              id.includes('node_modules/pinia/')) {
+            return 'vue-core'
+          }
+          // Element Plus（依赖 vue-core）
+          if (id.includes('node_modules/element-plus/') ||
+              id.includes('node_modules/@element-plus/')) {
             return 'element-plus'
           }
-          // ECharts
-          if (id.includes('echarts') || id.includes('vue-echarts')) {
+          // ECharts（独立，无循环依赖）
+          if (id.includes('node_modules/echarts/') ||
+              id.includes('node_modules/vue-echarts/') ||
+              id.includes('node_modules/zrender/')) {
             return 'echarts'
           }
-          // Vue 生态
-          if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
-            return 'vue-vendor'
-          }
           // Axios
-          if (id.includes('axios')) {
+          if (id.includes('node_modules/axios/')) {
             return 'axios'
+          }
+          // 工具库
+          if (id.includes('node_modules/lodash-es/') ||
+              id.includes('node_modules/dayjs/') ||
+              id.includes('node_modules/nprogress/')) {
+            return 'utils'
           }
           // 其他 node_modules
           if (id.includes('node_modules')) {
             return 'vendor'
           }
         },
-        
+
         // 资源文件命名
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
       }
     },
-    
+
     // 压缩配置
     minify: 'terser',
     terserOptions: {
@@ -91,13 +103,13 @@ export default defineConfig({
         reduce_vars: true
       }
     },
-    
+
     // CSS 代码分割
     cssCodeSplit: true,
-    
+
     // chunk 大小警告阈值
-    chunkSizeWarningLimit: 500,
-    
+    chunkSizeWarningLimit: 1000,
+
     // 启用 Rollup 的模块预加载
     modulePreload: {
       polyfill: true
