@@ -1,144 +1,164 @@
 <template>
-  <el-card class="main-card">
-    <div class="title">{{ route.meta.title || '分类管理' }}</div>
-    <div class="operation-container">
-      <el-button type="primary" size="small" @click="openModel(null)">
-        <el-icon><Plus /></el-icon>
-        新增
-      </el-button>
-      <el-button
-        type="danger"
-        size="small"
-        :disabled="categoryIds.length === 0"
-        @click="isDelete = true">
-        <el-icon><Delete /></el-icon>
-        批量删除
-      </el-button>
-      <div class="search-container">
-        <el-input
-          v-model="keywords"
-          size="small"
-          placeholder="请输入分类名"
-          style="width: 200px"
-          @keyup.enter="searchCategories">
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button
-          type="primary"
-          size="small"
-          style="margin-left: 1rem"
-          @click="searchCategories">
-          <el-icon><Search /></el-icon>
-          搜索
-        </el-button>
+  <div class="category-page">
+    <!-- 页面头部 - 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <el-icon><FolderOpened /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ count }}</span>
+          <span class="stat-label">分类总数</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <el-icon><Document /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalArticles }}</span>
+          <span class="stat-label">文章总量</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <el-icon><TrendCharts /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ avgArticles }}</span>
+          <span class="stat-label">平均文章数</span>
+        </div>
       </div>
     </div>
-    <el-table
-      border
-      :data="categories"
-      @selection-change="selectionChange"
-      v-loading="loading"
-      class="category-table"
-      :header-cell-style="{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontWeight: '600' }">
-      <el-table-column type="selection" width="55" align="center" />
-      <el-table-column prop="categoryName" label="分类名" align="center" min-width="150">
-        <template #default="scope">
-          <div class="category-name">
-            <el-icon :size="18" style="margin-right: 8px; color: #409eff">
-              <FolderOpened />
-            </el-icon>
-            {{ scope.row.categoryName }}
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="articleCount" label="文章量" align="center" width="120" sortable>
-        <template #default="scope">
-          <el-tag
-            size="small"
-            :type="getArticleCountType(scope.row.articleCount)"
-            effect="plain">
-            {{ scope.row.articleCount }} 篇
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" align="center" width="160" sortable>
-        <template #default="scope">
-          <div class="create-time">
-            <el-icon><Clock /></el-icon>
-            {{ formatDate(scope.row.createTime) }}
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" align="center" width="150">
-        <template #default="scope">
-          <div class="action-buttons">
-            <el-button
-              type="primary"
-              size="small"
-              circle
-              @click="openModel(scope.row)">
-              <el-icon><Edit /></el-icon>
-            </el-button>
-            <el-popconfirm
-              title="确定删除吗？"
-              @confirm="deleteCategory(scope.row.id)">
-              <template #reference>
-                <el-button size="small" type="danger" circle>
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </template>
-            </el-popconfirm>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination
-      class="pagination-container"
-      background
-      @size-change="sizeChange"
-      @current-change="currentChange"
-      :current-page="current"
-      :page-size="size"
-      :total="count"
-      :page-sizes="[10, 20]"
-      layout="total, sizes, prev, pager, next, jumper" />
-    <el-dialog v-model="isDelete" width="30%">
-      <template #header>
-        <div class="dialog-title-container">
-          <el-icon style="color: #ff9900"><Warning /></el-icon>
-          提示
+
+    <!-- 主内容卡片 -->
+    <el-card class="main-card">
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button type="primary" :icon="Plus" @click="openModel(null)" class="btn-add">
+            <span>新增分类</span>
+          </el-button>
+          <el-button
+            type="danger"
+            :icon="Delete"
+            :disabled="categoryIds.length === 0"
+            @click="isDelete = true"
+            class="btn-batch-delete">
+            <span>批量删除 ({{ categoryIds.length }})</span>
+          </el-button>
+        </div>
+        <div class="toolbar-right">
+          <el-input
+            v-model="keywords"
+            :prefix-icon="Search"
+            placeholder="搜索分类名..."
+            class="search-input"
+            clearable
+            @keyup.enter="searchCategories"
+            @clear="searchCategories" />
+          <el-button type="primary" :icon="Search" @click="searchCategories" circle />
+        </div>
+      </div>
+
+      <!-- 现代化表格 -->
+      <el-table
+        :data="categories"
+        v-loading="loading"
+        @selection-change="selectionChange"
+        class="modern-table"
+        :header-cell-style="{ background: 'transparent' }"
+        row-key="id">
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="categoryName" label="分类名称" min-width="200" align="left">
+          <template #default="{ row }">
+            <div class="category-name-cell">
+              <div class="category-color-dot" :style="{ background: getCategoryColor(row.categoryName) }"></div>
+              <el-icon :size="18" class="category-icon"><FolderOpened /></el-icon>
+              <span class="category-name-text">{{ row.categoryName }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="articleCount" label="文章数量" width="140" align="center" sortable>
+          <template #default="{ row }">
+            <div class="article-count-cell">
+              <div class="count-bar-container">
+                <div class="count-bar" :style="{ width: getBarWidth(row.articleCount) + '%', background: getBarColor(row.articleCount) }"></div>
+              </div>
+              <span class="count-value">{{ row.articleCount }}</span>
+              <span class="count-unit">篇</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" align="center" sortable>
+          <template #default="{ row }">
+            <div class="time-cell">
+              <el-icon class="time-icon"><Clock /></el-icon>
+              <span>{{ formatDate(row.createTime) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" align="center" fixed="right">
+          <template #default="{ row }">
+            <div class="action-btns">
+              <el-tooltip content="编辑" placement="top" :show-after="500">
+                <button class="action-btn edit" @click="openModel(row)"><el-icon><Edit /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top" :show-after="500">
+                <button class="action-btn delete" @click="handleDelete(row.id)"><el-icon><Delete /></el-icon></button>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="count" :page-size="size" :current-page="current" :page-sizes="[10, 20]" @size-change="sizeChange" @current-change="currentChange" />
+      </div>
+    </el-card>
+
+    <!-- 删除确认对话框 -->
+    <el-dialog v-model="isDelete" width="400px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper danger"><el-icon><Warning /></el-icon></div>
+      <div class="dialog-content">
+        <h3>确认删除</h3>
+        <p>确定要删除选中的 {{ categoryIds.length }} 个分类吗？此操作不可恢复。</p>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="isDelete = false" class="btn-cancel">取消</el-button>
+          <el-button type="danger" @click="deleteCategory(null)" class="btn-confirm-danger">确认删除</el-button>
         </div>
       </template>
-      <div style="font-size: 1rem">是否删除选中项？</div>
+    </el-dialog>
+
+    <!-- 新增/编辑分类对话框 -->
+    <el-dialog v-model="addOrEdit" width="450px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper primary"><el-icon><EditPen /></el-icon></div>
+      <div class="dialog-content">
+        <h3>{{ categoryTitle }}</h3>
+        <el-form ref="categoryFormRef" :model="categoryForm" :rules="categoryRules" class="category-form" label-position="top">
+          <el-form-item label="分类名称" prop="categoryName">
+            <el-input v-model="categoryForm.categoryName" placeholder="请输入分类名称" class="form-input" :prefix-icon="FolderOpened" />
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
-        <el-button @click="isDelete = false">取 消</el-button>
-        <el-button type="primary" @click="deleteCategory(null)">确 定</el-button>
+        <div class="dialog-footer">
+          <el-button @click="addOrEdit = false" class="btn-cancel">取消</el-button>
+          <el-button type="primary" @click="addOrEditCategory" class="btn-confirm">确认保存</el-button>
+        </div>
       </template>
     </el-dialog>
-    <el-dialog v-model="addOrEdit" width="30%">
-      <template #header>
-        <div class="dialog-title-container" ref="categoryTitleRef" />
-      </template>
-      <el-form label-width="80px" size="medium" :model="categoryForm">
-        <el-form-item label="分类名">
-          <el-input v-model="categoryForm.categoryName" style="width: 220px" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addOrEdit = false">取 消</el-button>
-        <el-button type="primary" @click="addOrEditCategory">确 定</el-button>
-      </template>
-    </el-dialog>
-  </el-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePageStateStore } from '@/stores/pageState'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElMessage, ElNotification, ElMessageBox } from 'element-plus'
 import {
   Plus,
   Delete,
@@ -146,7 +166,10 @@ import {
   FolderOpened,
   Clock,
   Edit,
-  Warning
+  EditPen,
+  Warning,
+  Document,
+  TrendCharts
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
@@ -154,10 +177,10 @@ const route = useRoute()
 const router = useRouter()
 const pageStateStore = usePageStateStore()
 
-// 响应式数据
 const isDelete = ref(false)
 const loading = ref(true)
 const addOrEdit = ref(false)
+const categoryTitle = ref('')
 const keywords = ref(null)
 const categoryIds = ref([])
 const categories = ref([])
@@ -165,12 +188,16 @@ const categoryForm = ref({
   id: null,
   categoryName: ''
 })
+const categoryRules = {
+  categoryName: [{ required: true, message: '请输入分类名', trigger: 'blur' }]
+}
 const current = ref(1)
 const size = ref(10)
 const count = ref(0)
-const categoryTitleRef = ref(null)
 
-// 日期格式化
+const totalArticles = computed(() => categories.value.reduce((sum, cat) => sum + (cat.articleCount || 0), 0))
+const avgArticles = computed(() => categories.value.length === 0 ? 0 : Math.round(totalArticles.value / categories.value.length))
+
 const formatDate = (date) => {
   if (!date) return ''
   const d = new Date(date)
@@ -183,66 +210,70 @@ const formatDate = (date) => {
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`
 }
 
-// 获取文章数量标签类型
-const getArticleCountType = (count) => {
-  if (count >= 50) return 'danger'
-  if (count >= 30) return 'warning'
-  if (count >= 10) return 'success'
-  return 'info'
+const getCategoryColor = (name) => {
+  const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1']
+  return colors[name.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0) % colors.length]
 }
 
-// 选择变化
+const getBarWidth = (n) => {
+  const max = Math.max(...categories.value.map(c => c.articleCount || 0), 1)
+  return Math.min((n / max) * 100, 100)
+}
+
+const getBarColor = (n) => {
+  if (n >= 50) return 'linear-gradient(90deg, #ef4444, #f87171)'
+  if (n >= 30) return 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+  if (n >= 10) return 'linear-gradient(90deg, #10b981, #34d399)'
+  return 'linear-gradient(90deg, #3b82f6, #60a5fa)'
+}
+
 const selectionChange = (selection) => {
   categoryIds.value = selection.map((item) => item.id)
 }
 
-// 搜索分类
 const searchCategories = () => {
   current.value = 1
   listCategories()
 }
 
-// 每页数量变化
 const sizeChange = (val) => {
   size.value = val
   listCategories()
 }
 
-// 当前页变化
 const currentChange = (val) => {
   current.value = val
   pageStateStore.updatePageState('category', val)
   listCategories()
 }
 
-// 删除分类
+const handleDelete = (id) => {
+  ElMessageBox.confirm('确定删除该分类吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    deleteCategory(id)
+  }).catch(() => {})
+}
+
 const deleteCategory = async (id) => {
   const param = id ? { data: [id] } : { data: categoryIds.value }
-  
+
   try {
     const { data } = await request.delete('/admin/categories', param)
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: data.message
-      })
+      ElNotification.success({ title: '成功', message: data.message })
       listCategories()
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: data.message
-      })
+      ElNotification.error({ title: '失败', message: data.message })
     }
     isDelete.value = false
   } catch (error) {
-    ElNotification.error({
-      title: '失败',
-      message: error.message || '删除失败'
-    })
+    ElNotification.error({ title: '失败', message: error.message || '删除失败' })
   }
 }
 
-// 获取分类列表
 const listCategories = async () => {
   try {
     loading.value = true
@@ -261,10 +292,7 @@ const listCategories = async () => {
       count.value = 0
     }
   } catch (error) {
-    ElNotification.error({
-      title: '失败',
-      message: error.message || '获取分类列表失败'
-    })
+    ElNotification.error({ title: '失败', message: error.message || '获取分类列表失败' })
     categories.value = []
     count.value = 0
   } finally {
@@ -272,58 +300,38 @@ const listCategories = async () => {
   }
 }
 
-// 打开对话框
 const openModel = (category) => {
   if (category != null) {
     categoryForm.value = JSON.parse(JSON.stringify(category))
-    nextTick(() => {
-      if (categoryTitleRef.value) {
-        categoryTitleRef.value.innerHTML = '修改分类'
-      }
-    })
+    categoryTitle.value = '编辑分类'
   } else {
     categoryForm.value.id = null
     categoryForm.value.categoryName = ''
-    nextTick(() => {
-      if (categoryTitleRef.value) {
-        categoryTitleRef.value.innerHTML = '添加分类'
-      }
-    })
+    categoryTitle.value = '添加分类'
   }
   addOrEdit.value = true
 }
 
-// 添加或修改分类
 const addOrEditCategory = async () => {
   if (categoryForm.value.categoryName.trim() === '') {
     ElMessage.error('分类名不能为空')
     return
   }
-  
+
   try {
     const { data } = await request.post('/admin/categories', categoryForm.value)
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: data.message
-      })
+      ElNotification.success({ title: '成功', message: data.message })
       listCategories()
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: data.message
-      })
+      ElNotification.error({ title: '失败', message: data.message })
     }
     addOrEdit.value = false
   } catch (error) {
-    ElNotification.error({
-      title: '失败',
-      message: error.message || '操作失败'
-    })
+    ElNotification.error({ title: '失败', message: error.message || '操作失败' })
   }
 }
 
-// 初始化
 onMounted(() => {
   current.value = pageStateStore.category
   listCategories()
@@ -331,348 +339,452 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== Category Page Modern Styles ==================== */
-
-/* 页面标题 */
-.title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-6);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.category-page {
+  padding: 0;
 }
 
-.title::before {
-  content: '';
-  width: 4px;
-  height: 24px;
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border-radius: var(--radius-full);
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
-/* 操作区域 */
-.operation-container {
-  margin-top: var(--space-6);
+.stat-card {
+  background: var(--bg-base, #fff);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-default, #e5e7eb);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: #fff; }
+.stat-icon.success { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: #fff; }
+.stat-icon.warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: #fff; }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* 主卡片 */
+.main-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e5e7eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--bg-base, #fff);
+}
+
+.main-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  gap: 16px;
 }
 
-.operation-container .el-button {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--ease-out);
+.toolbar-left {
+  display: flex;
+  gap: 12px;
 }
 
-.operation-container .el-button:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.operation-container .el-button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border: none;
-}
-
-.operation-container .el-button--danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
-  border: none;
-}
-
-/* 搜索区域 */
-.search-container {
+.toolbar-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-left: auto;
+  gap: 12px;
 }
 
-.search-container .el-input {
-  width: 200px;
+.btn-add {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
 }
 
-.search-container .el-input :deep(.el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  background: var(--color-bg-card);
-  transition: all var(--duration-fast) var(--ease-out);
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.search-container .el-input :deep(.el-input__inner:focus) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+.btn-batch-delete {
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
 }
 
-/* 分类表格 */
-.category-table {
-  margin-top: var(--space-6);
-  border-radius: var(--radius-lg);
+.btn-batch-delete:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.search-input {
+  width: 280px;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px #3b82f6;
+}
+
+/* 现代化表格 */
+.modern-table {
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  background: var(--color-bg-card);
+  border: 1px solid var(--border-default, #e5e7eb);
 }
 
-.category-table :deep(.el-table__header-wrapper) {
-  background: var(--color-bg-hover);
-}
-
-.category-table :deep(.el-table__header th) {
-  background: var(--color-bg-hover) !important;
-  color: var(--color-text);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-xs);
+.modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #f9fafb);
+  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: var(--space-3) var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border);
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-default, #e5e7eb);
 }
 
-.category-table :deep(.el-table__body td) {
-  padding: var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border-light);
+.modern-table :deep(.el-table__body tr) {
+  transition: all 0.2s ease;
 }
 
-.category-table :deep(.el-table__body tr) {
-  transition: all var(--duration-fast) var(--ease-out);
+.modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #f3f4f6) !important;
 }
 
-.category-table :deep(.el-table__body tr:hover > td) {
-  background-color: var(--color-primary-50) !important;
+.modern-table :deep(.el-table__body td) {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
 }
 
-.category-table :deep(.el-table__row) {
-  animation: slideIn var(--duration-base) var(--ease-out);
+/* 分类名称单元格 */
+.category-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.category-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-/* 分类名称 */
-.category-name {
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  font-weight: var(--font-semibold);
+.category-icon {
+  color: #8b5cf6;
+}
+
+.category-name-text {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+}
+
+/* 文章数量进度条 */
+.article-count-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.count-bar-container {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-elevated, #e5e7eb);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.count-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.count-value {
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  min-width: 24px;
+  text-align: right;
+}
+
+.count-unit {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+/* 时间单元格 */
+.time-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: 8px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
 }
 
-.category-name .el-icon {
-  color: var(--color-primary);
-}
-
-.category-name:hover {
-  color: var(--color-primary);
-}
-
-/* 文章数量标签 */
-.category-table :deep(.el-tag) {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-2);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.category-table :deep(.el-tag:hover) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-
-/* 创建时间 */
-.create-time {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-}
-
-.create-time .el-icon {
-  color: var(--color-secondary);
+.time-icon {
+  color: #3b82f6;
 }
 
 /* 操作按钮 */
-.action-buttons {
+.action-btns {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
-.action-buttons .el-button {
-  transition: all var(--duration-fast) var(--ease-out);
-  border-radius: var(--radius-base);
-}
-
-.action-buttons .el-button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: var(--shadow-md);
-}
-
-.action-buttons .el-button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   border: none;
-}
-
-.action-buttons .el-button--danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
-  border: none;
-}
-
-/* 分页 */
-.pagination-container {
-  float: right;
-  margin-top: var(--space-6);
-  margin-bottom: var(--space-4);
-}
-
-.pagination-container :deep(.el-pagination) {
-  font-weight: var(--font-medium);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li) {
-  border-radius: var(--radius-base);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li.active) {
-  background: var(--color-primary);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li:hover) {
-  transform: translateY(-1px);
-}
-
-.pagination-container :deep(.el-pagination button) {
-  border-radius: var(--radius-base);
-}
-
-/* 对话框 */
-.dialog-title-container {
+  cursor: pointer;
   display: flex;
   align-items: center;
-  font-weight: var(--font-bold);
-  font-size: var(--text-lg);
-  color: var(--color-text);
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 16px;
 }
 
-.dialog-title-container .el-icon {
-  font-size: var(--text-2xl);
-  margin-right: var(--space-2);
-  color: var(--color-warning);
+.action-btn.edit { background: #eff6ff; color: #3b82f6; }
+.action-btn.edit:hover { background: #3b82f6; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+.action-btn.delete { background: #fef2f2; color: #ef4444; }
+.action-btn.delete:hover { background: #ef4444; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+/* 分页 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light, #f3f4f6);
+}
+
+.pagination-wrapper :deep(.el-pager li) {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pagination-wrapper :deep(.el-pager li:hover) {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+.pagination-wrapper :deep(.el-pager li.is-active) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* 优雅对话框 */
+.modern-dialog :deep(.el-dialog__header) {
+  display: none;
+}
+
+.modern-dialog :deep(.el-dialog__body) {
+  padding: 32px 32px 24px;
+}
+
+.modern-dialog :deep(.el-dialog__footer) {
+  padding: 0 32px 32px;
+}
+
+.dialog-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 20px;
+}
+
+.dialog-icon-wrapper.primary { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #3b82f6; }
+.dialog-icon-wrapper.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #ef4444; }
+
+.dialog-content {
+  text-align: center;
+}
+
+.dialog-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin: 0 0 8px;
+}
+
+.dialog-content p {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-cancel {
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-confirm-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 /* 表单样式 */
-:deep(.el-form-item__label) {
-  font-weight: var(--font-medium);
-  color: var(--color-text);
+.category-form {
+  margin-top: 24px;
+  text-align: left;
 }
 
-:deep(.el-input .el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  transition: all var(--duration-fast) var(--ease-out);
+.category-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  padding-bottom: 8px;
 }
 
-:deep(.el-input .el-input__inner:focus) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+.form-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  height: 44px;
 }
 
-/* 加载动画 */
-.category-table :deep(.el-loading-mask) {
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.9);
+.form-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px #3b82f6;
 }
 
-/* ==================== Dark Mode ==================== */
-[data-theme="dark"] .operation-container {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
+/* 深色模式 */
+[data-theme="dark"] .stat-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
 }
 
-[data-theme="dark"] .category-table :deep(.el-loading-mask) {
-  background: rgba(15, 23, 42, 0.9);
+[data-theme="dark"] .stat-value { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .stat-label { color: var(--text-secondary, #9ca3af); }
+
+[data-theme="dark"] .main-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
 }
 
-/* ==================== Responsive ==================== */
+[data-theme="dark"] .modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #374151);
+  color: var(--text-secondary, #9ca3af);
+}
+
+[data-theme="dark"] .modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #374151) !important;
+}
+
+[data-theme="dark"] .category-name-text { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .count-bar-container { background: var(--bg-elevated, #374151); }
+
+[data-theme="dark"] .action-btn.edit { background: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .action-btn.delete { background: rgba(239, 68, 68, 0.15); }
+
+[data-theme="dark"] .dialog-content h3 { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .dialog-content p { color: var(--text-secondary, #9ca3af); }
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-card:last-child { grid-column: span 2; }
+}
+
 @media (max-width: 768px) {
-  .title {
-    font-size: var(--text-xl);
-  }
-
-  .operation-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-container {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .search-container .el-input {
-    width: 100%;
-  }
-
-  .operation-container .el-button {
-    width: 100%;
-  }
-
-  .pagination-container {
-    float: none;
-    display: flex;
-    justify-content: center;
-  }
+  .stats-row { grid-template-columns: 1fr; }
+  .stat-card:last-child { grid-column: span 1; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left, .toolbar-right { width: 100%; }
+  .btn-add, .btn-batch-delete { width: 100%; }
+  .search-input { width: 100%; }
+  .pagination-wrapper { justify-content: center; }
 }
 
 @media (max-width: 480px) {
-  .category-table :deep(.el-table__header) {
-    display: none;
-  }
-
-  .category-table :deep(.el-table__row) {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-4);
-    margin-bottom: var(--space-3);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .category-table :deep(.el-table__row td) {
-    border: none;
-    padding: var(--space-2) 0 !important;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .category-table :deep(.el-table__row td::before) {
-    content: attr(data-label);
-    font-weight: var(--font-semibold);
-    color: var(--color-text-secondary);
-    font-size: var(--text-xs);
-  }
+  .main-card :deep(.el-card__body) { padding: 16px; }
+  .stat-card { padding: 16px; }
+  .stat-icon { width: 48px; height: 48px; font-size: 20px; }
+  .stat-value { font-size: 24px; }
 }
 </style>

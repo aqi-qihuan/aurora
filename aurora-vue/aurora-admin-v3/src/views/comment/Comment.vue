@@ -1,197 +1,195 @@
 <template>
-  <el-card class="main-card">
-    <div class="title">{{ route.name }}</div>
-    <div class="review-menu">
-      <span>状态</span>
-      <span @click="changeReview(null)" :class="isReview == null ? 'active-review' : 'review'"> 全部 </span>
-      <span @click="changeReview(1)" :class="isReview == 1 ? 'active-review' : 'review'"> 正常 </span>
-      <span @click="changeReview(0)" :class="isReview == 0 ? 'active-review' : 'review'"> 审核中 </span>
-    </div>
-    <div class="operation-container">
-      <el-button
-        type="danger"
-        size="small"
-        :icon="Delete"
-        :disabled="commentIds.length == 0"
-        @click="remove = true">
-        批量删除
-      </el-button>
-      <el-button
-        type="success"
-        size="small"
-        :icon="SuccessFilled"
-        :disabled="commentIds.length == 0"
-        @click="updateCommentReview(null)">
-        批量通过
-      </el-button>
-      <div style="margin-left: auto">
-        <el-select clearable v-model="type" placeholder="请选择来源" size="small" style="margin-right: 1rem">
-          <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-        <el-input
-          v-model="keywords"
-          :prefix-icon="Search"
-          size="small"
-          placeholder="请输入用户昵称"
-          style="width: 200px"
-          @keyup.enter="searchComments" />
-        <el-button type="primary" size="small" :icon="Search" style="margin-left: 1rem" @click="searchComments">
-          搜索
-        </el-button>
+  <div class="comment-page">
+    <!-- 页面头部 - 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <el-icon><ChatDotRound /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ count }}</span>
+          <span class="stat-label">评论总数</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <el-icon><CircleCheck /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ approvedCount }}</span>
+          <span class="stat-label">已通过</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <el-icon><Clock /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ pendingCount }}</span>
+          <span class="stat-label">待审核</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon info">
+          <el-icon><User /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ uniqueUsers }}</span>
+          <span class="stat-label">评论用户</span>
+        </div>
       </div>
     </div>
-    <el-table
-      border
-      :data="comments"
-      @selection-change="selectionChange"
-      v-loading="loading"
-      class="comment-table"
-      :header-cell-style="{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontWeight: '600' }">
-      <el-table-column type="selection" width="55" align="center" />
-      <el-table-column prop="avatar" label="头像" align="center" width="100">
-        <template #default="{ row }">
-          <el-avatar :size="40" :src="row.avatar" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="nickname" label="评论人" align="center" width="120">
-        <template #default="{ row }">
-          <div class="nickname">
-            <el-icon style="margin-right: 5px; color: #409eff"><User /></el-icon>
-            {{ row.nickname }}
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="replyNickname" label="回复人" align="center" width="120">
-        <template #default="{ row }">
-          <div class="reply-nickname">
-            <el-icon v-if="row.replyNickname"><ChatLineRound /></el-icon>
-            {{ row.replyNickname || '无' }}
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="articleTitle" label="文章标题" align="center" min-width="180">
-        <template #default="{ row }">
-          <el-tooltip :content="row.articleTitle" placement="top" :disabled="!row.articleTitle || row.articleTitle.length <= 20">
-            <div class="article-title">
-              <el-icon><Document /></el-icon>
-              {{ row.articleTitle || '无' }}
+
+    <!-- 主内容卡片 -->
+    <el-card class="main-card">
+      <!-- 胶囊状态筛选 -->
+      <div class="status-capsules">
+        <span @click="changeReview(null)" :class="['capsule', { active: isReview == null }]">全部</span>
+        <span @click="changeReview(1)" :class="['capsule', { active: isReview == 1 }]">正常</span>
+        <span @click="changeReview(0)" :class="['capsule warning-capsule', { active: isReview == 0 }]">审核中</span>
+      </div>
+
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button type="danger" :icon="Delete" :disabled="commentIds.length === 0" @click="remove = true" class="btn-danger">
+            <span>批量删除 ({{ commentIds.length }})</span>
+          </el-button>
+          <el-button type="success" :icon="SuccessFilled" :disabled="commentIds.length === 0" @click="updateCommentReview(null)" class="btn-success">
+            <span>批量通过</span>
+          </el-button>
+        </div>
+        <div class="toolbar-right">
+          <el-select clearable v-model="type" placeholder="评论来源" size="default" class="filter-select">
+            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+          <el-input clearable v-model="keywords" :prefix-icon="Search" placeholder="搜索用户昵称..." class="search-input" @keyup.enter="searchComments" />
+          <el-button type="primary" :icon="Search" @click="searchComments" circle />
+        </div>
+      </div>
+
+      <!-- 现代化表格 -->
+      <el-table :data="comments" @selection-change="selectionChange" v-loading="loading" class="modern-table" :header-cell-style="{ background: 'transparent' }" row-key="id">
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="avatar" label="头像" width="80" align="center">
+          <template #default="{ row }">
+            <el-avatar :size="40" :src="row.avatar" class="comment-avatar" />
+          </template>
+        </el-table-column>
+        <el-table-column prop="nickname" label="评论人" width="130" align="left">
+          <template #default="{ row }">
+            <div class="nickname-cell">
+              <el-icon class="user-icon"><User /></el-icon>
+              <span class="nickname-text">{{ row.nickname }}</span>
             </div>
-          </el-tooltip>
-        </template>
-      </el-table-column>
-      <el-table-column prop="commentContent" label="评论内容" align="center" min-width="200">
-        <template #default="{ row }">
-          <div class="comment-content" v-html="sanitizeHtml(row.commentContent)" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="评论时间" width="160" align="center" sortable>
-        <template #default="{ row }">
-          <div class="create-time">
-            <el-icon><Clock /></el-icon>
-            {{ formatDate(row.createTime) }}
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="isReview" label="状态" width="100" align="center">
-        <template #default="{ row }">
-          <el-tag
-            v-if="row.isReview == 0"
-            type="warning"
-            size="small"
-            effect="plain">
-            <el-icon><Loading /></el-icon> 审核中
-          </el-tag>
-          <el-tag
-            v-if="row.isReview == 1"
-            type="success"
-            size="small"
-            effect="plain">
-            <el-icon><Check /></el-icon> 正常
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="来源" align="center" width="100">
-        <template #default="{ row }">
-          <el-tag
-            :type="getSourceType(row.type).tagType"
-            size="small"
-            effect="plain">
-            <el-icon><component :is="getSourceType(row.type).icon" /></el-icon>
-            {{ getSourceType(row.type).name }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" align="center" width="180" fixed="right">
-        <template #default="{ row }">
-          <div class="action-buttons">
-            <el-button
-              v-if="row.isReview == 0"
-              type="success"
-              size="small"
-              :icon="Check"
-              circle
-              @click="updateCommentReview(row.id)" />
-            <el-popconfirm
-              title="确定删除吗？"
-              @confirm="deleteComments(row.id)">
-              <template #reference>
-                <el-button
-                  size="small"
-                  type="danger"
-                  :icon="Delete"
-                  circle />
-              </template>
-            </el-popconfirm>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination
-      class="pagination-container"
-      background
-      @size-change="sizeChange"
-      @current-change="currentChange"
-      :current-page="current"
-      :page-size="size"
-      :total="count"
-      :page-sizes="[10, 20]"
-      layout="total, sizes, prev, pager, next, jumper" />
-    <el-dialog v-model="remove" width="30%">
-      <template #header>
-        <div class="dialog-title-container">
-          <el-icon style="color: #ff9900; font-size: 1.5rem; margin-right: 8px"><Warning /></el-icon>
-          提示
+          </template>
+        </el-table-column>
+        <el-table-column prop="replyNickname" label="回复人" width="120" align="center">
+          <template #default="{ row }">
+            <div class="reply-cell">
+              <el-icon v-if="row.replyNickname" class="reply-icon"><ChatLineRound /></el-icon>
+              <span>{{ row.replyNickname || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="articleTitle" label="文章标题" min-width="160" align="left">
+          <template #default="{ row }">
+            <el-tooltip :content="row.articleTitle" placement="top" :disabled="!row.articleTitle || row.articleTitle.length <= 20">
+              <div class="article-title-cell">
+                <el-icon class="article-icon"><Document /></el-icon>
+                <span class="article-title-text">{{ row.articleTitle || '无' }}</span>
+              </div>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        <el-table-column prop="commentContent" label="评论内容" min-width="200" align="left">
+          <template #default="{ row }">
+            <div class="comment-content-wrapper">
+              <div class="comment-content-text" v-html="sanitizeHtml(row.commentContent)" />
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="评论时间" width="160" align="center" sortable>
+          <template #default="{ row }">
+            <div class="time-cell">
+              <el-icon class="time-icon"><Clock /></el-icon>
+              <span>{{ formatDate(row.createTime) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="isReview" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <span v-if="row.isReview == 0" class="status-badge pending"><el-icon><Loading /></el-icon> 审核中</span>
+            <span v-if="row.isReview == 1" class="status-badge approved"><el-icon><Check /></el-icon> 正常</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="来源" width="90" align="center">
+          <template #default="{ row }">
+            <span :class="['source-badge', getSourceType(row.type).tagType]">
+              {{ getSourceType(row.type).name }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" align="center" fixed="right">
+          <template #default="{ row }">
+            <div class="action-btns">
+              <el-tooltip v-if="row.isReview == 0" content="通过审核" placement="top" :show-after="500">
+                <button class="action-btn approve" @click="updateCommentReview(row.id)"><el-icon><Check /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top" :show-after="500">
+                <button class="action-btn delete" @click="handleDelete(row.id)"><el-icon><Delete /></el-icon></button>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="count" :page-size="size" :current-page="current" :page-sizes="[10, 20]" @size-change="sizeChange" @current-change="currentChange" />
+      </div>
+    </el-card>
+
+    <!-- 删除确认对话框 -->
+    <el-dialog v-model="remove" width="400px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper danger"><el-icon><Warning /></el-icon></div>
+      <div class="dialog-content">
+        <h3>确认删除</h3>
+        <p>确定要删除选中的 {{ commentIds.length }} 条评论吗？此操作不可恢复。</p>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="remove = false" class="btn-cancel">取消</el-button>
+          <el-button type="danger" @click="deleteComments(null)" class="btn-confirm-danger">确认删除</el-button>
         </div>
       </template>
-      <div style="font-size: 1rem">是否彻底删除选中项？</div>
-      <template #footer>
-        <el-button @click="remove = false">取 消</el-button>
-        <el-button type="primary" @click="deleteComments(null)"> 确 定 </el-button>
-      </template>
     </el-dialog>
-  </el-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElNotification } from 'element-plus'
-import { 
-  Delete, 
-  Search, 
-  SuccessFilled, 
+import { ElMessage, ElNotification, ElMessageBox } from 'element-plus'
+import {
+  Delete,
+  Search,
+  SuccessFilled,
   User,
   ChatLineRound,
+  ChatDotRound,
   Document,
   Clock,
   Loading,
   Check,
-  Warning
+  Warning,
+  CircleCheck
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { usePageStateStore } from '@/stores/pageState'
 import dayjs from 'dayjs'
 import DOMPurify from 'dompurify'
+import logger from '@/utils/logger'
 
 const route = useRoute()
 const pageStateStore = usePageStateStore()
@@ -224,21 +222,24 @@ const current = ref(1)
 const size = ref(10)
 const count = ref(0)
 
+// 计算属性
+const approvedCount = computed(() => comments.value.filter(c => c.isReview === 1).length)
+const pendingCount = computed(() => comments.value.filter(c => c.isReview === 0).length)
+const uniqueUsers = computed(() => new Set(comments.value.map(c => c.nickname)).size)
+
 // 日期格式化
-const formatDate = (date) => {
-  return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
-}
+const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 
 // 获取来源类型
 const getSourceType = (type) => {
   const types = {
-    1: { name: '文章', tagType: 'primary', icon: 'Document' },
-    2: { name: '留言', tagType: 'danger', icon: 'ChatLineRound' },
-    3: { name: '关于我', tagType: 'success', icon: 'User' },
-    4: { name: '友链', tagType: 'warning', icon: 'Link' },
-    5: { name: '说说', tagType: 'info', icon: 'Edit' }
+    1: { name: '文章', tagType: 'primary' },
+    2: { name: '留言', tagType: 'danger' },
+    3: { name: '关于我', tagType: 'success' },
+    4: { name: '友链', tagType: 'warning' },
+    5: { name: '说说', tagType: 'info' }
   }
-  return types[type] || { name: '未知', tagType: 'info', icon: 'QuestionFilled' }
+  return types[type] || { name: '未知', tagType: 'info' }
 }
 
 // 选择变化
@@ -277,43 +278,41 @@ const updateCommentReview = (id) => {
   param.ids = id != null ? [id] : commentIds.value
   request.put('/admin/comments/review', param).then(({ data }) => {
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: data.message
-      })
+      ElNotification.success({ title: '成功', message: data.message })
       listComments()
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: data.message
-      })
+      ElNotification.error({ title: '失败', message: data.message })
     }
   }).catch(error => {
     ElMessage.error('审核失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
-// 删除评论
+// 处理删除
+const handleDelete = (id) => {
+  ElMessageBox.confirm('确定删除该评论吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    deleteComments(id)
+  }).catch(() => {})
+}
+
 const deleteComments = (id) => {
   const param = id == null ? { data: commentIds.value } : { data: [id] }
   request.delete('/admin/comments', param).then(({ data }) => {
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: data.message
-      })
+      ElNotification.success({ title: '成功', message: data.message })
       listComments()
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: data.message
-      })
+      ElNotification.error({ title: '失败', message: data.message })
     }
     remove.value = false
   }).catch(error => {
     ElMessage.error('删除评论失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -337,7 +336,7 @@ const listComments = () => {
   }).catch(error => {
     loading.value = false
     ElMessage.error('获取评论列表失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -355,526 +354,593 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== Comment Page Modern Styles ====================
- * 基于 UI/UX Pro Max 设计系统
- * 配色: Primary #2563EB, CTA #F97316
- */
+.comment-page {
+  padding: 0;
+}
 
-/* 页面标题 */
-.title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-6);
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-base, #fff);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-default, #e5e7eb);
+  transition: all 0.3s ease;
 }
 
-.title::before {
-  content: '';
-  width: 4px;
-  height: 24px;
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border-radius: var(--radius-full);
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
 }
 
-/* 审核菜单 - 现代化标签页样式 */
-.review-menu {
-  font-size: var(--text-sm);
-  margin-top: var(--space-4);
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  padding: var(--space-3) 0;
-  border-bottom: 2px solid var(--color-border);
-  gap: var(--space-2);
-}
-
-.review-menu > span:first-child {
-  font-weight: var(--font-semibold);
-  color: var(--color-text);
-  margin-right: var(--space-4);
-}
-
-.review-menu span {
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-full);
-  transition: all var(--duration-base) var(--ease-out);
-  position: relative;
-  cursor: pointer;
-}
-
-.review {
-  color: var(--color-text-secondary);
-  background: transparent;
-}
-
-.review:hover {
-  color: var(--color-primary);
-  background: var(--color-primary-50);
-}
-
-.active-review {
-  color: var(--color-primary);
-  font-weight: var(--font-semibold);
-  background: var(--color-primary-50);
-}
-
-.active-review::after {
-  content: '';
-  position: absolute;
-  bottom: -11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 3px;
-  background: var(--color-primary);
-  border-radius: var(--radius-full);
-}
-
-/* 操作区域 - 现代化工具栏 */
-.operation-container {
-  margin-top: var(--space-6);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-}
-
-.operation-container .el-button {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.operation-container .el-button:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.operation-container .el-button--danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
-  border: none;
-}
-
-.operation-container .el-button--success {
-  background: linear-gradient(135deg, var(--color-success) 0%, #34d399 100%);
-  border: none;
-}
-
-.operation-container .el-button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border: none;
-}
-
-/* 搜索区域 */
-.operation-container > div:last-child {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-left: auto;
-}
-
-.operation-container .el-select,
-.operation-container .el-input {
-  width: 180px;
-}
-
-.operation-container .el-input :deep(.el-input__inner),
-.operation-container .el-select :deep(.el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  background: var(--color-bg-card);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.operation-container .el-input :deep(.el-input__inner):focus,
-.operation-container .el-select :deep(.el-input__inner):focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-}
-
-/* 评论表格 - 现代化数据表格 */
-.comment-table {
-  margin-top: var(--space-6);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
-  background: var(--color-bg-card);
-}
-
-.comment-table :deep(.el-table__header-wrapper) {
-  background: var(--color-bg-hover);
-}
-
-.comment-table :deep(.el-table__header th) {
-  background: var(--color-bg-hover) !important;
-  color: var(--color-text);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: var(--space-3) var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.comment-table :deep(.el-table__body td) {
-  padding: var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.comment-table :deep(.el-table__body tr) {
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.comment-table :deep(.el-table__body tr:hover > td) {
-  background-color: var(--color-primary-50) !important;
-}
-
-.comment-table :deep(.el-table__row) {
-  animation: slideIn var(--duration-base) var(--ease-out);
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 头像 */
-.comment-table :deep(.el-avatar) {
-  border: 2px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--duration-base) var(--ease-out);
-}
-
-.comment-table :deep(.el-avatar):hover {
-  transform: scale(1.15);
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-}
-
-/* 昵称 */
-.nickname {
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  font-weight: var(--font-semibold);
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-}
-
-.nickname .el-icon {
-  color: var(--color-primary);
-}
-
-.reply-nickname {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-}
-
-.reply-nickname .el-icon {
-  color: var(--color-secondary);
-}
-
-/* 文章标题 */
-.article-title {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-.article-title .el-icon {
-  color: var(--color-primary);
+  font-size: 24px;
   flex-shrink: 0;
 }
 
-.article-title:hover {
-  color: var(--color-primary);
+.stat-icon.primary { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: #fff; }
+.stat-icon.success { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: #fff; }
+.stat-icon.warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: #fff; }
+.stat-icon.info { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); color: #fff; }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* 评论内容 */
-.comment-content {
-  display: inline-block;
-  max-width: 280px;
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* 主卡片 */
+.main-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e5e7eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--bg-base, #fff);
+}
+
+.main-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+/* 胶囊状态筛选 */
+.status-capsules {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
+}
+
+.capsule {
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-secondary, #6b7280);
+  background: transparent;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.capsule:hover {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+.capsule.active {
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.capsule.warning-capsule:hover {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.capsule.warning-capsule.active {
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.toolbar-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-danger {
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
+}
+
+.btn-success:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.filter-select {
+  width: 140px;
+}
+
+.filter-select :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.search-input {
+  width: 220px;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+/* 现代化表格 */
+.modern-table {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-default, #e5e7eb);
+}
+
+.modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #f9fafb);
+  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-default, #e5e7eb);
+}
+
+.modern-table :deep(.el-table__body tr) {
+  transition: all 0.2s ease;
+}
+
+.modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #f3f4f6) !important;
+}
+
+.modern-table :deep(.el-table__body td) {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
+}
+
+/* 头像 */
+.comment-avatar {
+  border: 2px solid var(--border-light, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.comment-avatar:hover {
+  transform: scale(1.1);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+/* 昵称 */
+.nickname-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-icon {
+  color: #3b82f6;
+  font-size: 16px;
+}
+
+.nickname-text {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+}
+
+/* 回复人 */
+.reply-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+.reply-icon {
+  color: #8b5cf6;
+}
+
+/* 文章标题 */
+.article-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.article-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.article-title-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  line-height: var(--leading-relaxed);
-  padding: var(--space-2);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-md);
-  transition: all var(--duration-base) var(--ease-out);
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+  transition: color 0.2s ease;
 }
 
-.comment-content:hover {
+.article-title-cell:hover .article-title-text {
+  color: #3b82f6;
+}
+
+/* 评论内容 */
+.comment-content-wrapper {
+  max-width: 300px;
+}
+
+.comment-content-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-primary, #1f2937);
+  line-height: 1.5;
+  padding: 6px 12px;
+  background: var(--bg-elevated, #f9fafb);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.comment-content-wrapper:hover .comment-content-text {
   white-space: normal;
   overflow: visible;
-  max-width: 400px;
-  background: var(--color-bg-card);
-  box-shadow: var(--shadow-lg);
-  z-index: 10;
+  background: var(--bg-base, #fff);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   position: relative;
+  z-index: 10;
 }
 
-/* 创建时间 */
-.create-time {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+/* 时间 */
+.time-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: 8px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
 }
 
-.create-time .el-icon {
-  color: var(--color-secondary);
+.time-icon {
+  color: #3b82f6;
 }
 
-/* 状态标签 */
-.comment-table :deep(.el-tag) {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-2);
-  transition: all var(--duration-fast) var(--ease-out);
+/* 状态徽章 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.comment-table :deep(.el-tag):hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+.status-badge.pending {
+  background: #fffbeb;
+  color: #d97706;
 }
 
-.comment-table :deep(.el-tag--warning) {
-  background: var(--color-warning-light);
-  border-color: var(--color-warning);
-  color: var(--color-warning);
+.status-badge.approved {
+  background: #ecfdf5;
+  color: #059669;
 }
 
-.comment-table :deep(.el-tag--success) {
-  background: var(--color-success-light);
-  border-color: var(--color-success);
-  color: var(--color-success);
+/* 来源徽章 */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
 }
+
+.source-badge.primary { background: #eff6ff; color: #2563eb; }
+.source-badge.danger { background: #fef2f2; color: #dc2626; }
+.source-badge.success { background: #ecfdf5; color: #059669; }
+.source-badge.warning { background: #fffbeb; color: #d97706; }
+.source-badge.info { background: #f5f3ff; color: #7c3aed; }
 
 /* 操作按钮 */
-.action-buttons {
+.action-btns {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
-.action-buttons .el-button {
-  transition: all var(--duration-fast) var(--ease-out);
-  border-radius: var(--radius-base);
-}
-
-.action-buttons .el-button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: var(--shadow-md);
-}
-
-.action-buttons .el-button--success {
-  background: linear-gradient(135deg, var(--color-success) 0%, #34d399 100%);
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   border: none;
-}
-
-.action-buttons .el-button--danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
-  border: none;
-}
-
-/* 分页 - 现代化样式 */
-.pagination-container {
-  float: right;
-  margin-top: var(--space-6);
-  margin-bottom: var(--space-4);
-}
-
-.pagination-container :deep(.el-pagination) {
-  font-weight: var(--font-medium);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li) {
-  border-radius: var(--radius-base);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li.is-active) {
-  background: var(--color-primary);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li):hover {
-  transform: translateY(-1px);
-}
-
-.pagination-container :deep(.el-pagination button) {
-  border-radius: var(--radius-base);
-}
-
-/* 对话框 */
-.dialog-title-container {
+  cursor: pointer;
   display: flex;
   align-items: center;
-  font-weight: var(--font-bold);
-  font-size: var(--text-lg);
-  color: var(--color-text);
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 16px;
 }
 
-.dialog-title-container .el-icon {
-  font-size: var(--text-2xl);
-  margin-right: var(--space-2);
-  color: var(--color-warning);
+.action-btn.approve { background: #ecfdf5; color: #10b981; }
+.action-btn.approve:hover { background: #10b981; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+.action-btn.delete { background: #fef2f2; color: #ef4444; }
+.action-btn.delete:hover { background: #ef4444; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+/* 分页 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light, #f3f4f6);
 }
 
-/* 加载动画 */
-.comment-table :deep(.el-loading-mask) {
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.9);
+.pagination-wrapper :deep(.el-pagination) {
+  gap: 8px;
 }
 
-/* ==================== Dark Mode ==================== */
-[data-theme="dark"] .operation-container {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
+.pagination-wrapper :deep(.el-pager li) {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
-[data-theme="dark"] .comment-content {
-  background: var(--color-bg-active);
+.pagination-wrapper :deep(.el-pager li:hover) {
+  background: var(--bg-hover, #f3f4f6);
 }
 
-[data-theme="dark"] .comment-content:hover {
-  background: var(--color-bg-card);
+.pagination-wrapper :deep(.el-pager li.is-active) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
-[data-theme="dark"] .comment-table :deep(.el-loading-mask) {
-  background: rgba(15, 23, 42, 0.9);
+/* 优雅对话框 */
+.modern-dialog :deep(.el-dialog__header) {
+  display: none;
 }
 
-/* ==================== Responsive ==================== */
+.modern-dialog :deep(.el-dialog__body) {
+  padding: 32px 32px 24px;
+}
+
+.modern-dialog :deep(.el-dialog__footer) {
+  padding: 0 32px 32px;
+}
+
+.dialog-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 20px;
+}
+
+.dialog-icon-wrapper.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #ef4444; }
+
+.dialog-content {
+  text-align: center;
+}
+
+.dialog-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin: 0 0 8px;
+}
+
+.dialog-content p {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-cancel {
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* 深色模式 */
+[data-theme="dark"] .stat-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
+}
+
+[data-theme="dark"] .stat-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .stat-value { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .stat-label { color: var(--text-secondary, #9ca3af); }
+
+[data-theme="dark"] .main-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
+}
+
+[data-theme="dark"] .capsule { color: var(--text-secondary, #9ca3af); }
+
+[data-theme="dark"] .capsule:hover {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .capsule.warning-capsule:hover {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="dark"] .status-capsules { border-bottom-color: var(--border-default, #374151); }
+
+[data-theme="dark"] .modern-table { border-color: var(--border-default, #374151); }
+
+[data-theme="dark"] .modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #374151);
+  color: var(--text-secondary, #9ca3af);
+  border-bottom-color: var(--border-default, #374151);
+}
+
+[data-theme="dark"] .modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #374151) !important;
+}
+
+[data-theme="dark"] .modern-table :deep(.el-table__body td) {
+  border-bottom-color: var(--border-default, #374151);
+}
+
+[data-theme="dark"] .comment-avatar { border-color: var(--border-default, #374151); }
+[data-theme="dark"] .nickname-text { color: var(--text-primary, #f9fafb); }
+
+[data-theme="dark"] .comment-content-text {
+  background: var(--bg-elevated, #374151);
+}
+
+[data-theme="dark"] .comment-content-wrapper:hover .comment-content-text {
+  background: var(--bg-base, #1f2937);
+}
+
+[data-theme="dark"] .status-badge.pending { background: rgba(245, 158, 11, 0.15); }
+[data-theme="dark"] .status-badge.approved { background: rgba(16, 185, 129, 0.15); }
+
+[data-theme="dark"] .source-badge.primary { background: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .source-badge.danger { background: rgba(239, 68, 68, 0.15); }
+[data-theme="dark"] .source-badge.success { background: rgba(16, 185, 129, 0.15); }
+[data-theme="dark"] .source-badge.warning { background: rgba(245, 158, 11, 0.15); }
+[data-theme="dark"] .source-badge.info { background: rgba(139, 92, 246, 0.15); }
+
+[data-theme="dark"] .action-btn.approve { background: rgba(16, 185, 129, 0.15); }
+[data-theme="dark"] .action-btn.delete { background: rgba(239, 68, 68, 0.15); }
+
+[data-theme="dark"] .dialog-content h3 { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .dialog-content p { color: var(--text-secondary, #9ca3af); }
+[data-theme="dark"] .dialog-icon-wrapper.danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.25) 100%); }
+
+[data-theme="dark"] .pagination-wrapper { border-top-color: var(--border-default, #374151); }
+
+/* 响应式 */
+@media (max-width: 1280px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 768px) {
-  .title {
-    font-size: var(--text-xl);
-  }
-
-  .review-menu {
-    flex-wrap: wrap;
-    gap: var(--space-2);
-  }
-
-  .review-menu span {
-    padding: var(--space-1) var(--space-3);
-    font-size: var(--text-xs);
-  }
-
-  .operation-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .operation-container > div:last-child {
-    margin-left: 0;
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .operation-container .el-select,
-  .operation-container .el-input {
-    width: 100%;
-  }
-
-  .operation-container .el-button {
-    width: 100%;
-  }
-
-  .comment-content {
-    max-width: 150px;
-  }
-
-  .article-title {
-    max-width: 120px;
-  }
-
-  .action-buttons {
-    flex-direction: row;
-  }
-
-  .pagination-container {
-    float: none;
-    display: flex;
-    justify-content: center;
-  }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left, .toolbar-right { width: 100%; }
+  .pagination-wrapper { justify-content: center; }
 }
 
 @media (max-width: 480px) {
-  .review-menu > span:first-child {
-    width: 100%;
-    margin-bottom: var(--space-2);
-  }
-
-  .comment-table :deep(.el-table__header) {
-    display: none;
-  }
-
-  .comment-table :deep(.el-table__row) {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-4);
-    margin-bottom: var(--space-3);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .comment-table :deep(.el-table__row td) {
-    border: none;
-    padding: var(--space-2) 0 !important;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .comment-table :deep(.el-table__row td::before) {
-    content: attr(data-label);
-    font-weight: var(--font-semibold);
-    color: var(--color-text-secondary);
-    font-size: var(--text-xs);
-  }
-
-  .comment-content {
-    max-width: none;
-    white-space: normal;
-  }
-
-  .article-title {
-    max-width: none;
-  }
+  .stats-row { grid-template-columns: 1fr; }
+  .comment-content-wrapper { max-width: 180px; }
 }
 </style>

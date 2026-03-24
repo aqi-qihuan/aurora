@@ -22,6 +22,38 @@ NProgress.configure({
 // 白名单路由(不需要登录)
 const whiteList = ['/login', '/404', '/403']
 
+/**
+ * 添加固定静态路由（不受动态路由通配符影响）
+ * 必须在通配符路由之前注册
+ */
+const addStaticRoutes = () => {
+  // 文章编辑/发布页面 + 定时任务调度日志 - 添加到 Layout 的子路由中
+  router.addRoute({
+    path: '/',
+    component: Layout,
+    children: [
+      {
+        path: 'articles/:id',
+        name: 'ArticleEdit',
+        component: () => import('@/views/article/Article.vue'),
+        meta: { title: '发布文章' }
+      },
+      {
+        path: 'quartz/log/all',
+        name: 'QuartzLogAll',
+        component: () => import('@/views/log/QuartzLog.vue'),
+        meta: { title: '调度日志' }
+      },
+      {
+        path: 'quartz/log/:id',
+        name: 'QuartzLog',
+        component: () => import('@/views/log/QuartzLog.vue'),
+        meta: { title: '调度日志' }
+      }
+    ]
+  })
+}
+
 // 标记是否已加载动态路由
 let dynamicRoutesLoaded = false
 
@@ -193,6 +225,9 @@ const loadDynamicRoutes = async (userStore) => {
         logger.log('添加路由:', route.path)
         router.addRoute(route)
       })
+
+      // 在通配符之前添加静态路由
+      addStaticRoutes()
 
       // 添加 404 通配符路由（必须最后添加）
       router.addRoute({

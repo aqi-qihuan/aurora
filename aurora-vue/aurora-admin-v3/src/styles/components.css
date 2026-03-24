@@ -532,7 +532,7 @@
   }
   
   .main-card {
-    margin: 12px;
+    margin: var(--page-padding-mobile, 12px);
   }
   
   .main-card .title {
@@ -543,4 +543,270 @@
   .main-card .operation-container {
     padding: 12px 16px;
   }
+
+  .operation-toolbar .toolbar-right {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .search-group {
+    flex-wrap: wrap;
+  }
+
+  .search-group .el-input {
+    width: 100% !important;
+  }
+}
+
+/* ===== 操作栏布局工具类 ===== */
+.operation-toolbar {
+  padding: var(--toolbar-padding, 16px 20px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px);
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.operation-toolbar .toolbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+
+/* ===== 搜索区工具类 ===== */
+.search-group {
+  display: flex;
+  align-items: center;
+  gap: var(--search-button-gap, 12px);
+}
+
+.search-group .el-input {
+  width: var(--search-input-width, 220px);
+}
+
+/* ===== 统一表格样式 ===== */
+.unified-table {
+  --el-table-border-color: var(--border-lighter);
+  --el-table-header-bg-color: var(--bg-elevated);
+  --el-table-header-text-color: var(--text-primary);
+  --el-table-row-hover-bg-color: var(--primary-light);
+  --el-table-text-color: var(--text-primary);
+  --el-table-current-row-bg-color: var(--primary-light);
+}
+
+.unified-table .el-table__header th {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600;
+}
+
+/* ===== 页面标题 ===== */
+.page-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.page-header .el-icon {
+  color: var(--primary);
+}
+
+/* ===== 弹窗统一 ===== */
+.elegant-dialog {
+  border-radius: var(--radius-xl, 16px) !important;
+  border: 1px solid var(--border-default) !important;
+  box-shadow: var(--shadow-xl) !important;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .elegant-dialog {
+  border-color: rgba(59, 130, 246, 0.15) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(59, 130, 246, 0.08) !important;
+}
+
+.elegant-dialog .el-dialog__header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-light);
+  margin-right: 0;
+}
+
+.elegant-dialog .el-dialog__title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.elegant-dialog .el-dialog__headerbtn .el-dialog__close {
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.elegant-dialog .el-dialog__headerbtn .el-dialog__close:hover {
+  color: var(--danger);
+}
+
+.elegant-dialog .el-dialog__body {
+  padding: 24px;
+  color: var(--text-primary);
+}
+
+.elegant-dialog .el-dialog__footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3, 12px);
+}
+
+.elegant-dialog .el-dialog__footer .el-button + .el-button {
+  margin-left: 0;
+}
+
+/* ===== 弹窗内部表单适配 ===== */
+.elegant-dialog .el-form-item__label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.elegant-dialog .el-input__wrapper {
+  background: var(--bg-surface);
+}
+
+/* ===== 弹窗遮罩层 ===== */
+.el-overlay-dialog {
+  backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .el-overlay {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* ===== Popconfirm 统一样式 ===== */
+.el-popconfirm__action {
+  display: flex;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-3, 12px);
+}
+
+.el-popconfirm__action .el-button + .el-button {
+  margin-left: 0;
+}
+
+/* ===== 弹窗内容居中（用于确认弹窗） ===== */
+.dialog-confirm-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4, 16px);
+  padding: var(--space-4, 16px) 0;
+}
+
+.dialog-confirm-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.dialog-confirm-icon.warning {
+  background: var(--warning-light);
+  color: var(--warning);
+  box-shadow: 0 0 20px var(--warning-glow);
+}
+
+.dialog-confirm-icon.danger {
+  background: var(--danger-light);
+  color: var(--danger);
+  box-shadow: 0 0 20px var(--danger-glow);
+}
+
+.dialog-confirm-text {
+  font-size: 15px;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ===== 表单工具类 ===== */
+.form-input-wide {
+  width: var(--form-input-width, 400px);
+  max-width: 100%;
+}
+
+.form-group {
+  margin-bottom: var(--form-item-gap, 20px);
+}
+
+/* ===== 入场交错动画 ===== */
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.stagger-enter > * {
+  opacity: 0;
+  animation: cardEnter 0.5s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+}
+
+.stagger-enter > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-enter > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-enter > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-enter > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-enter > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-enter > *:nth-child(6) { animation-delay: 300ms; }
+
+/* ===== 弹窗入场 ===== */
+@keyframes dialogScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.elegant-dialog {
+  animation: dialogScaleIn 0.3s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
+}
+
+/* ===== 骨架屏闪烁优化 ===== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-hover) 37%,
+    var(--bg-surface) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* ===== 状态切换过渡 ===== */
+.status-transition {
+  transition: all var(--duration-normal, 250ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
 }

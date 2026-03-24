@@ -1,142 +1,224 @@
 <template>
-  <el-card class="main-card">
-    <div class="title">{{ route.name }}</div>
-    <div class="operation-container">
-      <el-button type="primary" size="small" :icon="Plus" @click="openMenuModel(null)"> 新增 </el-button>
-      <el-button
-        type="danger"
-        size="small"
-        :icon="Delete"
-        :disabled="roleIds.length == 0"
-        @click="isDelete = true">
-        批量删除
-      </el-button>
-      <div style="margin-left: auto">
-        <el-input
-          v-model="keywords"
-          :prefix-icon="Search"
-          size="small"
-          placeholder="请输入角色名"
-          style="width: 200px"
-          @keyup.enter="searchRoles" />
-        <el-button type="primary" size="small" :icon="Search" style="margin-left: 1rem" @click="searchRoles">
-          搜索
-        </el-button>
+  <div class="role-page">
+    <!-- 页面头部 - 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <el-icon><UserFilled /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ count }}</span>
+          <span class="stat-label">角色总数</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <el-icon><Key /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ selectedCount }}</span>
+          <span class="stat-label">已选中</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <el-icon><Clock /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ roles.length }}</span>
+          <span class="stat-label">本页角色</span>
+        </div>
       </div>
     </div>
-    <el-table border :data="roles" @selection-change="selectionChange" v-loading="loading">
-      <el-table-column type="selection" width="55" />
-      <el-table-column prop="roleName" label="角色名" align="center" />
-      <el-table-column prop="roleLabel" label="权限标签" align="center">
-        <template #default="{ row }">
-          <el-tag>
-            {{ row.roleName }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" width="150" align="center">
-        <template #default="{ row }">
-          <el-icon style="margin-right: 5px"><Clock /></el-icon>
-          {{ formatDate(row.createTime) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" align="center" width="220">
-        <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="openMenuModel(row)">
-            <el-icon><Edit /></el-icon> 菜单权限
+
+    <!-- 主内容卡片 -->
+    <el-card class="main-card">
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button type="primary" :icon="Plus" @click="openMenuModel(null)" class="btn-add">
+            <span>新增角色</span>
           </el-button>
-          <el-button type="primary" link size="small" @click="openResourceModel(row)">
-            <el-icon><FolderChecked /></el-icon> 资源权限
+          <el-button
+            type="danger"
+            :icon="Delete"
+            :disabled="roleIds.length === 0"
+            @click="isDelete = true"
+            class="btn-batch-delete">
+            <span>批量删除 ({{ roleIds.length }})</span>
           </el-button>
-          <el-popconfirm title="确定删除吗？" @confirm="deleteRoles(row.id)">
-            <template #reference>
-              <el-button size="small" type="danger" link> <el-icon><Delete /></el-icon> 删除 </el-button>
-            </template>
-          </el-popconfirm>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination
-      class="pagination-container"
-      background
-      @size-change="sizeChange"
-      @current-change="currentChange"
-      :current-page="current"
-      :page-size="size"
-      :total="count"
-      :page-sizes="[10, 20]"
-      layout="total, sizes, prev, pager, next, jumper" />
-    <el-dialog v-model="roleMenu" width="30%">
-      <template #header>
-        <div class="dialog-title-container">{{ roleTitle }}</div>
-      </template>
-      <el-form label-width="80px" size="medium" :model="roleForm">
-        <el-form-item label="角色名">
-          <el-input v-model="roleForm.roleName" style="width: 250px" />
-        </el-form-item>
-        <el-form-item label="菜单权限">
-          <el-tree :data="menus" :default-checked-keys="roleForm.menuIds" show-checkbox node-key="id" ref="menuTreeRef" />
-        </el-form-item>
-      </el-form>
+        </div>
+        <div class="toolbar-right">
+          <el-input
+            v-model="keywords"
+            :prefix-icon="Search"
+            placeholder="搜索角色名..."
+            class="search-input"
+            clearable
+            @keyup.enter="searchRoles"
+            @clear="searchRoles" />
+          <el-button type="primary" :icon="Search" @click="searchRoles" circle />
+        </div>
+      </div>
+
+      <!-- 现代化表格 -->
+      <el-table
+        :data="roles"
+        v-loading="loading"
+        @selection-change="selectionChange"
+        class="modern-table"
+        :header-cell-style="{ background: 'transparent' }">
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="roleName" label="角色名" min-width="160">
+          <template #default="{ row }">
+            <div class="role-name-cell">
+              <div class="role-avatar">
+                <el-icon><User /></el-icon>
+              </div>
+              <span class="role-name-text">{{ row.roleName }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="roleLabel" label="权限标签" width="160" align="center">
+          <template #default="{ row }">
+            <span class="role-badge">{{ row.roleLabel }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" align="center" sortable>
+          <template #default="{ row }">
+            <div class="time-cell">
+              <el-icon class="time-icon"><Clock /></el-icon>
+              <span>{{ formatDate(row.createTime) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" align="center" fixed="right">
+          <template #default="{ row }">
+            <div class="action-btns">
+              <el-tooltip content="菜单权限" placement="top" :show-after="500">
+                <button class="action-btn menu" @click="openMenuModel(row)"><el-icon><Menu /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip content="资源权限" placement="top" :show-after="500">
+                <button class="action-btn resource" @click="openResourceModel(row)"><el-icon><FolderChecked /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top" :show-after="500">
+                <button class="action-btn delete" @click="handleDelete(row.id)"><el-icon><Delete /></el-icon></button>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          background
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="count"
+          :page-size="size"
+          :current-page="current"
+          :page-sizes="[10, 20]"
+          @size-change="sizeChange"
+          @current-change="currentChange" />
+      </div>
+    </el-card>
+
+    <!-- 删除确认对话框 -->
+    <el-dialog v-model="isDelete" width="400px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper danger"><el-icon><Warning /></el-icon></div>
+      <div class="dialog-content">
+        <h3>确认删除</h3>
+        <p>确定要删除选中的 {{ roleIds.length }} 个角色吗？此操作不可恢复。</p>
+      </div>
       <template #footer>
-        <el-button @click="roleMenu = false">取 消</el-button>
-        <el-button type="primary" @click="saveOrUpdateRoleMenu"> 确 定 </el-button>
-      </template>
-    </el-dialog>
-    <el-dialog v-model="roleResource" width="30%" top="9vh">
-      <template #header>
-        <div class="dialog-title-container">修改资源权限</div>
-      </template>
-      <el-form label-width="80px" size="medium" :model="roleForm">
-        <el-form-item label="角色名">
-          <el-input v-model="roleForm.roleName" style="width: 250px" />
-        </el-form-item>
-        <el-form-item label="资源权限">
-          <el-tree
-            :data="resources"
-            :default-checked-keys="roleForm.resourceIds"
-            show-checkbox
-            node-key="id"
-            ref="resourceTreeRef" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="roleResource = false">取 消</el-button>
-        <el-button type="primary" @click="saveOrUpdateRoleResource"> 确 定 </el-button>
-      </template>
-    </el-dialog>
-    <el-dialog v-model="isDelete" width="30%">
-      <template #header>
-        <div class="dialog-title-container">
-          <el-icon style="color: #ff9900; font-size: 1.5rem; margin-right: 8px"><Warning /></el-icon>
-          提示
+        <div class="dialog-footer">
+          <el-button @click="isDelete = false" class="btn-cancel">取消</el-button>
+          <el-button type="danger" @click="deleteRoles(null)" class="btn-confirm-danger">确认删除</el-button>
         </div>
       </template>
-      <div style="font-size: 1rem">是否删除选中项？</div>
+    </el-dialog>
+
+    <!-- 新增/编辑角色 - 菜单权限对话框 -->
+    <el-dialog v-model="roleMenu" width="520px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper primary"><el-icon><Setting /></el-icon></div>
+      <div class="dialog-content">
+        <h3>{{ roleTitle }}</h3>
+        <el-form ref="roleFormRef" :model="roleForm" :rules="roleRules" class="role-form" label-position="top">
+          <el-form-item label="角色名" prop="roleName">
+            <el-input v-model="roleForm.roleName" placeholder="请输入角色名" class="form-input" :prefix-icon="User" />
+          </el-form-item>
+          <el-form-item label="菜单权限">
+            <div class="tree-wrapper">
+              <el-tree
+                :data="menus"
+                :default-checked-keys="roleForm.menuIds"
+                show-checkbox
+                node-key="id"
+                ref="menuTreeRef" />
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
-        <el-button @click="isDelete = false">取 消</el-button>
-        <el-button type="primary" @click="deleteRoles(null)"> 确 定 </el-button>
+        <div class="dialog-footer">
+          <el-button @click="roleMenu = false" class="btn-cancel">取消</el-button>
+          <el-button type="primary" @click="saveOrUpdateRoleMenu" class="btn-confirm">确认保存</el-button>
+        </div>
       </template>
     </el-dialog>
-  </el-card>
+
+    <!-- 资源权限对话框 -->
+    <el-dialog v-model="roleResource" width="520px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper success"><el-icon><FolderChecked /></el-icon></div>
+      <div class="dialog-content">
+        <h3>修改资源权限</h3>
+        <el-form :model="roleForm" class="role-form" label-position="top">
+          <el-form-item label="角色名">
+            <el-input v-model="roleForm.roleName" placeholder="角色名" class="form-input" :prefix-icon="User" disabled />
+          </el-form-item>
+          <el-form-item label="资源权限">
+            <div class="tree-wrapper">
+              <el-tree
+                :data="resources"
+                :default-checked-keys="roleForm.resourceIds"
+                show-checkbox
+                node-key="id"
+                ref="resourceTreeRef" />
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="roleResource = false" class="btn-cancel">取消</el-button>
+          <el-button type="primary" @click="saveOrUpdateRoleResource" class="btn-confirm">确认保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElNotification } from 'element-plus'
-import { 
-  Plus, 
-  Delete, 
-  Search, 
-  Edit, 
-  FolderChecked, 
+import { ElMessage, ElNotification, ElMessageBox } from 'element-plus'
+import {
+  Plus,
+  Delete,
+  Search,
+  User,
+  UserFilled,
+  Key,
   Clock,
-  Warning
+  Warning,
+  Menu,
+  FolderChecked,
+  Setting
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { usePageStateStore } from '@/stores/pageState'
 import dayjs from 'dayjs'
+import logger from '@/utils/logger'
 
 const route = useRoute()
 const pageStateStore = usePageStateStore()
@@ -165,6 +247,11 @@ const roleForm = reactive({
   resourceIds: [],
   menuIds: []
 })
+const roleRules = {
+  roleName: [{ required: true, message: '请输入角色名', trigger: 'blur' }]
+}
+
+const selectedCount = computed(() => roleIds.value.length)
 
 // 日期格式化
 const formatDate = (date) => {
@@ -211,23 +298,33 @@ const listRoles = () => {
   }).catch(error => {
     loading.value = false
     ElMessage.error('获取角色列表失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
-  
+
   request.get('/admin/role/resources').then(({ data }) => {
     resources.value = data?.data || []
   }).catch(error => {
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
-  
+
   request.get('/admin/role/menus').then(({ data }) => {
     menus.value = data.data
   }).catch(error => {
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
 // 删除角色
+const handleDelete = (id) => {
+  ElMessageBox.confirm('确定删除该角色吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    deleteRoles(id)
+  }).catch(() => {})
+}
+
 const deleteRoles = (id) => {
   const param = id == null ? { data: roleIds.value } : { data: [id] }
   request.delete('/admin/roles', param).then(({ data }) => {
@@ -246,7 +343,7 @@ const deleteRoles = (id) => {
     isDelete.value = false
   }).catch(error => {
     ElMessage.error('删除失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -257,9 +354,9 @@ const openMenuModel = (role) => {
       menuTreeRef.value.setCheckedKeys([])
     }
   })
-  
+
   roleTitle.value = role ? '修改角色' : '新增角色'
-  
+
   if (role != null) {
     Object.assign(roleForm, JSON.parse(JSON.stringify(role)))
   } else {
@@ -304,7 +401,7 @@ const saveOrUpdateRoleResource = () => {
     roleResource.value = false
   }).catch(error => {
     ElMessage.error('保存失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -334,7 +431,7 @@ const saveOrUpdateRoleMenu = () => {
     roleMenu.value = false
   }).catch(error => {
     ElMessage.error('保存失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -346,308 +443,449 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== Role Page Modern Styles ====================
- * 基于 UI/UX Pro Max 设计系统
- * 配色: Primary #2563EB, CTA #F97316
- */
-
-/* 页面标题 */
-.title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-6);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.role-page {
+  padding: 0;
 }
 
-.title::before {
-  content: '';
-  width: 4px;
-  height: 24px;
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border-radius: var(--radius-full);
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
-/* 操作区域 - 现代化工具栏 */
-.operation-container {
-  margin-top: var(--space-6);
+.stat-card {
+  background: var(--bg-base, #fff);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-default, #e5e7eb);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: #fff; }
+.stat-icon.success { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); color: #fff; }
+.stat-icon.warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: #fff; }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* 主卡片 */
+.main-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e5e7eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--bg-base, #fff);
+}
+
+.main-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  margin-bottom: var(--space-6);
+  gap: 16px;
 }
 
-.operation-container .el-button {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--ease-out);
+.toolbar-left {
+  display: flex;
+  gap: 12px;
 }
 
-.operation-container .el-button:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.operation-container .el-button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border: none;
-}
-
-.operation-container .el-button--danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, #f87171 100%);
-  border: none;
-}
-
-/* 搜索区域 */
-.operation-container > div:last-child {
+.toolbar-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-left: auto;
+  gap: 12px;
 }
 
-.operation-container .el-input {
-  width: 200px;
+.btn-add {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
 }
 
-.operation-container .el-input :deep(.el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  background: var(--color-bg-card);
-  transition: all var(--duration-fast) var(--ease-out);
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.operation-container .el-input :deep(.el-input__inner):focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+.btn-batch-delete {
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
 }
 
-/* 角色表格 - 现代化数据表格 */
-.el-table {
-  border-radius: var(--radius-lg);
+.btn-batch-delete:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.search-input {
+  width: 280px;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px #3b82f6;
+}
+
+/* 现代化表格 */
+.modern-table {
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  background: var(--color-bg-card);
+  border: 1px solid var(--border-default, #e5e7eb);
 }
 
-.el-table :deep(.el-table__header-wrapper) {
-  background: var(--color-bg-hover);
-}
-
-.el-table :deep(.el-table__header th) {
-  background: var(--color-bg-hover) !important;
-  color: var(--color-text);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-xs);
+.modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #f9fafb);
+  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: var(--space-3) var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border);
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-default, #e5e7eb);
 }
 
-.el-table :deep(.el-table__body td) {
-  padding: var(--space-3) var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border-light);
+.modern-table :deep(.el-table__body tr) {
+  transition: all 0.2s ease;
 }
 
-.el-table :deep(.el-table__body tr) {
-  transition: all var(--duration-fast) var(--ease-out);
+.modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #f3f4f6) !important;
 }
 
-.el-table :deep(.el-table__body tr:hover > td) {
-  background-color: var(--color-primary-50) !important;
+.modern-table :deep(.el-table__body td) {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
 }
 
-/* 角色标签 */
-.el-table :deep(.el-tag) {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-3);
-  transition: all var(--duration-fast) var(--ease-out);
+/* 角色名单元格 */
+.role-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.el-table :deep(.el-tag):hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+.role-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.role-name-text {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+}
+
+/* 权限标签 */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 时间单元格 */
+.time-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+}
+
+.time-icon {
+  color: #3b82f6;
 }
 
 /* 操作按钮 */
-.el-button--text {
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--ease-out);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-base);
-  color: var(--color-primary);
+.action-btns {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
 }
 
-.el-button--text:hover {
-  background: var(--color-primary-50);
-  transform: translateY(-1px);
-}
-
-.el-button--text .el-icon {
-  margin-right: var(--space-1);
-}
-
-/* 分页 - 现代化样式 */
-.pagination-container {
-  float: right;
-  margin-top: var(--space-6);
-  margin-bottom: var(--space-4);
-}
-
-.pagination-container :deep(.el-pagination) {
-  font-weight: var(--font-medium);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li) {
-  border-radius: var(--radius-base);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li.is-active) {
-  background: var(--color-primary);
-}
-
-.pagination-container :deep(.el-pagination .el-pager li):hover {
-  transform: translateY(-1px);
-}
-
-.pagination-container :deep(.el-pagination button) {
-  border-radius: var(--radius-base);
-}
-
-/* 对话框 */
-.dialog-title-container {
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  font-weight: var(--font-bold);
-  font-size: var(--text-lg);
-  color: var(--color-text);
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 16px;
 }
 
-.dialog-title-container .el-icon {
-  font-size: var(--text-2xl);
-  margin-right: var(--space-2);
-  color: var(--color-warning);
+.action-btn.menu { background: #eff6ff; color: #3b82f6; }
+.action-btn.menu:hover { background: #3b82f6; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+.action-btn.resource { background: #f0fdf4; color: #16a34a; }
+.action-btn.resource:hover { background: #16a34a; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
+.action-btn.delete { background: #fef2f2; color: #ef4444; }
+.action-btn.delete:hover { background: #ef4444; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+/* 分页 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light, #f3f4f6);
+}
+
+.pagination-wrapper :deep(.el-pager li) {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pagination-wrapper :deep(.el-pager li:hover) {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+.pagination-wrapper :deep(.el-pager li.is-active) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* 优雅对话框 */
+.modern-dialog :deep(.el-dialog__header) {
+  display: none;
+}
+
+.modern-dialog :deep(.el-dialog__body) {
+  padding: 32px 32px 24px;
+}
+
+.modern-dialog :deep(.el-dialog__footer) {
+  padding: 0 32px 32px;
+}
+
+.dialog-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 20px;
+}
+
+.dialog-icon-wrapper.primary { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #3b82f6; }
+.dialog-icon-wrapper.success { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); color: #16a34a; }
+.dialog-icon-wrapper.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #ef4444; }
+
+.dialog-content {
+  text-align: center;
+}
+
+.dialog-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin: 0 0 8px;
+}
+
+.dialog-content p {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-cancel {
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-confirm-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 /* 表单样式 */
-:deep(.el-form-item__label) {
-  font-weight: var(--font-medium);
-  color: var(--color-text);
+.role-form {
+  margin-top: 24px;
+  text-align: left;
 }
 
-.el-input :deep(.el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  transition: all var(--duration-fast) var(--ease-out);
+.role-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  padding-bottom: 8px;
 }
 
-.el-input :deep(.el-input__inner):focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+.form-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  height: 44px;
+}
+
+.form-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px #3b82f6;
 }
 
 /* 树形控件 */
-.el-tree {
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-base);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
+.tree-wrapper {
+  border: 1px solid var(--border-default, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--bg-elevated, #f9fafb);
+  max-height: 260px;
+  overflow-y: auto;
 }
 
-.el-tree :deep(.el-tree-node__content) {
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-fast) var(--ease-out);
+/* 深色模式 */
+[data-theme="dark"] .stat-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
 }
 
-.el-tree :deep(.el-tree-node__content):hover {
-  background: var(--color-primary-50);
+[data-theme="dark"] .stat-value { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .stat-label { color: var(--text-secondary, #9ca3af); }
+
+[data-theme="dark"] .main-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
 }
 
-/* 加载动画 */
-.el-table :deep(.el-loading-mask) {
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.9);
+[data-theme="dark"] .modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #374151);
+  color: var(--text-secondary, #9ca3af);
 }
 
-/* ==================== Dark Mode ==================== */
-[data-theme="dark"] .operation-container {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
+[data-theme="dark"] .modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #374151) !important;
 }
 
-[data-theme="dark"] .el-table :deep(.el-loading-mask) {
-  background: rgba(15, 23, 42, 0.9);
+[data-theme="dark"] .role-avatar { background: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .role-name-text { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .role-badge { background: rgba(22, 163, 74, 0.15); color: #4ade80; }
+
+[data-theme="dark"] .action-btn.menu { background: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .action-btn.resource { background: rgba(22, 163, 74, 0.15); }
+[data-theme="dark"] .action-btn.delete { background: rgba(239, 68, 68, 0.15); }
+
+[data-theme="dark"] .dialog-content h3 { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .dialog-content p { color: var(--text-secondary, #9ca3af); }
+[data-theme="dark"] .tree-wrapper { background: var(--bg-elevated, #374151); border-color: var(--border-default, #374151); }
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-card:last-child { grid-column: span 2; }
 }
 
-[data-theme="dark"] .el-tree {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
-}
-
-/* ==================== Responsive ==================== */
 @media (max-width: 768px) {
-  .title {
-    font-size: var(--text-xl);
-  }
-
-  .operation-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .operation-container > div:last-child {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .operation-container .el-input {
-    width: 100%;
-  }
-
-  .operation-container .el-button {
-    width: 100%;
-  }
-
-  .pagination-container {
-    float: none;
-    display: flex;
-    justify-content: center;
-  }
-
-  .el-button--text {
-    padding: var(--space-1) var(--space-2);
-  }
+  .stats-row { grid-template-columns: 1fr; }
+  .stat-card:last-child { grid-column: span 1; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left, .toolbar-right { width: 100%; }
+  .btn-add, .btn-batch-delete { width: 100%; }
+  .search-input { width: 100%; }
+  .pagination-wrapper { justify-content: center; }
 }
 
 @media (max-width: 480px) {
-  :deep(.el-dialog) {
-    width: 90% !important;
-  }
-
-  :deep(.el-form-item__label) {
-    float: none;
-    display: block;
-    text-align: left;
-    margin-bottom: var(--space-2);
-  }
-
-  :deep(.el-form-item__content) {
-    margin-left: 0 !important;
-  }
-
-  .el-input {
-    width: 100% !important;
-  }
+  .main-card :deep(.el-card__body) { padding: 16px; }
+  .stat-card { padding: 16px; }
+  .stat-icon { width: 48px; height: 48px; font-size: 20px; }
+  .stat-value { font-size: 24px; }
+  .modern-dialog :deep(.el-dialog) { width: 92% !important; }
 }
 </style>

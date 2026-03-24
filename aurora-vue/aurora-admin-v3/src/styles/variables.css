@@ -41,6 +41,22 @@
   --info: #6366F1;              /* 信息 */
   --info-light: rgba(99, 102, 241, 0.08);
 
+  /* ===== 兼容性别名（保持旧代码兼容） ===== */
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-50: rgba(59, 130, 246, 0.05);
+  --color-primary-100: rgba(59, 130, 246, 0.1);
+  --color-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--danger);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border-default);
+  --color-bg-card: var(--bg-base);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-surface: var(--bg-surface);
+
   /* ===== 霓虹高亮色（浅色模式降调） ===== */
   --neon-blue: #0EA5E9;         /* 霓虹蓝 - 高亮、链接 */
   --neon-green: #10B981;        /* 霓虹绿 - 成功状态 */
@@ -113,6 +129,37 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+
+  /* ===== 布局变量 ===== */
+  --page-padding: 20px;
+  --page-padding-mobile: 12px;
+  --card-gap: 16px;
+  --section-gap: 20px;
+
+  /* ===== 搜索区 ===== */
+  --search-input-width: 220px;
+  --search-button-gap: 12px;
+
+  /* ===== 表格 ===== */
+  --table-header-height: 48px;
+  --table-row-height: 56px;
+  --table-cell-padding-x: 16px;
+  --table-cell-padding-y: 14px;
+
+  /* ===== 操作栏 ===== */
+  --toolbar-padding: 16px 20px;
+
+  /* ===== 表单 ===== */
+  --form-label-width: 100px;
+  --form-input-height: 36px;
+  --form-input-width: 400px;
+  --form-item-gap: 20px;
+
+  /* ===== 头像 ===== */
+  --avatar-sm: 32px;
+  --avatar-md: 40px;
+  --avatar-lg: 56px;
+  --avatar-xl: 80px;
 }
 
 /* ===== 深色主题 - 极客风 ===== */
@@ -152,6 +199,22 @@
 
   --info: #6366F1;              /* 信息 */
   --info-light: rgba(99, 102, 241, 0.1);
+
+  /* ===== 兼容性别名（保持旧代码兼容） ===== */
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-50: rgba(59, 130, 246, 0.08);
+  --color-primary-100: rgba(59, 130, 246, 0.15);
+  --color-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--danger);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border-default);
+  --color-bg-card: var(--bg-base);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-surface: var(--bg-surface);
 
   /* ===== 霓虹高亮色 ===== */
   --neon-blue: #00D4FF;         /* 霓虹蓝 - 高亮、链接 */

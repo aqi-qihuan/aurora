@@ -1,10 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/layout/index.vue'
-// 静态导入静态路由组件（消除动态/静态导入冲突警告）
-import Home from '@/views/home/Home.vue'
-import Login from '@/views/login/Login.vue'
-import NotFound from '@/views/error/404.vue'
-import Forbidden from '@/views/error/403.vue'
 
 /**
  * 静态路由配置
@@ -19,7 +14,7 @@ export const constantRoutes = [
       {
         path: 'home',
         name: 'Home',
-        component: Home,
+        component: () => import('@/views/home/Home.vue'),
         meta: { title: '首页' }
       }
     ]
@@ -27,21 +22,21 @@ export const constantRoutes = [
   {
     path: '/login',
     name: 'Login',
-    component: Login,
+    component: () => import('@/views/login/Login.vue'),
     hidden: true,
     meta: { title: '登录' }
   },
   {
     path: '/404',
     name: '404',
-    component: NotFound,
+    component: () => import('@/views/error/404.vue'),
     hidden: true,
     meta: { title: '404' }
   },
   {
     path: '/403',
     name: '403',
-    component: Forbidden,
+    component: () => import('@/views/error/403.vue'),
     hidden: true,
     meta: { title: '403' }
   }
@@ -57,16 +52,5 @@ const router = createRouter({
     return { top: 0 }
   }
 })
-
-/**
- * 重置路由
- */
-export function resetRouter() {
-  const newRouter = createRouter({
-    history: createWebHistory(),
-    routes: constantRoutes
-  })
-  router.matcher = newRouter.matcher
-}
 
 export default router

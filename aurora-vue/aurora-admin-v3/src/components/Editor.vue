@@ -12,6 +12,14 @@
 
 <script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue'
+import DOMPurify from 'dompurify'
+
+const sanitizeHtml = (html) => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'br', 'p', 'span', 'img', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'del', 'u', 'sup', 'sub', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+    ALLOWED_ATTR: ['href', 'title', 'target', 'class', 'src', 'alt', 'style']
+  })
+}
 
 const props = defineProps({
   value: {
@@ -31,13 +39,13 @@ const props = defineProps({
 const emit = defineEmits(['input', 'focus', 'blur'])
 
 const editor = ref(null)
-const innerText = ref(props.value)
+const innerText = ref(sanitizeHtml(props.value))
 const isLocked = ref(false)
 const range = ref(null)
 
 watch(() => props.value, (newValue) => {
   if (!isLocked.value) {
-    innerText.value = newValue
+    innerText.value = sanitizeHtml(newValue)
   }
 })
 
@@ -73,7 +81,7 @@ const addText = (value) => {
       range.value = selection.getRangeAt(0)
     }
     range.value.deleteContents()
-    range.value.insertNode(range.value.createContextualFragment(value))
+    range.value.insertNode(range.value.createContextualFragment(sanitizeHtml(value)))
     range.value.collapse(false)
     selection.addRange(range.value)
     emit('input', editor.value.innerHTML)
@@ -92,7 +100,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   border-radius: 8px;
-  background: #f0f1f4;
+  background: var(--bg-surface, #f0f1f4);
   font-size: 14px;
   line-height: 1.5;
   padding: 6px 12px;

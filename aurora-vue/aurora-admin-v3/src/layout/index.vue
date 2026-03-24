@@ -3,22 +3,25 @@
     <SideBar ref="sidebar" @menu-clicked="handleMenuClicked" />
     <div class="main-container" :class="{ 'hideSideBar': appStore.collapse }">
       <div class="header-wrapper">
-        <NavBar :key="route.fullPath" @toggle-mobile-sidebar="toggleMobileSidebar" />
+        <NavBar @toggle-mobile-sidebar="toggleMobileSidebar" />
       </div>
-      <main class="main-content">
+      <main id="main-content" class="main-content">
         <div class="fade-transform-box">
-          <transition name="fade-transform" mode="out-in">
-            <router-view :key="route.fullPath" />
-          </transition>
+          <router-view v-slot="{ Component, route: currentRoute }">
+            <keep-alive :include="cachedViews">
+              <component :is="Component" :key="currentRoute.path" v-if="currentRoute.meta?.keepAlive !== false" />
+            </keep-alive>
+            <component :is="Component" :key="currentRoute.path" v-if="currentRoute.meta?.keepAlive === false" />
+          </router-view>
         </div>
       </main>
     </div>
-    <div v-if="isMobile && mobileSidebarVisible" class="sidebar-overlay" @click="toggleMobileSidebar" />
+    <div v-if="isMobile && mobileSidebarVisible" class="sidebar-overlay" role="presentation" @click="toggleMobileSidebar" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import NavBar from '@/layout/components/NavBar.vue'
 import SideBar from '@/layout/components/SideBar.vue'
@@ -30,6 +33,13 @@ const appStore = useAppStore()
 const isMobile = ref(false)
 const mobileSidebarVisible = ref(false)
 const sidebar = ref(null)
+
+// 缓存已打开的标签页组件名
+const cachedViews = computed(() => {
+  return appStore.tabList
+    .filter(tab => tab.name)
+    .map(tab => tab.name)
+})
 
 const checkMobile = () => {
   isMobile.value = window.innerWidth < 768

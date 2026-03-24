@@ -16,7 +16,8 @@
       text-color="var(--text-primary)"
       active-text-color="var(--primary)"
       @select="handleMenuSelect"
-      :default-openeds="defaultOpeneds">
+      :default-openeds="defaultOpeneds"
+      :key="menuKey">
       <template v-for="routeItem of userStore.userMenus" :key="routeItem.path">
         <template v-if="routeItem.name && routeItem.children && !routeItem.hidden">
           <el-sub-menu :index="routeItem.path" popper-class="sidebar-popper">
@@ -26,7 +27,7 @@
               </el-icon>
               <span>{{ routeItem.name }}</span>
             </template>
-            <template v-for="(item, index) of routeItem.children" :key="index">
+            <template v-for="item in routeItem.children" :key="item.path || item.name">
               <el-menu-item v-if="!item.hidden" :index="item.path">
                 <el-icon class="menu-icon">
                   <component :is="getIcon(item.icon)" />
@@ -50,17 +51,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useAppStore } from '@/stores/app'
 import { Platform, House, Document, User, Setting, ChatDotRound, Picture, Timer, Folder, Collection } from '@element-plus/icons-vue'
 
+const emit = defineEmits(['menu-clicked'])
 const route = useRoute()
 const userStore = useUserStore()
 const appStore = useAppStore()
 
 const defaultOpeneds = ref([])
+
+// 菜单 key，当 userMenus 变化时强制 el-menu 重新渲染
+const menuKey = computed(() => userStore.userMenus.length)
 
 const iconMap = {
   'el-icon-s-platform': Platform,
@@ -89,8 +94,6 @@ const iconMap = {
 const getIcon = (iconName) => {
   return iconMap[iconName] || Document
 }
-
-const emit = defineEmits(['menu-clicked'])
 
 const handleMenuSelect = () => {
   // 移动端点击菜单项后关闭侧边栏
@@ -121,8 +124,8 @@ const handleMenuSelect = () => {
 
 /* 深色主题特殊样式 */
 [data-theme="dark"] .sidebar-container {
-  border-right: 2px solid var(--primary);
-  box-shadow: 4px 0 24px rgba(59, 130, 246, 0.3);
+  border-right: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 2px 0 15px rgba(59, 130, 246, 0.15);
 }
 
 /* 折叠状态 */
@@ -200,13 +203,12 @@ const handleMenuSelect = () => {
 /* 深色主题Logo图标发光效果 */
 [data-theme="dark"] .logo .el-icon {
   color: var(--neon-blue);
-  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.5));
-  animation: logo-glow 2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.4));
+  will-change: filter;
 }
 
-@keyframes logo-glow {
-  from { filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.3)); }
-  to { filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.6)); }
+[data-theme="dark"] .sidebar-container:hover .logo .el-icon {
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
 }
 
 .logo span {
@@ -305,27 +307,26 @@ const handleMenuSelect = () => {
 
 /* ===== 深色主题激活状态 - 霓虹发光 ===== */
 [data-theme="dark"] ::deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
   color: var(--neon-blue, #00D4FF);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3),
-              inset 0 0 15px rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
 }
 
 [data-theme="dark"] ::deep(.el-menu-item.is-active)::before {
   background: var(--neon-blue, #00D4FF);
-  box-shadow: 0 0 10px var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 8px var(--neon-blue, #00D4FF);
 }
 
 [data-theme="dark"] ::deep(.el-menu-item.is-active) .menu-icon {
   color: var(--neon-blue, #00D4FF);
-  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6));
+  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.5));
 }
 
 /* ===== 深色主题悬停效果 ===== */
 [data-theme="dark"] ::deep(.el-menu-item:hover) .menu-icon,
 [data-theme="dark"] ::deep(.el-sub-menu__title:hover) .menu-icon {
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));
 }
 
 ::deep(.el-sub-menu .el-menu-item) {

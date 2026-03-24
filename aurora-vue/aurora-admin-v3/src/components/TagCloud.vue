@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 const props = defineProps({
   tags: {
@@ -183,10 +183,8 @@ onUnmounted(() => {
 })
 
 // 监听数据变化
-const stopWatch = computed(() => {
-  initTags()
-  return props.tags || props.data
-})
+watch(() => props.tags, () => { initTags() }, { deep: true, immediate: true })
+watch(() => props.data, () => { initTags() }, { deep: true, immediate: true })
 </script>
 
 <style scoped>

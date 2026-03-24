@@ -176,6 +176,10 @@ export const roleDirective = {
   }
 }
 
+export const getAuthHeaders = () => ({
+  Authorization: 'Bearer ' + sessionStorage.getItem('token')
+})
+
 export default {
   hasPermission,
   hasRole,
@@ -183,5 +187,6 @@ export default {
   getPermissions,
   checkRoutePermission,
   permissionDirective,
-  roleDirective
+  roleDirective,
+  getAuthHeaders
 }

@@ -1,9 +1,60 @@
 <template>
-  <el-card class="main-card">
-    <el-tabs v-model="activeName">
-      <el-tab-pane label="网站信息" name="info">
-        <el-form label-width="100px" :model="websiteConfigForm" label-position="left">
-          <el-form-item label="作者头像">
+  <div class="website-page">
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <el-icon><Monitor /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">3</span>
+          <span class="stat-label">配置分类</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <el-icon><Link /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ socialCount }}</span>
+          <span class="stat-label">社交链接</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <el-icon><Setting /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ activeFeatures }}</span>
+          <span class="stat-label">已启用功能</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主内容卡片 -->
+    <el-card class="main-card">
+      <!-- Tab 头部 -->
+      <div class="tab-header">
+        <div
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="tab-item"
+          :class="{ active: activeName === tab.key }"
+          @click="activeName = tab.key">
+          <el-icon><component :is="tab.icon" /></el-icon>
+          <span>{{ tab.label }}</span>
+        </div>
+      </div>
+
+      <!-- 网站信息 -->
+      <div v-show="activeName === 'info'" class="tab-content">
+        <div class="section-title">
+          <el-icon><InfoFilled /></el-icon>
+          基本信息
+        </div>
+        <div class="form-grid">
+          <div class="form-group upload-group">
+            <label class="form-label">作者头像</label>
             <el-upload
               class="avatar-uploader"
               action="/api/admin/config/images"
@@ -12,10 +63,14 @@
               :before-upload="beforeUpload"
               :on-success="handleAuthorAvatarSuccess">
               <img v-if="websiteConfigForm.authorAvatar" :src="websiteConfigForm.authorAvatar" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+              <div v-else class="avatar-placeholder">
+                <el-icon><Plus /></el-icon>
+                <span>上传头像</span>
+              </div>
             </el-upload>
-          </el-form-item>
-          <el-form-item label="网站logo">
+          </div>
+          <div class="form-group upload-group">
+            <label class="form-label">网站Logo</label>
             <el-upload
               class="avatar-uploader"
               action="/api/admin/config/images"
@@ -24,10 +79,14 @@
               :before-upload="beforeUpload"
               :on-success="handleLogoSuccess">
               <img v-if="websiteConfigForm.logo" :src="websiteConfigForm.logo" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+              <div v-else class="avatar-placeholder">
+                <el-icon><Plus /></el-icon>
+                <span>上传Logo</span>
+              </div>
             </el-upload>
-          </el-form-item>
-          <el-form-item label="favicon">
+          </div>
+          <div class="form-group upload-group">
+            <label class="form-label">Favicon</label>
             <el-upload
               class="avatar-uploader"
               action="/api/admin/config/images"
@@ -36,197 +95,301 @@
               :before-upload="beforeUpload"
               :on-success="handleFaviconSuccess">
               <img v-if="websiteConfigForm.favicon" :src="websiteConfigForm.favicon" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+              <div v-else class="avatar-placeholder">
+                <el-icon><Plus /></el-icon>
+                <span>上传图标</span>
+              </div>
             </el-upload>
-          </el-form-item>
-          <el-form-item label="网站名称">
-            <el-input v-model="websiteConfigForm.name" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="网站英文名称">
-            <el-input v-model="websiteConfigForm.englishName" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="网站作者">
-            <el-input v-model="websiteConfigForm.author" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="网页标题">
-            <el-input v-model="websiteConfigForm.websiteTitle" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="作者介绍">
-            <el-input v-model="websiteConfigForm.authorIntro" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="多语言">
-            <el-radio-group v-model="websiteConfigForm.multiLanguage">
-              <el-radio :value="0">关闭</el-radio>
-              <el-radio :value="1">开启</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="网站创建日期">
+          </div>
+          <div class="form-group">
+            <label class="form-label">网站名称</label>
+            <el-input v-model="websiteConfigForm.name" placeholder="请输入网站名称" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">网站英文名称</label>
+            <el-input v-model="websiteConfigForm.englishName" placeholder="请输入英文名称" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">网站作者</label>
+            <el-input v-model="websiteConfigForm.author" placeholder="请输入作者名" class="form-input" />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">网页标题</label>
+            <el-input v-model="websiteConfigForm.websiteTitle" placeholder="请输入网页标题" class="form-input" />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">作者介绍</label>
+            <el-input v-model="websiteConfigForm.authorIntro" placeholder="请输入作者介绍" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">多语言</label>
+            <div class="radio-card-group">
+              <div class="radio-card" :class="{ active: websiteConfigForm.multiLanguage === 0 }" @click="websiteConfigForm.multiLanguage = 0">
+                <el-icon><Close /></el-icon>
+                <span>关闭</span>
+              </div>
+              <div class="radio-card" :class="{ active: websiteConfigForm.multiLanguage === 1 }" @click="websiteConfigForm.multiLanguage = 1">
+                <el-icon><Check /></el-icon>
+                <span>开启</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">网站创建日期</label>
             <el-date-picker
-              style="width: 400px"
+              class="form-input"
               value-format="YYYY-MM-DD"
               v-model="websiteConfigForm.websiteCreateTime"
               type="date"
               placeholder="选择日期" />
-          </el-form-item>
-          <el-form-item label="网站公告">
+          </div>
+          <div class="form-group">
+            <label class="form-label">QQ登录</label>
+            <div class="radio-card-group">
+              <div class="radio-card" :class="{ active: websiteConfigForm.qqLogin === 0 }" @click="websiteConfigForm.qqLogin = 0">
+                <el-icon><Close /></el-icon>
+                <span>关闭</span>
+              </div>
+              <div class="radio-card" :class="{ active: websiteConfigForm.qqLogin === 1 }" @click="websiteConfigForm.qqLogin = 1">
+                <el-icon><Check /></el-icon>
+                <span>开启</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">网站公告</label>
             <el-input
               v-model="websiteConfigForm.notice"
               placeholder="请输入公告内容"
-              style="width: 400px"
+              class="form-input"
               type="textarea"
-              :rows="5" />
-          </el-form-item>
-          <el-form-item label="工信部备案号">
-            <el-input v-model="websiteConfigForm.beianNumber" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="公安部备案号">
-            <el-input v-model="websiteConfigForm.gonganBeianNumber" size="small" style="width: 400px" />
-          </el-form-item>
-          <el-form-item label="qq登录">
-            <el-radio-group v-model="websiteConfigForm.qqLogin">
-              <el-radio :value="0">关闭</el-radio>
-              <el-radio :value="1">开启</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-button type="primary" size="medium" style="margin-left: 6.3rem" @click="updateWebsiteConfig">
-            修改
-          </el-button>
-        </el-form>
-      </el-tab-pane>
-      <el-tab-pane label="社交信息" name="notice">
-        <div class="tip">tip:空白默认不显示</div>
-        <el-form label-width="70px" :model="websiteConfigForm">
-          <el-form-item label="Github">
-            <el-input v-model="websiteConfigForm.github" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="Gitee">
-            <el-input v-model="websiteConfigForm.gitee" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="QQ">
-            <el-input v-model="websiteConfigForm.qq" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="WeChat">
-            <el-input v-model="websiteConfigForm.weChat" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="微博">
-            <el-input v-model="websiteConfigForm.weibo" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="CSDN">
-            <el-input v-model="websiteConfigForm.csdn" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="知乎">
-            <el-input v-model="websiteConfigForm.zhihu" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="掘金">
-            <el-input v-model="websiteConfigForm.juejin" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="twitter">
-            <el-input v-model="websiteConfigForm.twitter" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-form-item label="stackoverflow">
-            <el-input v-model="websiteConfigForm.stackoverflow" size="small" style="width: 400px; margin-right: 1rem" />
-          </el-form-item>
-          <el-button type="primary" size="medium" style="margin-left: 4.375rem" @click="updateWebsiteConfig">
-            修改
-          </el-button>
-        </el-form>
-      </el-tab-pane>
-      <el-tab-pane label="其他设置" name="password">
-        <el-form label-width="120px" :model="websiteConfigForm" label-position="left">
-          <el-row style="width: 600px">
-            <el-col :span="12">
-              <el-form-item label="用户头像">
-                <el-upload
-                  class="avatar-uploader"
-                  action="/api/admin/config/images"
-                  :headers="headers"
-                  :show-file-list="false"
-                  :before-upload="beforeUpload"
-                  :on-success="handleUserAvatarSuccess">
-                  <img v-if="websiteConfigForm.userAvatar" :src="websiteConfigForm.userAvatar" class="avatar" />
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="游客头像">
-                <el-upload
-                  class="avatar-uploader"
-                  action="/api/admin/config/images"
-                  :headers="headers"
-                  :show-file-list="false"
-                  :before-upload="beforeUpload"
-                  :on-success="handleTouristAvatarSuccess">
-                  <img v-if="websiteConfigForm.touristAvatar" :src="websiteConfigForm.touristAvatar" class="avatar" />
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-form-item label="邮箱通知">
-            <el-radio-group v-model="websiteConfigForm.isEmailNotice">
-              <el-radio :value="1">开启</el-radio>
-              <el-radio :value="0">关闭</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="评论审核">
-            <el-radio-group v-model="websiteConfigForm.isCommentReview">
-              <el-radio :value="1">开启</el-radio>
-              <el-radio :value="0">关闭</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="打赏状态">
-            <el-radio-group v-model="websiteConfigForm.isReward">
-              <el-radio :value="1">开启</el-radio>
-              <el-radio :value="0">关闭</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-row style="width: 600px" v-show="websiteConfigForm.isReward == 1">
-            <el-col :span="12">
-              <el-form-item label="微信收款码">
-                <el-upload
-                  class="avatar-uploader"
-                  action="/api/admin/config/images"
-                  :headers="headers"
-                  :show-file-list="false"
-                  :before-upload="beforeUpload"
-                  :on-success="handleWeiXinSuccess">
-                  <img v-if="websiteConfigForm.weiXinQRCode" :src="websiteConfigForm.weiXinQRCode" class="avatar" />
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="支付宝收款码">
-                <el-upload
-                  class="avatar-uploader"
-                  action="/api/admin/config/images"
-                  :headers="headers"
-                  :show-file-list="false"
-                  :before-upload="beforeUpload"
-                  :on-success="handleAlipaySuccess">
-                  <img v-if="websiteConfigForm.alipayQRCode" :src="websiteConfigForm.alipayQRCode" class="avatar" />
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-button type="primary" size="medium" style="margin-left: 6.3rem" @click="updateWebsiteConfig">
-            修改
-          </el-button>
-        </el-form>
-      </el-tab-pane>
-    </el-tabs>
-  </el-card>
+              :rows="4" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">工信部备案号</label>
+            <el-input v-model="websiteConfigForm.beianNumber" placeholder="请输入备案号" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">公安部备案号</label>
+            <el-input v-model="websiteConfigForm.gonganBeianNumber" placeholder="请输入备案号" class="form-input" />
+          </div>
+        </div>
+        <div class="save-bar">
+          <button class="btn-save" @click="updateWebsiteConfig">
+            <el-icon><Check /></el-icon>
+            保存网站信息
+          </button>
+        </div>
+      </div>
+
+      <!-- 社交信息 -->
+      <div v-show="activeName === 'notice'" class="tab-content">
+        <div class="tip-box">
+          <el-icon><InfoFilled /></el-icon>
+          <span>空白默认不显示，填写链接即可在博客前台展示对应社交图标</span>
+        </div>
+        <div class="section-title">
+          <el-icon><Share /></el-icon>
+          社交平台链接
+        </div>
+        <div class="form-grid">
+          <div class="form-group" v-for="item in socialFields" :key="item.key">
+            <label class="form-label">
+              <span class="social-icon-label" :style="{ color: item.color }">
+                <el-icon><component :is="item.icon" /></el-icon>
+                {{ item.label }}
+              </span>
+            </label>
+            <el-input v-model="websiteConfigForm[item.key]" :placeholder="item.placeholder" class="form-input">
+              <template #prefix>
+                <el-icon :style="{ color: item.color }"><component :is="item.icon" /></el-icon>
+              </template>
+            </el-input>
+          </div>
+        </div>
+        <div class="save-bar">
+          <button class="btn-save" @click="updateWebsiteConfig">
+            <el-icon><Check /></el-icon>
+            保存社交信息
+          </button>
+        </div>
+      </div>
+
+      <!-- 其他设置 -->
+      <div v-show="activeName === 'settings'" class="tab-content">
+        <div class="section-title">
+          <el-icon><Avatar /></el-icon>
+          用户头像设置
+        </div>
+        <div class="form-grid two-col-upload">
+          <div class="form-group upload-group">
+            <label class="form-label">用户默认头像</label>
+            <el-upload
+              class="avatar-uploader"
+              action="/api/admin/config/images"
+              :headers="headers"
+              :show-file-list="false"
+              :before-upload="beforeUpload"
+              :on-success="handleUserAvatarSuccess">
+              <img v-if="websiteConfigForm.userAvatar" :src="websiteConfigForm.userAvatar" class="avatar" />
+              <div v-else class="avatar-placeholder">
+                <el-icon><Plus /></el-icon>
+                <span>用户头像</span>
+              </div>
+            </el-upload>
+          </div>
+          <div class="form-group upload-group">
+            <label class="form-label">游客默认头像</label>
+            <el-upload
+              class="avatar-uploader"
+              action="/api/admin/config/images"
+              :headers="headers"
+              :show-file-list="false"
+              :before-upload="beforeUpload"
+              :on-success="handleTouristAvatarSuccess">
+              <img v-if="websiteConfigForm.touristAvatar" :src="websiteConfigForm.touristAvatar" class="avatar" />
+              <div v-else class="avatar-placeholder">
+                <el-icon><Plus /></el-icon>
+                <span>游客头像</span>
+              </div>
+            </el-upload>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top: 28px">
+          <el-icon><SetUp /></el-icon>
+          功能开关
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card" :class="{ active: websiteConfigForm.isEmailNotice === 1 }">
+            <div class="feature-icon">
+              <el-icon><Message /></el-icon>
+            </div>
+            <div class="feature-info">
+              <span class="feature-name">邮箱通知</span>
+              <span class="feature-desc">新评论时发送邮件通知</span>
+            </div>
+            <div class="feature-switch" @click="websiteConfigForm.isEmailNotice = websiteConfigForm.isEmailNotice === 1 ? 0 : 1">
+              <div class="switch-track" :class="{ on: websiteConfigForm.isEmailNotice === 1 }">
+                <div class="switch-thumb"></div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-card" :class="{ active: websiteConfigForm.isCommentReview === 1 }">
+            <div class="feature-icon">
+              <el-icon><ChatLineSquare /></el-icon>
+            </div>
+            <div class="feature-info">
+              <span class="feature-name">评论审核</span>
+              <span class="feature-desc">评论需审核后才显示</span>
+            </div>
+            <div class="feature-switch" @click="websiteConfigForm.isCommentReview = websiteConfigForm.isCommentReview === 1 ? 0 : 1">
+              <div class="switch-track" :class="{ on: websiteConfigForm.isCommentReview === 1 }">
+                <div class="switch-thumb"></div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-card" :class="{ active: websiteConfigForm.isReward === 1 }">
+            <div class="feature-icon">
+              <el-icon><Present /></el-icon>
+            </div>
+            <div class="feature-info">
+              <span class="feature-name">打赏功能</span>
+              <span class="feature-desc">在文章底部显示打赏</span>
+            </div>
+            <div class="feature-switch" @click="websiteConfigForm.isReward = websiteConfigForm.isReward === 1 ? 0 : 1">
+              <div class="switch-track" :class="{ on: websiteConfigForm.isReward === 1 }">
+                <div class="switch-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 收款码上传 -->
+        <div v-show="websiteConfigForm.isReward === 1" class="qrcode-section">
+          <div class="section-title">
+            <el-icon><Wallet /></el-icon>
+            收款码设置
+          </div>
+          <div class="form-grid two-col-upload">
+            <div class="form-group upload-group">
+              <label class="form-label">微信收款码</label>
+              <el-upload
+                class="avatar-uploader qrcode-uploader"
+                action="/api/admin/config/images"
+                :headers="headers"
+                :show-file-list="false"
+                :before-upload="beforeUpload"
+                :on-success="handleWeiXinSuccess">
+                <img v-if="websiteConfigForm.weiXinQRCode" :src="websiteConfigForm.weiXinQRCode" class="avatar qrcode-img" />
+                <div v-else class="avatar-placeholder qrcode-placeholder">
+                  <el-icon><Plus /></el-icon>
+                  <span>微信收款码</span>
+                </div>
+              </el-upload>
+            </div>
+            <div class="form-group upload-group">
+              <label class="form-label">支付宝收款码</label>
+              <el-upload
+                class="avatar-uploader qrcode-uploader"
+                action="/api/admin/config/images"
+                :headers="headers"
+                :show-file-list="false"
+                :before-upload="beforeUpload"
+                :on-success="handleAlipaySuccess">
+                <img v-if="websiteConfigForm.alipayQRCode" :src="websiteConfigForm.alipayQRCode" class="avatar qrcode-img" />
+                <div v-else class="avatar-placeholder qrcode-placeholder">
+                  <el-icon><Plus /></el-icon>
+                  <span>支付宝收款码</span>
+                </div>
+              </el-upload>
+            </div>
+          </div>
+        </div>
+        <div class="save-bar">
+          <button class="btn-save" @click="updateWebsiteConfig">
+            <el-icon><Check /></el-icon>
+            保存其他设置
+          </button>
+        </div>
+      </div>
+    </el-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElNotification } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import {
+  Plus, Check, Close, Monitor, Link, Setting,
+  InfoFilled, Share, Avatar, SetUp, Message,
+  ChatLineSquare, Present, Wallet, EditPen,
+  Platform, ChatRound, Notebook, Reading, Promotion,
+  Position, Trophy, Connection
+} from '@element-plus/icons-vue'
+import { createBeforeUploadHandler } from '@/utils/imageUtils'
+import { getAuthHeaders } from '@/utils/auth'
 import request from '@/utils/request'
 
-// 响应式数据
+const tabs = [
+  { key: 'info', label: '网站信息', icon: EditPen },
+  { key: 'notice', label: '社交信息', icon: Share },
+  { key: 'settings', label: '其他设置', icon: Setting }
+]
+
+const socialFields = [
+  { key: 'github', label: 'Github', icon: Link, color: '#24292e', placeholder: 'https://github.com/username' },
+  { key: 'gitee', label: 'Gitee', icon: Link, color: '#c71d23', placeholder: 'https://gitee.com/username' },
+  { key: 'qq', label: 'QQ', icon: ChatRound, color: '#12b7f5', placeholder: 'QQ号码' },
+  { key: 'weChat', label: '微信', icon: ChatLineSquare, color: '#07c160', placeholder: '微信号' },
+  { key: 'weibo', label: '微博', icon: Platform, color: '#e6162d', placeholder: '微博链接' },
+  { key: 'csdn', label: 'CSDN', icon: Notebook, color: '#cf2228', placeholder: 'CSDN链接' },
+  { key: 'zhihu', label: '知乎', icon: Reading, color: '#0084ff', placeholder: '知乎链接' },
+  { key: 'juejin', label: '掘金', icon: Trophy, color: '#1e80ff', placeholder: '掘金链接' },
+  { key: 'twitter', label: 'Twitter', icon: Promotion, color: '#1da1f2', placeholder: 'Twitter链接' },
+  { key: 'stackoverflow', label: 'StackOverflow', icon: Position, color: '#f48024', placeholder: 'StackOverflow链接' }
+]
+
 const websiteConfigForm = ref({
   authorAvatar: '',
   logo: '',
@@ -261,56 +424,32 @@ const websiteConfigForm = ref({
   alipayQRCode: ''
 })
 const activeName = ref('info')
-const headers = ref({ Authorization: 'Bearer ' + sessionStorage.getItem('token') })
+const headers = ref(getAuthHeaders())
 
-// 上传配置
-const UPLOAD_SIZE = 500 // KB
+const socialCount = computed(() => {
+  const keys = ['github', 'gitee', 'qq', 'weChat', 'weibo', 'csdn', 'zhihu', 'juejin', 'twitter', 'stackoverflow']
+  return keys.filter(k => websiteConfigForm.value[k]?.trim()).length
+})
 
-// 上传前处理
-const beforeUpload = (file) => {
-  return new Promise((resolve) => {
-    // 简单的文件大小检查
-    const isLt500K = file.size / 1024 < UPLOAD_SIZE
-    if (isLt500K) {
-      resolve(file)
-    } else {
-      // 如果超过大小,这里可以添加压缩逻辑
-      // 暂时直接resolve,实际项目中应该使用 image-conversion
-      resolve(file)
-    }
-  })
-}
+const activeFeatures = computed(() => {
+  let count = 0
+  if (websiteConfigForm.value.isEmailNotice === 1) count++
+  if (websiteConfigForm.value.isCommentReview === 1) count++
+  if (websiteConfigForm.value.isReward === 1) count++
+  if (websiteConfigForm.value.qqLogin === 1) count++
+  return count
+})
 
-// 上传成功回调
-const handleAuthorAvatarSuccess = (response) => {
-  websiteConfigForm.value.authorAvatar = response.data
-}
+const beforeUpload = createBeforeUploadHandler(500)
 
-const handleFaviconSuccess = (response) => {
-  websiteConfigForm.value.favicon = response.data
-}
+const handleAuthorAvatarSuccess = (response) => { websiteConfigForm.value.authorAvatar = response.data }
+const handleFaviconSuccess = (response) => { websiteConfigForm.value.favicon = response.data }
+const handleLogoSuccess = (response) => { websiteConfigForm.value.logo = response.data }
+const handleUserAvatarSuccess = (response) => { websiteConfigForm.value.userAvatar = response.data }
+const handleTouristAvatarSuccess = (response) => { websiteConfigForm.value.touristAvatar = response.data }
+const handleWeiXinSuccess = (response) => { websiteConfigForm.value.weiXinQRCode = response.data }
+const handleAlipaySuccess = (response) => { websiteConfigForm.value.alipayQRCode = response.data }
 
-const handleLogoSuccess = (response) => {
-  websiteConfigForm.value.logo = response.data
-}
-
-const handleUserAvatarSuccess = (response) => {
-  websiteConfigForm.value.userAvatar = response.data
-}
-
-const handleTouristAvatarSuccess = (response) => {
-  websiteConfigForm.value.touristAvatar = response.data
-}
-
-const handleWeiXinSuccess = (response) => {
-  websiteConfigForm.value.weiXinQRCode = response.data
-}
-
-const handleAlipaySuccess = (response) => {
-  websiteConfigForm.value.alipayQRCode = response.data
-}
-
-// 获取网站配置
 const getWebsiteConfig = async () => {
   try {
     const { data } = await request.get('/admin/website/config')
@@ -318,318 +457,325 @@ const getWebsiteConfig = async () => {
       websiteConfigForm.value = { ...websiteConfigForm.value, ...data.data }
     }
   } catch (error) {
-    ElNotification.error({
-      title: '失败',
-      message: error.message || '获取网站配置失败'
-    })
+    ElNotification.error({ title: '失败', message: error.message || '获取网站配置失败' })
   }
 }
 
-// 更新网站配置
 const updateWebsiteConfig = async () => {
   try {
     const { data } = await request.put('/admin/website/config', websiteConfigForm.value)
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: data.message
-      })
+      ElNotification.success({ title: '成功', message: data.message })
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: data.message
-      })
+      ElNotification.error({ title: '失败', message: data.message })
     }
   } catch (error) {
-    ElNotification.error({
-      title: '失败',
-      message: error.message || '更新网站配置失败'
-    })
+    ElNotification.error({ title: '失败', message: error.message || '更新网站配置失败' })
   }
 }
 
-// 初始化
-onMounted(() => {
-  getWebsiteConfig()
-})
+onMounted(() => { getWebsiteConfig() })
 </script>
 
 <style scoped>
-/* ==================== Website Config Page Modern Styles ==================== */
+.website-page { padding: 0; }
 
-/* 提示文字 */
-.tip {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  margin-bottom: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-base);
-  border-left: 3px solid var(--color-primary);
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
 }
-
-/* 标签页样式 */
-:deep(.el-tabs__header) {
-  margin-bottom: var(--space-6);
-}
-
-:deep(.el-tabs__nav-wrap::after) {
-  background: var(--color-border);
-}
-
-:deep(.el-tabs__item) {
-  font-weight: var(--font-medium);
-  color: var(--color-text-secondary);
-  transition: all var(--duration-fast) var(--ease-out);
-  padding: 0 var(--space-6);
-  height: 40px;
-  line-height: 40px;
-}
-
-:deep(.el-tabs__item:hover) {
-  color: var(--color-primary);
-}
-
-:deep(.el-tabs__item.is-active) {
-  color: var(--color-primary);
-  font-weight: var(--font-semibold);
-}
-
-:deep(.el-tabs__active-bar) {
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  height: 3px;
-  border-radius: var(--radius-full);
-}
-
-/* 表单样式 */
-.el-form {
-  max-width: 600px;
-}
-
-.el-form-item {
-  margin-bottom: var(--space-6);
-}
-
-:deep(.el-form-item__label) {
-  font-weight: var(--font-semibold);
-  color: var(--color-text);
-  padding-right: var(--space-4);
-}
-
-/* 输入框样式 */
-:deep(.el-input .el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  background: var(--color-bg-card);
-  transition: all var(--duration-fast) var(--ease-out);
-  padding: 0 var(--space-4);
-}
-
-:deep(.el-input .el-input__inner:focus) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-}
-
-:deep(.el-input .el-input__inner:hover) {
-  border-color: var(--color-primary-light);
-}
-
-/* 文本域样式 */
-:deep(.el-textarea .el-textarea__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  background: var(--color-bg-card);
-  transition: all var(--duration-fast) var(--ease-out);
-  padding: var(--space-3) var(--space-4);
-}
-
-:deep(.el-textarea .el-textarea__inner:focus) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
-}
-
-/* 日期选择器 */
-.el-date-editor {
-  width: 100%;
-}
-
-:deep(.el-date-editor .el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-}
-
-/* 单选按钮组 */
-.el-radio-group {
+.stat-card {
+  background: var(--bg-base, #fff);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid var(--border-default, #e5e7eb);
+  transition: all 0.3s ease;
+}
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
+.stat-icon {
+  width: 56px; height: 56px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+.stat-icon.primary { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #fff; }
+.stat-icon.success { background: linear-gradient(135deg, #10b981, #34d399); color: #fff; }
+.stat-icon.warning { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #fff; }
+.stat-info { display: flex; flex-direction: column; gap: 4px; }
+.stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary, #1f2937); line-height: 1; }
+.stat-label { font-size: 14px; color: var(--text-secondary, #6b7280); }
+
+/* 主卡片 */
+.main-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e5e7eb);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  background: var(--bg-base, #fff);
+}
+.main-card :deep(.el-card__body) { padding: 0; }
+
+/* Tab 头部 */
+.tab-header {
+  display: flex;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border-default, #e5e7eb);
+  background: var(--bg-elevated, #f9fafb);
+  border-radius: 16px 16px 0 0;
+}
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  margin-bottom: -1px;
+}
+.tab-item:hover { color: var(--color-primary, #3b82f6); }
+.tab-item.active {
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+  border-bottom-color: var(--color-primary, #3b82f6);
 }
 
-.el-radio {
-  margin-right: 0;
-  font-weight: var(--font-medium);
+/* Tab 内容 */
+.tab-content { padding: 32px; }
+
+/* 段落标题 */
+.section-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
 }
 
-:deep(.el-radio__input.is-checked .el-radio__inner) {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+/* 表单网格 */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+.form-grid .full-width { grid-column: span 2; }
+.form-grid .upload-group { grid-column: span 1; }
+.form-grid.two-col-upload { grid-template-columns: repeat(2, 1fr); }
+
+/* 表单组 */
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-label {
+  font-size: 14px; font-weight: 500;
+  color: var(--text-primary, #1f2937);
 }
 
-:deep(.el-radio__input.is-checked + .el-radio__label) {
-  color: var(--color-primary);
+/* 输入框 */
+.form-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  height: 44px;
+  transition: all 0.2s ease;
 }
+.form-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2), 0 0 0 1px #3b82f6;
+}
+.form-input :deep(.el-textarea__inner) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  transition: all 0.2s ease;
+}
+.form-input :deep(.el-textarea__inner:focus) {
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2), 0 0 0 1px #3b82f6;
+}
+.form-input { width: 100%; }
+.form-input :deep(.el-date-editor) { width: 100%; }
 
 /* 上传组件 */
 .avatar-uploader :deep(.el-upload) {
-  border: 2px dashed var(--color-border);
-  border-radius: var(--radius-lg);
+  border: 2px dashed var(--border-default, #e5e7eb);
+  border-radius: 14px;
   cursor: pointer;
-  position: relative;
   overflow: hidden;
-  background: var(--color-bg-hover);
-  transition: all var(--duration-fast) var(--ease-out);
-  width: 120px;
-  height: 120px;
+  background: var(--bg-elevated, #f9fafb);
+  transition: all 0.3s ease;
+  width: 120px; height: 120px;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: var(--color-primary, #3b82f6);
+  background: rgba(59,130,246,0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.15);
+}
+.avatar-placeholder {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+.avatar-placeholder .el-icon { font-size: 24px; }
+.avatar {
+  width: 120px; height: 120px;
+  display: block; object-fit: cover;
+  border-radius: 14px;
+}
+
+/* 单选卡片 */
+.radio-card-group { display: flex; gap: 12px; }
+.radio-card {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px;
+  border: 2px solid var(--border-default, #e5e7eb);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px; font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  transition: all 0.2s ease;
+}
+.radio-card:hover { border-color: var(--color-primary-light, #93c5fd); }
+.radio-card.active {
+  border-color: var(--color-primary, #3b82f6);
+  color: var(--color-primary, #3b82f6);
+  background: rgba(59,130,246,0.08);
+}
+
+/* 提示框 */
+.tip-box {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  background: rgba(59,130,246,0.06);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+}
+.tip-box .el-icon { color: var(--color-primary, #3b82f6); font-size: 18px; flex-shrink: 0; }
+
+/* 社交标签 */
+.social-icon-label {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 500;
+}
+
+/* 功能开关卡片 */
+.feature-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.feature-card {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-elevated, #f9fafb);
+  border: 2px solid var(--border-default, #e5e7eb);
+  border-radius: 14px;
+  transition: all 0.2s ease;
 }
-
-.avatar-uploader :deep(.el-upload:hover) {
-  border-color: var(--color-primary);
-  background: var(--color-primary-50);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+.feature-card.active { border-color: var(--color-primary, #3b82f6); background: rgba(59,130,246,0.04); }
+.feature-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  background: var(--bg-base, #fff);
+  color: var(--text-secondary, #6b7280);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
 }
+.feature-card.active .feature-icon { color: var(--color-primary, #3b82f6); background: rgba(59,130,246,0.1); }
+.feature-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.feature-name { font-size: 15px; font-weight: 600; color: var(--text-primary, #1f2937); }
+.feature-desc { font-size: 13px; color: var(--text-secondary, #6b7280); }
+.feature-switch { cursor: pointer; }
 
-.avatar-uploader-icon {
-  font-size: var(--text-2xl);
-  color: var(--color-text-muted);
-  transition: all var(--duration-fast) var(--ease-out);
+/* 自定义开关 */
+.switch-track {
+  width: 48px; height: 26px;
+  background: var(--border-default, #e5e7eb);
+  border-radius: 13px;
+  position: relative;
+  transition: all 0.3s ease;
 }
-
-.avatar-uploader :deep(.el-upload:hover .avatar-uploader-icon) {
-  color: var(--color-primary);
-  transform: scale(1.1);
+.switch-track.on { background: var(--color-primary, #3b82f6); }
+.switch-thumb {
+  width: 22px; height: 22px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
+.switch-track.on .switch-thumb { left: 24px; }
 
-.avatar {
-  width: 120px;
-  height: 120px;
-  display: block;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
+/* 收款码 */
+.qrcode-section { margin-top: 8px; }
+.qrcode-uploader :deep(.el-upload) { width: 160px; height: 160px; }
+.qrcode-placeholder { width: 160px; height: 160px; }
+.qrcode-img { width: 160px; height: 160px; }
+
+/* 保存栏 */
+.save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border-light, #f3f4f6);
 }
-
-/* 提交按钮 */
-.el-button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border: none;
-  border-radius: var(--radius-base);
-  font-weight: var(--font-semibold);
-  padding: var(--space-3) var(--space-8);
-  transition: all var(--duration-fast) var(--ease-out);
-  box-shadow: var(--shadow-sm);
+.btn-save {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 28px; height: 44px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
+.btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
 
-.el-button--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
-}
+/* 深色模式 */
+[data-theme="dark"] .stat-card { background: var(--bg-base, #1f2937); border-color: var(--border-default, #374151); }
+[data-theme="dark"] .stat-value { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .stat-label { color: var(--text-secondary, #9ca3af); }
+[data-theme="dark"] .main-card { background: var(--bg-base, #1f2937); border-color: var(--border-default, #374151); }
+[data-theme="dark"] .tab-header { background: var(--bg-elevated, #374151); border-color: var(--border-default, #374151); }
+[data-theme="dark"] .section-title { color: var(--text-primary, #f9fafb); border-color: var(--border-default, #374151); }
+[data-theme="dark"] .form-label { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .form-input :deep(.el-input__wrapper) { background: var(--bg-elevated, #374151); }
+[data-theme="dark"] .form-input :deep(.el-textarea__inner) { background: var(--bg-elevated, #374151); color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .avatar-uploader :deep(.el-upload) { background: var(--bg-elevated, #374151); border-color: var(--border-default, #374151); }
+[data-theme="dark"] .radio-card { border-color: var(--border-default, #374151); color: var(--text-secondary, #9ca3af); }
+[data-theme="dark"] .radio-card.active { background: rgba(59,130,246,0.1); }
+[data-theme="dark"] .tip-box { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.2); }
+[data-theme="dark"] .feature-card { background: var(--bg-elevated, #374151); border-color: var(--border-default, #374151); }
+[data-theme="dark"] .feature-icon { background: var(--bg-base, #1f2937); }
+[data-theme="dark"] .switch-track { background: var(--border-default, #374151); }
+[data-theme="dark"] .save-bar { border-color: var(--border-default, #374151); }
 
-.el-button--primary:active {
-  transform: translateY(0);
-}
-
-/* 两列布局 */
-.el-row {
-  margin-bottom: var(--space-4);
-}
-
-/* ==================== Dark Mode ==================== */
-[data-theme="dark"] :deep(.el-tabs__nav-wrap::after) {
-  background: var(--color-border);
-}
-
-[data-theme="dark"] :deep(.el-input .el-input__inner),
-[data-theme="dark"] :deep(.el-textarea .el-textarea__inner) {
-  background: var(--color-bg-card);
-  border-color: var(--color-border);
-  color: var(--color-text);
-}
-
-[data-theme="dark"] .avatar-uploader :deep(.el-upload) {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
-}
-
-[data-theme="dark"] .tip {
-  background: var(--color-bg-hover);
-}
-
-/* ==================== Responsive ==================== */
+/* 响应式 */
 @media (max-width: 768px) {
-  .el-form {
-    max-width: 100%;
-  }
-
-  :deep(.el-form-item__label) {
-    float: none;
-    display: block;
-    text-align: left;
-    margin-bottom: var(--space-2);
-  }
-
-  :deep(.el-form-item__content) {
-    margin-left: 0 !important;
-  }
-
-  .el-input,
-  .el-textarea,
-  .el-date-editor {
-    width: 100% !important;
-  }
-
-  .el-radio-group {
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .el-row {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .el-col {
-    width: 100% !important;
-  }
-
-  .el-button--primary {
-    width: 100%;
-    margin-left: 0 !important;
-  }
-}
-
-@media (max-width: 480px) {
-  :deep(.el-tabs__item) {
-    padding: 0 var(--space-3);
-    font-size: var(--text-sm);
-  }
-
-  .avatar-uploader :deep(.el-upload) {
-    width: 100px;
-    height: 100px;
-  }
-
-  .avatar {
-    width: 100px;
-    height: 100px;
-  }
-
-  .avatar-uploader-icon {
-    font-size: var(--text-xl);
-  }
+  .stats-row { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-grid .full-width { grid-column: span 1; }
+  .form-grid.two-col-upload { grid-template-columns: 1fr; }
+  .tab-header { padding: 0 12px; overflow-x: auto; }
+  .tab-item { padding: 12px 16px; font-size: 13px; white-space: nowrap; }
+  .tab-content { padding: 20px; }
+  .save-bar { justify-content: center; }
+  .btn-save { width: 100%; justify-content: center; }
+  .qrcode-section .form-grid { grid-template-columns: 1fr; }
 }
 </style>

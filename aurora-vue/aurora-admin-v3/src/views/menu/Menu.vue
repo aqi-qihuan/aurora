@@ -1,137 +1,245 @@
 <template>
-  <el-card class="main-card">
-    <div class="title">{{ route.name }}</div>
-    <div class="operation-container">
-      <el-button type="primary" size="small" :icon="Plus" @click="openModel(null)"> 新增菜单 </el-button>
-      <div style="margin-left: auto">
-        <el-input
-          v-model="keywords"
-          :prefix-icon="Search"
-          size="small"
-          placeholder="请输入菜单名"
-          style="width: 200px"
-          @keyup.enter="listMenus" />
-        <el-button type="primary" size="small" :icon="Search" style="margin-left: 1rem" @click="listMenus">
-          搜索
-        </el-button>
+  <div class="menu-page">
+    <!-- 页面头部 - 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <el-icon><Menu /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ menuCount }}</span>
+          <span class="stat-label">菜单总数</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <el-icon><View /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ visibleCount }}</span>
+          <span class="stat-label">可见菜单</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <el-icon><Hide /></el-icon>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ hiddenCount }}</span>
+          <span class="stat-label">隐藏菜单</span>
+        </div>
       </div>
     </div>
-    <el-table
-      v-loading="loading"
-      :data="menus"
-      row-key="id"
-      :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
-      <el-table-column type="selection" width="55" />
-      <el-table-column prop="name" label="菜单名称" width="140" />
-      <el-table-column prop="icon" align="center" label="图标" width="100">
-        <template #default="{ row }">
-          <i :class="'iconfont ' + row.icon" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="orderNum" align="center" label="排序" width="100" />
-      <el-table-column prop="path" label="访问路径" />
-      <el-table-column prop="component" label="组件路径" />
-      <el-table-column prop="isHidden" label="隐藏" align="center" width="80">
-        <template #default="{ row }">
-          <el-switch
-            v-model="row.isHidden"
-            :active-color="'#13ce66'"
-            :inactive-color="'#F4F4F5'"
-            :active-value="1"
-            :inactive-value="0"
-            @change="changeDisable(row)" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" align="center" width="150">
-        <template #default="{ row }">
-          <el-icon style="margin-right: 5px"><Clock /></el-icon>
-          {{ formatDate(row.createTime) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" align="center" width="200">
-        <template #default="{ row }">
-          <el-button type="primary" link size="small" @click="openModel(row, 1)" v-if="row.children">
-            <el-icon><Plus /></el-icon> 新增
+
+    <!-- 主内容卡片 -->
+    <el-card class="main-card">
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-button type="primary" :icon="Plus" @click="openModel(null)" class="btn-add">
+            <span>新增菜单</span>
           </el-button>
-          <el-button type="primary" link size="small" @click="openModel(row, 2)">
-            <el-icon><Edit /></el-icon> 修改
-          </el-button>
-          <el-popconfirm title="确定删除吗？" @confirm="deleteMenu(row.id)">
-            <template #reference>
-              <el-button size="small" type="danger" link> <el-icon><Delete /></el-icon> 删除 </el-button>
-            </template>
-          </el-popconfirm>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-dialog v-model="addMenu" width="30%" top="12vh">
-      <template #header>
-        <div class="dialog-title-container">{{ menuTitle }}</div>
-      </template>
-      <el-form label-width="80px" size="medium" :model="menuForm">
-        <el-form-item label="菜单类型" v-if="show">
-          <el-radio-group v-model="isCatalog">
-            <el-radio :label="true">目录</el-radio>
-            <el-radio :label="false">一级菜单</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="菜单名称">
-          <el-input v-model="menuForm.name" style="width: 220px" />
-        </el-form-item>
-        <el-form-item label="菜单图标">
-          <el-popover placement="bottom-start" width="300" trigger="click">
-            <template #default>
-              <el-row>
-                <el-col v-for="(item, index) in icons" :key="index" :md="12" :gutter="10">
-                  <div class="icon-item" @click="checkIcon(item)"><i :class="'iconfont ' + item" /> {{ item }}</div>
-                </el-col>
-              </el-row>
-            </template>
-            <template #reference>
-              <el-input
-                :prefix-icon="'iconfont ' + menuForm.icon"
-                v-model="menuForm.icon"
-                style="width: 220px" />
-            </template>
-          </el-popover>
-        </el-form-item>
-        <el-form-item label="组件路径" v-show="!isCatalog">
-          <el-input v-model="menuForm.component" style="width: 220px" />
-        </el-form-item>
-        <el-form-item label="访问路径">
-          <el-input v-model="menuForm.path" style="width: 220px" />
-        </el-form-item>
-        <el-form-item label="显示排序">
-          <el-input-number v-model="menuForm.orderNum" controls-position="right" :min="1" :max="10" />
-        </el-form-item>
-        <el-form-item label="显示状态">
-          <el-radio-group v-model="menuForm.isHidden">
-            <el-radio :label="0">显示</el-radio>
-            <el-radio :label="1">隐藏</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
+        </div>
+        <div class="toolbar-right">
+          <el-input
+            v-model="keywords"
+            :prefix-icon="Search"
+            placeholder="搜索菜单名..."
+            class="search-input"
+            clearable
+            @keyup.enter="listMenus"
+            @clear="listMenus" />
+          <el-button type="primary" :icon="Search" @click="listMenus" circle />
+        </div>
+      </div>
+
+      <!-- 现代化树形表格 -->
+      <el-table
+        v-loading="loading"
+        :data="menus"
+        row-key="id"
+        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+        class="modern-table"
+        :header-cell-style="{ background: 'transparent' }">
+        <el-table-column prop="name" label="菜单名称" min-width="180">
+          <template #default="{ row }">
+            <div class="menu-name-cell">
+              <div class="menu-icon-wrapper">
+                <i :class="'iconfont ' + row.icon" />
+              </div>
+              <span class="menu-name-text">{{ row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="orderNum" label="排序" width="90" align="center">
+          <template #default="{ row }">
+            <span class="order-badge">{{ row.orderNum }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="path" label="访问路径" min-width="180">
+          <template #default="{ row }">
+            <span v-if="row.path" class="menu-path">{{ row.path }}</span>
+            <span v-else class="menu-path-empty">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="component" label="组件路径" min-width="180">
+          <template #default="{ row }">
+            <span v-if="row.component" class="menu-component">{{ row.component }}</span>
+            <span v-else class="menu-path-empty">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="isHidden" label="状态" width="110" align="center">
+          <template #default="{ row }">
+            <div class="switch-cell">
+              <span class="switch-label" :class="{ active: row.isHidden === 0 }">
+                {{ row.isHidden === 0 ? '显示' : '隐藏' }}
+              </span>
+              <el-switch
+                v-model="row.isHidden"
+                :active-value="1"
+                :inactive-value="0"
+                @change="changeDisable(row)" />
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" align="center">
+          <template #default="{ row }">
+            <div class="time-cell">
+              <el-icon class="time-icon"><Clock /></el-icon>
+              <span>{{ formatDate(row.createTime) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" align="center" fixed="right">
+          <template #default="{ row }">
+            <div class="action-btns">
+              <el-tooltip content="新增子菜单" placement="top" :show-after="500" v-if="row.children">
+                <button class="action-btn add" @click="openModel(row, 1)"><el-icon><Plus /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip content="修改" placement="top" :show-after="500">
+                <button class="action-btn edit" @click="openModel(row, 2)"><el-icon><Edit /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top" :show-after="500">
+                <button class="action-btn delete" @click="handleDelete(row.id)"><el-icon><Delete /></el-icon></button>
+              </el-tooltip>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 新增/编辑菜单对话框 -->
+    <el-dialog v-model="addMenu" width="500px" class="modern-dialog" :show-close="false">
+      <div class="dialog-icon-wrapper primary"><el-icon><EditPen /></el-icon></div>
+      <div class="dialog-content">
+        <h3>{{ menuTitle }}</h3>
+        <el-form :model="menuForm" class="menu-form" label-position="top">
+          <el-form-item label="菜单类型" v-if="show">
+            <div class="type-select">
+              <button
+                class="type-option"
+                :class="{ active: isCatalog }"
+                @click="isCatalog = true">
+                <el-icon><FolderOpened /></el-icon>
+                <span>目录</span>
+              </button>
+              <button
+                class="type-option"
+                :class="{ active: !isCatalog }"
+                @click="isCatalog = false">
+                <el-icon><Document /></el-icon>
+                <span>一级菜单</span>
+              </button>
+            </div>
+          </el-form-item>
+          <el-form-item label="菜单名称">
+            <el-input v-model="menuForm.name" placeholder="请输入菜单名称" class="form-input" />
+          </el-form-item>
+          <el-form-item label="菜单图标">
+            <el-popover placement="bottom-start" width="300" trigger="click">
+              <template #default>
+                <div class="icon-grid">
+                  <div
+                    v-for="(item, index) in icons"
+                    :key="index"
+                    class="icon-item"
+                    :class="{ active: menuForm.icon === item }"
+                    @click="checkIcon(item)">
+                    <i :class="'iconfont ' + item" />
+                  </div>
+                </div>
+              </template>
+              <template #reference>
+                <div class="icon-input-wrapper" @click.stop>
+                  <div class="icon-preview">
+                    <i v-if="menuForm.icon" :class="'iconfont ' + menuForm.icon" />
+                    <el-icon v-else><QuestionFilled /></el-icon>
+                  </div>
+                  <el-input v-model="menuForm.icon" placeholder="选择或输入图标" class="form-input" />
+                </div>
+              </template>
+            </el-popover>
+          </el-form-item>
+          <el-form-item label="组件路径" v-show="!isCatalog">
+            <el-input v-model="menuForm.component" placeholder="如: layout/Index" class="form-input" />
+          </el-form-item>
+          <el-form-item label="访问路径">
+            <el-input v-model="menuForm.path" placeholder="/path" class="form-input" />
+          </el-form-item>
+          <el-form-item label="显示排序">
+            <el-input-number v-model="menuForm.orderNum" controls-position="right" :min="1" :max="10" class="order-input" />
+          </el-form-item>
+          <el-form-item label="显示状态">
+            <div class="type-select">
+              <button
+                class="type-option"
+                :class="{ active: menuForm.isHidden === 0 }"
+                @click="menuForm.isHidden = 0">
+                <el-icon><View /></el-icon>
+                <span>显示</span>
+              </button>
+              <button
+                class="type-option"
+                :class="{ active: menuForm.isHidden === 1 }"
+                @click="menuForm.isHidden = 1">
+                <el-icon><Hide /></el-icon>
+                <span>隐藏</span>
+              </button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
-        <el-button @click="addMenu = false">取 消</el-button>
-        <el-button type="primary" @click="saveOrUpdateMenu"> 确 定 </el-button>
+        <div class="dialog-footer">
+          <el-button @click="addMenu = false" class="btn-cancel">取消</el-button>
+          <el-button type="primary" @click="saveOrUpdateMenu" class="btn-confirm">确认保存</el-button>
+        </div>
       </template>
     </el-dialog>
-  </el-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElNotification } from 'element-plus'
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Delete, 
-  Clock
+import { ElMessage, ElNotification, ElMessageBox } from 'element-plus'
+import {
+  Plus,
+  Search,
+  Edit,
+  Delete,
+  Clock,
+  Menu,
+  View,
+  Hide,
+  FolderOpened,
+  Document,
+  EditPen,
+  QuestionFilled
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import dayjs from 'dayjs'
+import logger from '@/utils/logger'
 
 const route = useRoute()
 
@@ -159,13 +267,25 @@ const icons = [
   'el-icon-myfabiaowenzhang',
   'el-icon-myyonghuliebiao',
   'el-icon-myxiaoxi',
-  'el-icon-myliuyan',
-  'el-icon-myshouye',
-  'el-icon-myfabiaowenzhang',
-  'el-icon-myyonghuliebiao',
-  'el-icon-myxiaoxi',
   'el-icon-myliuyan'
 ]
+
+// 统计数据
+const flatMenus = (items) => {
+  let result = []
+  items.forEach(item => {
+    result.push(item)
+    if (item.children && item.children.length) {
+      result = result.concat(flatMenus(item.children))
+    }
+  })
+  return result
+}
+
+const allFlat = computed(() => flatMenus(menus.value))
+const menuCount = computed(() => allFlat.value.length)
+const visibleCount = computed(() => allFlat.value.filter(m => m.isHidden === 0).length)
+const hiddenCount = computed(() => allFlat.value.filter(m => m.isHidden === 1).length)
 
 // 日期格式化
 const formatDate = (date) => {
@@ -185,7 +305,7 @@ const listMenus = () => {
   }).catch(error => {
     loading.value = false
     ElMessage.error('获取菜单列表失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -206,7 +326,7 @@ const openModel = (menu, type) => {
           parentId: null,
           isHidden: 0
         })
-        menuTitle.value = '新增菜单'
+        menuTitle.value = '新增子菜单'
         menuForm.parentId = JSON.parse(JSON.stringify(menu.id))
         break
       case 2:
@@ -244,19 +364,13 @@ const changeDisable = (menu) => {
   }
   request.put('/admin/menus/isHidden', params).then(({ data }) => {
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: '修改成功'
-      })
+      ElNotification.success({ title: '成功', message: '修改成功' })
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: '修改失败'
-      })
+      ElNotification.error({ title: '失败', message: '修改失败' })
     }
   }).catch(error => {
     ElMessage.error('操作失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -280,42 +394,40 @@ const saveOrUpdateMenu = () => {
   }
   request.post('/admin/menus', menuForm).then(({ data }) => {
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: '操作成功'
-      })
+      ElNotification.success({ title: '成功', message: '操作成功' })
       listMenus()
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: '操作失败'
-      })
+      ElNotification.error({ title: '失败', message: '操作失败' })
     }
     addMenu.value = false
   }).catch(error => {
     ElMessage.error('保存失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
 // 删除菜单
+const handleDelete = (id) => {
+  ElMessageBox.confirm('确定删除该菜单吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    deleteMenu(id)
+  }).catch(() => {})
+}
+
 const deleteMenu = (id) => {
   request.delete('/admin/menus/' + id).then(({ data }) => {
     if (data.flag) {
-      ElNotification.success({
-        title: '成功',
-        message: '删除成功'
-      })
+      ElNotification.success({ title: '成功', message: '删除成功' })
       listMenus()
     } else {
-      ElNotification.error({
-        title: '失败',
-        message: data.message
-      })
+      ElNotification.error({ title: '失败', message: data.message })
     }
   }).catch(error => {
     ElMessage.error('删除失败')
-    console.error('API Error:', error)
+    logger.error('API Error:', error)
   })
 }
 
@@ -326,319 +438,546 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== Menu Page Modern Styles ====================
- * 基于 UI/UX Pro Max 设计系统
- * 配色: Primary #2563EB, CTA #F97316
- */
-
-/* 页面标题 */
-.title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-6);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.menu-page {
+  padding: 0;
 }
 
-.title::before {
-  content: '';
-  width: 4px;
-  height: 24px;
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border-radius: var(--radius-full);
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
-/* 操作区域 - 现代化工具栏 */
-.operation-container {
-  margin-top: var(--space-6);
+.stat-card {
+  background: var(--bg-base, #fff);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-default, #e5e7eb);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: #fff; }
+.stat-icon.success { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: #fff; }
+.stat-icon.warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: #fff; }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* 主卡片 */
+.main-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-default, #e5e7eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--bg-base, #fff);
+}
+
+.main-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+/* 工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  margin-bottom: var(--space-6);
+  gap: 16px;
 }
 
-.operation-container .el-button {
-  border-radius: var(--radius-base);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--ease-out);
+.toolbar-left {
+  display: flex;
+  gap: 12px;
 }
 
-.operation-container .el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.operation-container .el-button--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  border: none;
-}
-
-/* 搜索区域 */
-.operation-container > div:last-child {
+.toolbar-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-left: auto;
+  gap: 12px;
 }
 
-.operation-container .el-input {
-  width: 200px;
+.btn-add {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  font-weight: 500;
+  height: 40px;
+  padding: 0 20px;
+  transition: all 0.2s ease;
 }
 
-.operation-container .el-input :deep(.el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  background: var(--color-bg-card);
-  transition: all var(--duration-fast) var(--ease-out);
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.operation-container .el-input :deep(.el-input__inner):focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+.search-input {
+  width: 280px;
 }
 
-/* 菜单表格 - 现代化树形表格 */
-.el-table {
-  border-radius: var(--radius-lg);
+.search-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px #3b82f6;
+}
+
+/* 现代化表格 */
+.modern-table {
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  background: var(--color-bg-card);
+  border: 1px solid var(--border-default, #e5e7eb);
 }
 
-.el-table :deep(.el-table__header-wrapper) {
-  background: var(--color-bg-hover);
-}
-
-.el-table :deep(.el-table__header th) {
-  background: var(--color-bg-hover) !important;
-  color: var(--color-text);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-xs);
+.modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #f9fafb);
+  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: var(--space-3) var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border);
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-default, #e5e7eb);
 }
 
-.el-table :deep(.el-table__body td) {
-  padding: var(--space-3) var(--space-4) !important;
-  border-bottom: 1px solid var(--color-border-light);
+.modern-table :deep(.el-table__body tr) {
+  transition: all 0.2s ease;
 }
 
-.el-table :deep(.el-table__body tr) {
-  transition: all var(--duration-fast) var(--ease-out);
+.modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #f3f4f6) !important;
 }
 
-.el-table :deep(.el-table__body tr:hover > td) {
-  background-color: var(--color-primary-50) !important;
+.modern-table :deep(.el-table__body td) {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
 }
 
-/* 菜单名称 */
-.el-table :deep(.cell) {
-  font-size: var(--text-sm);
-  color: var(--color-text);
+/* 菜单名称单元格 */
+.menu-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* 图标样式 */
-.iconfont {
-  font-size: var(--text-lg);
-  color: var(--color-primary);
-  transition: all var(--duration-fast) var(--ease-out);
+.menu-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
-.el-table :deep(tr:hover) .iconfont {
-  transform: scale(1.1);
+.menu-name-text {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
 }
 
-/* Switch 开关样式 */
-:deep(.el-switch__core) {
-  border-radius: var(--radius-full);
+/* 排序徽章 */
+.order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-elevated, #f3f4f6);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary, #1f2937);
+}
+
+/* 路径样式 */
+.menu-path, .menu-component {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  background: var(--bg-elevated, #f3f4f6);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.menu-path-empty {
+  color: var(--text-secondary, #9ca3af);
+}
+
+/* 开关单元格 */
+.switch-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.switch-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  min-width: 28px;
+}
+
+.switch-label.active {
+  color: #16a34a;
+}
+
+/* 时间单元格 */
+.time-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+}
+
+.time-icon {
+  color: #3b82f6;
 }
 
 /* 操作按钮 */
-.el-button--text {
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--ease-out);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-base);
-}
-
-.el-button--text:hover {
-  background: var(--color-primary-50);
-  transform: translateY(-1px);
-}
-
-.el-button--text .el-icon {
-  margin-right: var(--space-1);
-}
-
-/* 对话框 */
-.dialog-title-container {
+.action-btns {
   display: flex;
-  align-items: center;
-  font-weight: var(--font-bold);
-  font-size: var(--text-lg);
-  color: var(--color-text);
+  justify-content: center;
+  gap: 8px;
 }
 
-/* 图标选择器 */
-.icon-item {
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
   cursor: pointer;
-  padding: var(--space-2) var(--space-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-radius: var(--radius-base);
-  transition: all var(--duration-fast) var(--ease-out);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 16px;
 }
 
-.icon-item:hover {
-  background: var(--color-primary-50);
-  color: var(--color-primary);
-  transform: translateX(4px);
+.action-btn.add { background: #f0fdf4; color: #16a34a; }
+.action-btn.add:hover { background: #16a34a; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
+.action-btn.edit { background: #eff6ff; color: #3b82f6; }
+.action-btn.edit:hover { background: #3b82f6; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+.action-btn.delete { background: #fef2f2; color: #ef4444; }
+.action-btn.delete:hover { background: #ef4444; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+/* 优雅对话框 */
+.modern-dialog :deep(.el-dialog__header) {
+  display: none;
 }
 
-.icon-item i {
-  color: var(--color-primary);
-  font-size: var(--text-base);
+.modern-dialog :deep(.el-dialog__body) {
+  padding: 32px 32px 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modern-dialog :deep(.el-dialog__footer) {
+  padding: 0 32px 32px;
+}
+
+.dialog-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 20px;
+}
+
+.dialog-icon-wrapper.primary { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #3b82f6; }
+
+.dialog-content {
+  text-align: center;
+}
+
+.dialog-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin: 0 0 8px;
+}
+
+.dialog-content p {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-cancel {
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+}
+
+.btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 /* 表单样式 */
-:deep(.el-form-item__label) {
-  font-weight: var(--font-medium);
-  color: var(--color-text);
+.menu-form {
+  margin-top: 24px;
+  text-align: left;
 }
 
-.el-input :deep(.el-input__inner),
-.el-input-number :deep(.el-input__inner) {
-  border-radius: var(--radius-base);
-  border-color: var(--color-border);
-  transition: all var(--duration-fast) var(--ease-out);
+.menu-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  padding-bottom: 8px;
 }
 
-.el-input :deep(.el-input__inner):focus,
-.el-input-number :deep(.el-input__inner):focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+.form-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-default, #e5e7eb);
+  height: 44px;
 }
 
-:deep(.el-radio-group) {
+.form-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px #3b82f6;
+}
+
+/* 类型选择器 */
+.type-select {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: 10px;
+  width: 100%;
 }
 
-:deep(.el-radio) {
-  margin-right: 0;
+.type-option {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border-default, #e5e7eb);
+  background: var(--bg-base, #fff);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  color: var(--text-secondary, #6b7280);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.type-option.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.type-option:hover {
+  transform: translateY(-1px);
+}
+
+/* 图标输入 */
+.icon-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-preview {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* 图标网格 */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.icon-item {
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid var(--border-default, #e5e7eb);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--text-primary, #1f2937);
+}
+
+.icon-item:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.icon-item.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #3b82f6;
 }
 
 /* 数字输入器 */
-.el-input-number {
+.order-input {
   width: 120px;
 }
 
-.el-input-number :deep(.el-input-number__decrease),
-.el-input-number :deep(.el-input-number__increase) {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
-  color: var(--color-text-secondary);
+.order-input :deep(.el-input__wrapper) {
+  border-radius: 10px;
 }
 
-.el-input-number :deep(.el-input-number__decrease):hover,
-.el-input-number :deep(.el-input-number__increase):hover {
-  color: var(--color-primary);
+/* 深色模式 */
+[data-theme="dark"] .stat-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
 }
 
-/* 加载动画 */
-.el-table :deep(.el-loading-mask) {
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.9);
+[data-theme="dark"] .stat-value { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .stat-label { color: var(--text-secondary, #9ca3af); }
+
+[data-theme="dark"] .main-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
 }
 
-/* ==================== Dark Mode ==================== */
-[data-theme="dark"] .operation-container {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border);
+[data-theme="dark"] .modern-table :deep(.el-table__header-wrapper th) {
+  background: var(--bg-elevated, #374151);
+  color: var(--text-secondary, #9ca3af);
 }
 
-[data-theme="dark"] .el-table :deep(.el-loading-mask) {
-  background: rgba(15, 23, 42, 0.9);
+[data-theme="dark"] .modern-table :deep(.el-table__body tr:hover > td) {
+  background: var(--bg-hover, #374151) !important;
 }
 
-[data-theme="dark"] .icon-item:hover {
-  background: var(--color-bg-active);
+[data-theme="dark"] .menu-icon-wrapper { background: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .menu-name-text { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .menu-path, .menu-component { background: var(--bg-elevated, #374151); }
+[data-theme="dark"] .order-badge { background: var(--bg-elevated, #374151); }
+
+[data-theme="dark"] .action-btn.add { background: rgba(22, 163, 74, 0.15); }
+[data-theme="dark"] .action-btn.edit { background: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .action-btn.delete { background: rgba(239, 68, 68, 0.15); }
+
+[data-theme="dark"] .dialog-content h3 { color: var(--text-primary, #f9fafb); }
+
+[data-theme="dark"] .type-option {
+  border-color: var(--border-default, #374151);
+  background: var(--bg-base, #1f2937);
+  color: var(--text-secondary, #9ca3af);
 }
 
-/* ==================== Responsive ==================== */
+[data-theme="dark"] .type-option.active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .icon-preview { background: rgba(59, 130, 246, 0.15); }
+
+[data-theme="dark"] .icon-item {
+  border-color: var(--border-default, #374151);
+  color: var(--text-primary, #f9fafb);
+}
+
+[data-theme="dark"] .icon-item:hover,
+[data-theme="dark"] .icon-item.active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-card:last-child { grid-column: span 2; }
+}
+
 @media (max-width: 768px) {
-  .title {
-    font-size: var(--text-xl);
-  }
-
-  .operation-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .operation-container > div:last-child {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .operation-container .el-input {
-    width: 100%;
-  }
-
-  .operation-container .el-button {
-    width: 100%;
-  }
-
-  .el-table {
-    font-size: var(--text-xs);
-  }
-
-  .el-table :deep(.el-table__header th) {
-    padding: var(--space-2) var(--space-3) !important;
-  }
-
-  .el-table :deep(.el-table__body td) {
-    padding: var(--space-2) var(--space-3) !important;
-  }
-
-  .el-button--text {
-    padding: var(--space-1) var(--space-2);
-  }
+  .stats-row { grid-template-columns: 1fr; }
+  .stat-card:last-child { grid-column: span 1; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left, .toolbar-right { width: 100%; }
+  .btn-add { width: 100%; }
+  .search-input { width: 100%; }
 }
 
 @media (max-width: 480px) {
-  :deep(.el-dialog) {
-    width: 90% !important;
-  }
-
-  :deep(.el-form-item__label) {
-    float: none;
-    display: block;
-    text-align: left;
-    margin-bottom: var(--space-2);
-  }
-
-  :deep(.el-form-item__content) {
-    margin-left: 0 !important;
-  }
-
-  .el-input,
-  .el-input-number {
-    width: 100% !important;
-  }
+  .main-card :deep(.el-card__body) { padding: 16px; }
+  .stat-card { padding: 16px; }
+  .stat-icon { width: 48px; height: 48px; font-size: 20px; }
+  .stat-value { font-size: 24px; }
+  .modern-dialog :deep(.el-dialog) { width: 92% !important; }
+  .type-select { flex-direction: column; }
 }
 </style>

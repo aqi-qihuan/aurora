@@ -1,4 +1,5 @@
 <template>
+  <a href="#main-content" class="skip-link">跳到主要内容</a>
   <router-view v-slot="{ Component }">
     <transition name="fade" mode="out-in">
       <component :is="Component" />
@@ -34,8 +35,6 @@ onMounted(() => {
   if (savedAccent) {
     root.style.setProperty('--color-primary', savedAccent)
   }
-
-  console.log('[App] 主题已恢复:', savedTheme || 'light', '跟随系统:', followSystem)
 })
 </script>
 
@@ -48,6 +47,41 @@ onMounted(() => {
 @import './styles/geek-animations.css';
 /* 引入极客风管理页面样式 */
 @import './styles/geek-admin.css';
+
+/* 跳过导航链接 - 可访问性 */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--primary, #3B82F6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 屏幕阅读器专用 - 视觉隐藏但可被辅助技术读取 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
 
 /* 全局过渡动画 */
 .fade-enter-active,
@@ -74,6 +108,26 @@ body,
   font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   background: var(--bg-deep, #0F172A);
   color: var(--text-primary, #F8FAFC);
+  touch-action: manipulation;
+}
+
+/* 消除移动端 300ms 点击延迟 */
+a,
+button,
+[role="button"],
+.el-button,
+.el-menu-item,
+.el-sub-menu__title,
+.el-dropdown,
+.el-tabs__item,
+.el-tag,
+.el-input__wrapper,
+.el-select,
+.el-date-editor,
+.el-switch,
+.el-checkbox,
+.el-radio {
+  touch-action: manipulation;
 }
 
 /* 滚动条样式 - 极客风 */

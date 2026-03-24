@@ -2,7 +2,7 @@
   <div>
     <div class="nav-bar">
       <div class="left-menu">
-        <div class="hambuger-container" @click="trigger">
+        <div class="hambuger-container" role="button" tabindex="0" :aria-label="appStore.collapse ? '展开侧边栏' : '折叠侧边栏'" @click="trigger" @keydown.enter="trigger" @keydown.space.prevent="trigger">
           <el-icon :size="20">
             <component :is="appStore.collapse ? 'Expand' : 'Fold'" />
           </el-icon>
@@ -15,15 +15,15 @@
         </el-breadcrumb>
       </div>
       <div class="right-menu">
-        <div class="screen-full" @click="fullScreen" title="全屏">
+        <div class="screen-full" role="button" tabindex="0" aria-label="全屏切换" title="全屏" @click="fullScreen" @keydown.enter="fullScreen" @keydown.space.prevent="fullScreen">
           <el-icon :size="18"><FullScreen /></el-icon>
         </div>
-        <div class="theme-toggle" @click="showThemeSettings" title="主题设置">
+        <div class="theme-toggle" role="button" tabindex="0" aria-label="主题设置" title="主题设置" @click="showThemeSettings" @keydown.enter="showThemeSettings" @keydown.space.prevent="showThemeSettings">
           <el-icon :size="18"><Operation /></el-icon>
         </div>
         <el-dropdown @command="handleCommand">
           <div class="user-dropdown">
-            <el-avatar :size="36" :src="userStore.userInfo.avatar" />
+            <el-avatar :size="36" :src="userStore.userInfo?.avatar" />
             <span class="user-name">{{ userStore.userInfo?.nickname || 'Admin' }}</span>
             <el-icon :size="12"><CaretBottom /></el-icon>
           </div>
@@ -50,9 +50,10 @@
           :key="item.path" 
           @click="goTo(item)">
           {{ item.name }}
-          <el-icon 
-            v-if="item.path != '/home'" 
-            class="el-icon-close" 
+          <el-icon
+            v-if="item.path != '/home'"
+            class="el-icon-close"
+            :aria-label="'关闭 ' + item.name + ' 标签页'"
             @click.stop="removeTab(item)">
             <Close />
           </el-icon>
@@ -76,6 +77,8 @@ import { useUserStore } from '@/stores/user'
 import { useAppStore } from '@/stores/app'
 import ThemeSettings from '@/components/ThemeSettings.vue'
 import request from '@/utils/request'
+
+const emit = defineEmits(['toggle-mobile-sidebar'])
 
 const route = useRoute()
 const router = useRouter()
@@ -159,7 +162,7 @@ const handleCommand = (command) => {
       userStore.logout()
       appStore.resetTab()
       router.push({ path: '/login' })
-    })
+    }).catch(() => {})
   }
 }
 
@@ -186,7 +189,7 @@ const fullScreen = () => {
     } else if (element.webkitRequestFullScreen) {
       element.webkitRequestFullScreen()
     } else if (element.mozRequestFullScreen) {
-      element.webkitRequestFullScreen()
+      element.mozRequestFullScreen()
     } else if (element.msRequestFullscreen) {
       element.msRequestFullscreen()
     }
@@ -206,8 +209,6 @@ const showThemeSettings = () => {
 const isActive = (tab) => {
   return tab.path == route.path ? 'tabs-view-item-active' : 'tabs-view-item'
 }
-
-const emit = defineEmits(['toggle-mobile-sidebar'])
 </script>
 
 <style scoped>

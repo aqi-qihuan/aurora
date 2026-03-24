@@ -18,7 +18,7 @@
       @onUploadImg="uploadImg"
       style="height: calc(100vh - 260px)"
     />
-    <el-dialog v-model="addOrEdit" width="40%" top="3vh">
+    <el-dialog v-model="addOrEdit" width="40%" top="3vh" custom-class="elegant-dialog">
       <div class="dialog-title-container">发布文章</div>
       <el-form label-width="80px" :model="article">
         <el-form-item label="文章分类">
@@ -158,6 +158,9 @@ import 'md-editor-v3/lib/style.css'
 import * as imageConversion from 'image-conversion'
 import dayjs from 'dayjs'
 import request from '@/utils/request'
+import logger from '@/utils/logger'
+import { createBeforeUploadHandler } from '@/utils/imageUtils'
+import { getAuthHeaders } from '@/utils/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -197,7 +200,7 @@ const article = reactive({
   password: ''
 })
 
-const headers = ref({ Authorization: 'Bearer ' + sessionStorage.getItem('token') })
+const headers = ref(getAuthHeaders())
 
 // 分类相关方法
 const listCategories = async () => {
@@ -205,7 +208,7 @@ const listCategories = async () => {
     const { data } = await request.get('/admin/categories/search')
     categorys.value = data.data || []
   } catch (error) {
-    console.error('获取分类列表失败:', error)
+    logger.error('获取分类列表失败:', error)
   }
 }
 
@@ -245,7 +248,7 @@ const listTags = async () => {
     const { data } = await request.get('/admin/tags/search')
     tagList.value = data.data || []
   } catch (error) {
-    console.error('获取标签列表失败:', error)
+    logger.error('获取标签列表失败:', error)
   }
 }
 
@@ -294,17 +297,7 @@ const uploadCover = (response) => {
   }
 }
 
-const beforeUpload = (file) => {
-  return new Promise((resolve) => {
-    if (file.size / 1024 < UPLOAD_SIZE) {
-      resolve(file)
-    } else {
-      imageConversion.compressAccurately(file, UPLOAD_SIZE).then((res) => {
-        resolve(res)
-      })
-    }
-  })
-}
+const beforeUpload = createBeforeUploadHandler(UPLOAD_SIZE)
 
 const uploadImg = async (files, callback) => {
   const file = files[0]
@@ -455,7 +448,7 @@ const autoSaveArticle = async () => {
         })
       }
     } catch (error) {
-      console.error('自动保存失败:', error)
+      logger.error('自动保存失败:', error)
     }
   }
   if (autoSave.value && article.id == null) {
@@ -482,7 +475,7 @@ onMounted(() => {
         const parsedArticle = JSON.parse(savedArticle)
         Object.assign(article, parsedArticle)
       } catch (error) {
-        console.error('解析保存的文章失败:', error)
+        logger.error('解析保存的文章失败:', error)
       }
     }
   }
@@ -502,8 +495,8 @@ onUnmounted(() => {
 }
 .save-btn {
   margin-left: 0.75rem;
-  background: #fff;
-  color: #f56c6c;
+  background: var(--bg-elevated, #fff);
+  color: var(--danger, #f56c6c);
 }
 .tag-item {
   margin-right: 1rem;

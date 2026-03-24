@@ -58,6 +58,23 @@ export const usePageStateStore = defineStore('pageState', () => {
   }
 
   /**
+   * 更新照片页面状态
+   * @param {Object} value - { albumId, current }
+   */
+  const updatePhotoPageState = (value) => {
+    pageState.value.photo = value
+  }
+
+  /**
+   * 更新定时任务日志页面状态
+   * @param {number} jobId - 任务ID
+   * @param {number} current - 当前页
+   */
+  const updateQuartzLogState = (jobId, current) => {
+    pageState.value.quartzLog = { jobId, current }
+  }
+
+  /**
    * 重置所有页面状态
    */
   const resetAllPageState = () => {
@@ -85,7 +102,9 @@ export const usePageStateStore = defineStore('pageState', () => {
     // Actions
     updatePageState,
     getPageState,
-    resetAllPageState
+    resetAllPageState,
+    updatePhotoPageState,
+    updateQuartzLogState
   }
 }, {
   persist: {

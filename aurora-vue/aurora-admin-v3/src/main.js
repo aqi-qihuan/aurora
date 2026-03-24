@@ -33,10 +33,6 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 // 注册自定义指令
 setupDirectives(app)
 
-// 全局属性
-app.config.globalProperties.$axios = request
-app.config.globalProperties.$moment = dayjs
-
 // 使用插件
 app.use(pinia)
 app.use(router)
