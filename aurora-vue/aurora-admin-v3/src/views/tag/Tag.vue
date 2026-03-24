@@ -846,14 +846,20 @@ onMounted(() => {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 0 0 1px var(--primary, #3b82f6);
 }
 
-/* ==================== 深色模式 ==================== */
+/* ==================== 深色模式 - 极客风 ==================== */
 [data-theme="dark"] .stat-card {
   background: var(--bg-base, #1f2937);
   border-color: var(--border-default, #374151);
 }
 
+[data-theme="dark"] .stat-card:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 15px var(--primary-glow);
+}
+
 [data-theme="dark"] .stat-value {
   color: var(--text-primary, #f9fafb);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
 }
 
 [data-theme="dark"] .stat-label {
@@ -866,12 +872,13 @@ onMounted(() => {
 }
 
 [data-theme="dark"] .modern-table :deep(.el-table__header-wrapper th) {
-  background: var(--bg-elevated, #374151);
-  color: var(--text-secondary, #9ca3af);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.7) 100%);
+  color: #F8FAFC;
+  border-bottom: 2px solid var(--neon-blue, #00D4FF);
 }
 
 [data-theme="dark"] .modern-table :deep(.el-table__body tr:hover > td) {
-  background: var(--bg-hover, #374151) !important;
+  background: rgba(0, 212, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .tag-name-text {
@@ -882,20 +889,71 @@ onMounted(() => {
   background: var(--bg-elevated, #374151);
 }
 
+[data-theme="dark"] .count-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: var(--neon-blue, #00D4FF);
+}
+
+[data-theme="dark"] .count-bar {
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+[data-theme="dark"] .time-icon { color: var(--neon-blue, #00D4FF); }
+[data-theme="dark"] .time-cell {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 13px;
+}
+
 [data-theme="dark"] .action-btn.edit {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--neon-blue, #00D4FF);
+}
+
+[data-theme="dark"] .action-btn.edit:hover {
+  background: var(--neon-blue, #00D4FF);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
 }
 
 [data-theme="dark"] .action-btn.delete {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
 }
 
-[data-theme="dark"] .dialog-content h3 {
-  color: var(--text-primary, #f9fafb);
+[data-theme="dark"] .action-btn.delete:hover {
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
 }
 
-[data-theme="dark"] .dialog-content p {
-  color: var(--text-secondary, #9ca3af);
+[data-theme="dark"] .btn-add {
+  background: linear-gradient(135deg, var(--neon-blue, #00D4FF) 0%, var(--neon-purple, #BF5AF2) 100%);
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.4);
+}
+
+[data-theme="dark"] .btn-add:hover {
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.6);
+}
+
+[data-theme="dark"] .pagination-wrapper :deep(.el-pager li.is-active) {
+  background: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+[data-theme="dark"] .search-input :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15), 0 0 12px rgba(0, 212, 255, 0.2);
+}
+
+[data-theme="dark"] .dialog-content h3 { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .dialog-content p { color: var(--text-secondary, #9ca3af); }
+[data-theme="dark"] .dialog-icon-wrapper.primary {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(59, 130, 246, 0.25) 100%);
+  color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+[data-theme="dark"] .form-input :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15), 0 0 12px rgba(0, 212, 255, 0.2);
 }
 
 /* ==================== 响应式设计 ==================== */

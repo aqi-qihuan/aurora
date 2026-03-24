@@ -566,12 +566,37 @@ const previewPhoto = (item) => {
 .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ========== 暗色模式 ========== */
-[data-theme="dark"] .stat-card { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
+[data-theme="dark"] .stat-card {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+[data-theme="dark"] .stat-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: var(--neon-blue, #00D4FF);
+}
 [data-theme="dark"] .toolbar { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .photo-card { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .photo-card.selected { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
-[data-theme="dark"] .select-all.active { background: #1e3a5f; color: #60a5fa; }
-[data-theme="dark"] .select-badge { background: #3b82f6; }
+[data-theme="dark"] .photo-card {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+  transition: all 0.25s ease;
+}
+[data-theme="dark"] .photo-card:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+}
+[data-theme="dark"] .photo-card.selected {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .select-all.active {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .select-badge {
+  background: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
 
 /* ========== 响应式 ========== */
 @media (max-width: 1400px) {

@@ -563,41 +563,60 @@ const handleLogin = () => {
   50% { transform: translateY(-20px) scale(1.2); opacity: 0.6; }
 }
 
-/* ===== 暗色模式 ===== */
+/* ===== 暗色模式 - 极客风 ===== */
 [data-theme="dark"] .login-panel {
   background: var(--bg-base);
-  border-left: 1px solid rgba(59, 130, 246, 0.15);
+  border-left: 1px solid rgba(0, 212, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .login-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--neon-blue, #00D4FF), var(--neon-purple, #BF5AF2), var(--neon-pink, #FF2D92));
+  opacity: 0.8;
 }
 
 [data-theme="dark"] .form-input {
   background: var(--bg-deep);
-  border-color: var(--border-default);
+  border-color: rgba(71, 85, 105, 0.5);
 }
 
 [data-theme="dark"] .form-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light);
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12), 0 0 15px rgba(0, 212, 255, 0.2);
 }
 
 [data-theme="dark"] .password-toggle:hover {
-  background: var(--bg-surface);
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--neon-blue, #00D4FF);
 }
 
 [data-theme="dark"] .login-btn {
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, var(--neon-blue, #00D4FF) 0%, var(--neon-purple, #BF5AF2) 100%);
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
 }
 
 [data-theme="dark"] .login-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 6px 28px rgba(0, 212, 255, 0.6);
+  transform: translateY(-2px);
 }
 
 [data-theme="dark"] .brand-logo {
-  background: rgba(59, 130, 246, 0.2);
-  box-shadow: 0 4px 24px rgba(59, 130, 246, 0.3);
+  background: rgba(0, 212, 255, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 212, 255, 0.3);
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
 [data-theme="dark"] .brand-logo-sm {
-  background: var(--primary-light);
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
 }
 
 /* ===== 响应式 ===== */

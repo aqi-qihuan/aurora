@@ -531,4 +531,23 @@ onUnmounted(() => {
   font-weight: bold;
   margin-bottom: 20px;
 }
+
+/* 深色模式 - 极客风 */
+[data-theme="dark"] .save-btn {
+  background: var(--bg-elevated, #374151);
+  color: #F87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+[data-theme="dark"] .save-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+[data-theme="dark"] .category-item:hover {
+  background-color: rgba(0, 255, 136, 0.08);
+  color: var(--neon-green, #00FF88);
+}
+[data-theme="dark"] .popover-title {
+  color: var(--neon-blue, #00D4FF);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
 </style>

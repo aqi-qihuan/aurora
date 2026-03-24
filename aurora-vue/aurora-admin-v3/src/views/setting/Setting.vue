@@ -598,24 +598,67 @@ const updatePassword = () => {
 .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(26,115,232,0.35); }
 
 /* ========== 暗色模式 ========== */
-[data-theme="dark"] .profile-header { border-color: var(--border-color, #334155); }
+[data-theme="dark"] .profile-header {
+  border-color: rgba(0, 212, 255, 0.2);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(27, 35, 54, 0.5) 100%);
+}
 [data-theme="dark"] .profile-card { background: var(--bg-card, #1e293b); }
-[data-theme="dark"] .user-avatar { border-color: var(--bg-card, #1e293b); }
-[data-theme="dark"] .avatar-placeholder { border-color: var(--bg-card, #1e293b); background: linear-gradient(135deg, #1e3a5f, #1e3a5f); }
-[data-theme="dark"] .avatar-placeholder .el-icon { color: #60a5fa; }
-[data-theme="dark"] .settings-card { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .tab-nav { background: var(--bg-body, #0f172a); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .tab-item { color: var(--text-tertiary, #94a3b8); }
-[data-theme="dark"] .tab-item:hover { color: var(--text-primary, #e2e8f0); }
-[data-theme="dark"] .tab-item.active { color: #60a5fa; border-bottom-color: #3b82f6; }
+[data-theme="dark"] .user-avatar {
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .avatar-placeholder {
+  border-color: rgba(0, 212, 255, 0.2);
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(0, 212, 255, 0.03));
+}
+[data-theme="dark"] .avatar-placeholder .el-icon { color: var(--neon-blue, #00D4FF); }
+[data-theme="dark"] .settings-card {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+[data-theme="dark"] .settings-card:hover {
+  border-color: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.08);
+}
+[data-theme="dark"] .tab-nav {
+  background: var(--bg-body, #0f172a);
+  border-color: var(--border-color, #334155);
+}
+[data-theme="dark"] .tab-item { color: var(--text-tertiary, #94a3b8); transition: all 0.25s ease; }
+[data-theme="dark"] .tab-item:hover {
+  color: var(--neon-blue, #00D4FF);
+  background: rgba(0, 212, 255, 0.05);
+}
+[data-theme="dark"] .tab-item.active {
+  color: var(--neon-blue, #00D4FF);
+  border-bottom-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 2px 10px rgba(0, 212, 255, 0.2);
+}
 [data-theme="dark"] .form-input,
-[data-theme="dark"] .form-textarea { background: var(--bg-body, #0f172a); border-color: var(--border-color, #334155); color: var(--text-primary, #e2e8f0); }
-[data-theme="dark"] .form-input.input-error { border-color: #ef4444; }
+[data-theme="dark"] .form-textarea {
+  background: var(--bg-body, #0f172a);
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #e2e8f0);
+  transition: all 0.25s ease;
+}
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-textarea:focus {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15), 0 0 12px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .form-input.input-error { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); }
 [data-theme="dark"] .input-toggle { color: var(--text-tertiary, #64748b); }
-[data-theme="dark"] .input-toggle:hover { color: var(--text-primary, #e2e8f0); }
+[data-theme="dark"] .input-toggle:hover { color: var(--neon-blue, #00D4FF); }
 [data-theme="dark"] .strength-seg { background: var(--border-color, #334155); }
+[data-theme="dark"] .strength-seg.active { background: var(--neon-green, #00FF88); box-shadow: 0 0 8px rgba(0, 255, 136, 0.3); }
 [data-theme="dark"] .form-actions { border-top-color: var(--border-color, #334155); }
-[data-theme="dark"] .profile-meta a { color: #60a5fa; }
+[data-theme="dark"] .profile-meta a {
+  color: var(--neon-blue, #00D4FF);
+  transition: all 0.2s ease;
+}
+[data-theme="dark"] .profile-meta a:hover {
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+}
 
 /* ========== 响应式 ========== */
 @media (max-width: 640px) {

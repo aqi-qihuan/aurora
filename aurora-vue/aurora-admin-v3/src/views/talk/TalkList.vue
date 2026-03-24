@@ -758,37 +758,56 @@ const deleteTalk = () => {
   box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
 }
 
-/* ==================== 深色模式 ==================== */
+/* ==================== 深色模式 - 极客风 ==================== */
 [data-theme="dark"] .stat-card {
   background: var(--bg-card, #1e1e2e);
   border-color: var(--border-light, rgba(255, 255, 255, 0.06));
 }
 
+[data-theme="dark"] .stat-card:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 15px var(--primary-glow);
+}
+
+[data-theme="dark"] .stat-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: var(--neon-blue, #00D4FF);
+}
+
 [data-theme="dark"] .talk-item {
   background: var(--bg-elevated, rgba(30, 30, 46, 0.8));
   border-color: var(--border-light, rgba(255, 255, 255, 0.06));
+  transition: all 0.25s ease;
 }
 
 [data-theme="dark"] .talk-item:hover {
-  border-color: rgba(102, 126, 234, 0.25);
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
 }
 
 [data-theme="dark"] .action-btn {
   background: var(--bg-card, #1e1e2e);
   border-color: var(--border-light, rgba(255, 255, 255, 0.08));
+  transition: all 0.2s ease;
 }
 
 [data-theme="dark"] .capsule {
   background: var(--bg-secondary, #2a2a3e);
   color: var(--text-secondary, #aaa);
+  transition: all 0.2s ease;
 }
 
 [data-theme="dark"] .capsule:hover {
-  background: var(--bg-hover, #33334d);
+  color: var(--neon-blue, #00D4FF);
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.15);
 }
 
 [data-theme="dark"] .badge-top {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(251, 191, 36, 0.18));
+  background: linear-gradient(135deg, rgba(255, 159, 10, 0.18), rgba(251, 191, 36, 0.18));
+  color: var(--neon-orange, #FF9F0A);
+  box-shadow: 0 0 8px rgba(255, 159, 10, 0.15);
 }
 
 [data-theme="dark"] .badge-private {

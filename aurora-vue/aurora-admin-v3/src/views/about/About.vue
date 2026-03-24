@@ -311,16 +311,51 @@ const updateAbout = () => {
 }
 .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
 
-/* 深色模式 */
-[data-theme="dark"] .stat-card { background: var(--bg-base, #1f2937); border-color: var(--border-default, #374151); }
-[data-theme="dark"] .stat-value { color: var(--text-primary, #f9fafb); }
+/* 深色模式 - 极客风 */
+[data-theme="dark"] .stat-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
+}
+[data-theme="dark"] .stat-card:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 15px var(--primary-glow);
+}
+[data-theme="dark"] .stat-value {
+  color: var(--text-primary, #f9fafb);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
 [data-theme="dark"] .stat-label { color: var(--text-secondary, #9ca3af); }
-[data-theme="dark"] .editor-card { background: var(--bg-base, #1f2937); border-color: var(--border-default, #374151); }
-[data-theme="dark"] .editor-toolbar { background: var(--bg-elevated, #374151); border-color: var(--border-default, #374151); }
-[data-theme="dark"] .toolbar-title { color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .editor-card {
+  background: var(--bg-base, #1f2937);
+  border-color: var(--border-default, #374151);
+}
+[data-theme="dark"] .editor-card:hover {
+  border-color: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.08);
+}
+[data-theme="dark"] .editor-toolbar {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.7) 100%);
+  border-color: var(--border-default, #374151);
+}
+[data-theme="dark"] .toolbar-title {
+  color: var(--neon-blue, #00D4FF);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
 [data-theme="dark"] .edit-hint { color: var(--text-secondary, #9ca3af); }
 [data-theme="dark"] .dialog-content h3 { color: var(--text-primary, #f9fafb); }
-[data-theme="dark"] .preview-content { background: var(--bg-elevated, #374151); border-color: var(--border-default, #374151); color: var(--text-primary, #f9fafb); }
+[data-theme="dark"] .preview-content {
+  background: var(--bg-elevated, #374151);
+  border-color: rgba(0, 212, 255, 0.2);
+  color: var(--text-primary, #f9fafb);
+  box-shadow: inset 0 0 30px rgba(0, 212, 255, 0.03);
+}
+[data-theme="dark"] .btn-preview:hover {
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+}
+[data-theme="dark"] .btn-save {
+  background: linear-gradient(135deg, var(--neon-blue, #00D4FF) 0%, var(--neon-purple, #BF5AF2) 100%);
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.4);
+}
 
 /* 响应式 */
 @media (max-width: 768px) {

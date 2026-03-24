@@ -886,17 +886,70 @@ const previewPhoto = () => {
 .item-check { color: #1a73e8; font-size: 18px; flex-shrink: 0; }
 
 /* ========== 暗色模式 ========== */
-[data-theme="dark"] .stat-card { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
+[data-theme="dark"] .stat-card {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+[data-theme="dark"] .stat-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: var(--neon-blue, #00D4FF);
+}
 [data-theme="dark"] .toolbar { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .photo-card { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .photo-card.selected { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-[data-theme="dark"] .select-all.active { background: #1e3a5f; color: #60a5fa; }
-[data-theme="dark"] .select-badge { background: #3b82f6; }
-[data-theme="dark"] .form-input, [data-theme="dark"] .form-textarea { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); color: var(--text-primary, #e2e8f0); }
-[data-theme="dark"] .upload-drag :deep(.el-upload-dragger) { background: var(--bg-body, #0f172a); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .album-select-item { background: var(--bg-card, #1e293b); border-color: var(--border-color, #334155); }
-[data-theme="dark"] .album-select-item:hover { border-color: #3b82f6; background: #1e3a5f; }
-[data-theme="dark"] .album-select-item.active { border-color: #3b82f6; background: linear-gradient(135deg, #1e3a5f, #1e3a5f); }
+[data-theme="dark"] .photo-card {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+  transition: all 0.25s ease;
+}
+[data-theme="dark"] .photo-card:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+}
+[data-theme="dark"] .photo-card.selected {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .select-all.active {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .select-badge {
+  background: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+[data-theme="dark"] .form-input, [data-theme="dark"] .form-textarea {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #e2e8f0);
+}
+[data-theme="dark"] .form-input:focus, [data-theme="dark"] .form-textarea:focus {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15), 0 0 12px rgba(0, 212, 255, 0.2);
+}
+[data-theme="dark"] .upload-drag :deep(.el-upload-dragger) {
+  background: var(--bg-body, #0f172a);
+  border-color: rgba(0, 212, 255, 0.2);
+  transition: all 0.25s ease;
+}
+[data-theme="dark"] .upload-drag :deep(.el-upload-dragger:hover) {
+  border-color: var(--neon-blue, #00D4FF);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+}
+[data-theme="dark"] .album-select-item {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+  transition: all 0.25s ease;
+}
+[data-theme="dark"] .album-select-item:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.05);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
+}
+[data-theme="dark"] .album-select-item.active {
+  border-color: var(--neon-blue, #00D4FF);
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(0, 212, 255, 0.03));
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);
+}
 
 /* ========== 响应式 ========== */
 @media (max-width: 1400px) { .photo-grid { grid-template-columns: repeat(5, 1fr); } }

@@ -630,7 +630,7 @@ const saveOrUpdateTalk = () => {
   color: #a78bfa;
 }
 
-/* ==================== 深色模式 ==================== */
+/* ==================== 深色模式 - 极客风 ==================== */
 [data-theme="dark"] .main-card {
   background: var(--bg-card, #1e1e2e);
   border-color: var(--border-light, rgba(255, 255, 255, 0.06));
@@ -638,19 +638,22 @@ const saveOrUpdateTalk = () => {
 
 [data-theme="dark"] .tips-card {
   background: var(--bg-elevated, rgba(30, 30, 46, 0.6));
-  border-color: var(--border-light, rgba(255, 255, 255, 0.06));
+  border-color: rgba(0, 212, 255, 0.15);
+  box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.03);
 }
 
 [data-theme="dark"] .op-btn {
   background: var(--bg-card, #1e1e2e);
   border-color: var(--border-light, rgba(255, 255, 255, 0.08));
   color: var(--text-secondary, #aaa);
+  transition: all 0.25s ease;
 }
 
 [data-theme="dark"] .op-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.08);
+  border-color: var(--neon-blue, #00D4FF);
+  color: var(--neon-blue, #00D4FF);
+  background: rgba(0, 212, 255, 0.08);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
 }
 
 [data-theme="dark"] .op-toggle {
@@ -658,23 +661,28 @@ const saveOrUpdateTalk = () => {
 }
 
 [data-theme="dark"] .status-btn.status-private {
-  background: rgba(245, 87, 108, 0.1);
+  background: rgba(255, 45, 146, 0.1);
+  color: var(--neon-pink, #FF2D92);
 }
 
 [data-theme="dark"] .status-btn.status-private:hover {
-  background: rgba(245, 87, 108, 0.18);
+  background: rgba(255, 45, 146, 0.18);
+  box-shadow: 0 0 8px rgba(255, 45, 146, 0.2);
 }
 
 [data-theme="dark"] .clear-all-btn {
-  background: rgba(245, 87, 108, 0.12);
+  background: rgba(255, 45, 146, 0.1);
+  color: var(--neon-pink, #FF2D92);
 }
 
 [data-theme="dark"] .clear-all-btn:hover {
-  background: rgba(245, 87, 108, 0.22);
+  background: rgba(255, 45, 146, 0.2);
+  box-shadow: 0 0 10px rgba(255, 45, 146, 0.2);
 }
 
 [data-theme="dark"] .editor-wrapper {
-  border-color: var(--border-light, rgba(255, 255, 255, 0.08));
+  border-color: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.05);
 }
 
 /* ==================== 响应式 ==================== */
