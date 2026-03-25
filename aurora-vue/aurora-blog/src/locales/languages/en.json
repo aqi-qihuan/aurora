@@ -71,5 +71,12 @@
     "personal-center":"Personal Center",
     "running-time":"Running Time",
     "view-count":"View Count"
+  },
+  "copyright": {
+    "title": "Copyright",
+    "author": "Author",
+    "link": "Article Link",
+    "license": "License",
+    "default_license": "This article is copyrighted by the author. Reposts are welcome but must include the original link. Otherwise, legal liability may be pursued."
   }
 }

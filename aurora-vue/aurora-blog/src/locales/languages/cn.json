@@ -71,5 +71,12 @@
     "personal-center":"个人中心",
     "running-time":"运行时间",
     "view-count":"总访问量"
+  },
+  "copyright": {
+    "title": "版权声明",
+    "author": "本文作者",
+    "link": "本文链接",
+    "license": "版权声明",
+    "default_license": "本文版权归作者所有，欢迎转载，但未经作者同意必须在文章页面给出原文链接，否则保留追究法律责任的权利。"
   }
 }

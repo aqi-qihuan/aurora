@@ -105,6 +105,9 @@
           <br />
           <ob-skeleton tag="div" :count="25" height="16px" width="100px" class="mr-2" />
         </div>
+        <ArticleFooter v-if="article.id" :article="article" />
+        <CopyrightStatement v-if="article.id" :article="article" />
+        <Reward />
         <div class="flex flex-col lg:flex-row justify-start items-end my-8 my-gap">
           <div class="w-full h-full self-stretch mr-0 lg:mr-4" v-if="preArticleCard">
             <SubTitle title="settings.paginator.pre" icon="arrow-left-circle" />
@@ -156,6 +159,9 @@ import { useI18n } from 'vue-i18n'
 import { Comment } from '@/components/Comment'
 import { SubTitle } from '@/components/Title'
 import { ArticleCard } from '@/components/ArticleCard'
+import ArticleFooter from '@/components/ArticleFooter.vue'
+import CopyrightStatement from '@/components/CopyrightStatement.vue'
+import Reward from '@/components/Reward.vue'
 import '@/styles/prism-aurora-future.css'
 import { useCommonStore } from '@/stores/common'
 import { useCommentStore } from '@/stores/comment'
@@ -169,7 +175,7 @@ import markdownToHtml from '@/utils/markdown'
 
 export default defineComponent({
   name: 'Article',
-  components: { Sidebar, Comment, SubTitle, ArticleCard, Profile, Sticky, Navigator },
+  components: { Sidebar, Comment, SubTitle, ArticleCard, Profile, Sticky, Navigator, CopyrightStatement, Reward },
   setup() {
     const proxy: any = getCurrentInstance()?.appContext.config.globalProperties
     const commonStore = useCommonStore()
