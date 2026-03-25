@@ -37,10 +37,10 @@
         <span :class="expanderClass" @click="expandHandler">
           <svg-icon icon-class="chevron" />
         </span>
-        <ul class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        <transition-group name="stagger-fade" tag="ul" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           <template v-if="haveArticles === true">
-            <li v-for="article in articles" :key="article.id">
-              <ArticleCard class="home-article" :data="article" />
+            <li v-for="(article, index) in articles" :key="article.id">
+              <ArticleCard class="home-article" :data="article" :style="{ animationDelay: index * 0.06 + 's' }" />
             </li>
           </template>
           <template v-else>
@@ -48,7 +48,7 @@
               <ArticleCard :data="{}" />
             </li>
           </template>
-        </ul>
+        </transition-group>
         <Paginator
           :pageSize="pagination.size"
           :pageTotal="pagination.total"
@@ -272,6 +272,24 @@ export default defineComponent({
     .article-footer {
       margin-top: 13px;
     }
+  }
+}
+.stagger-fade-enter-active {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: cardFadeIn 0.4s ease both;
+}
+.stagger-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 </style>

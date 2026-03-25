@@ -1,3 +1,9 @@
 .sidebar-box {
   @apply w-full rounded-2xl relative shadow-xl bg-ob-deep-800 mb-8 p-8;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
 }

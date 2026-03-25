@@ -9,28 +9,31 @@
         <div class="relative space-y-5">
           <div class="bg-ob-deep-800 p-4 lg:p-14 rounded-2xl shadow-xl mb-8 lg:mb-0">
             <el-row :gutter="36">
-              <template v-for="link in links" :key="link.id">
-                <el-col :span="8" :xs="{ span: 20, offset: 2 }" class="mb-3">
-                  <el-card shadow="never" class="shadow-md">
-                    <div class="block">
-                      <el-avatar :size="60" :src="link.linkAvatar" />
-                    </div>
-                    <div class="info">
-                      <a :href="link.linkAddress" target="_blank">
-                        <div class="link-name font-semibold">{{ link.linkName }}</div>
-                      </a>
-                      <div class="link-intro truncate">{{ link.linkIntro }}</div>
-                    </div>
-                  </el-card>
+              <transition-group name="link-stagger">
+                <el-col v-for="(link, index) in links" :key="link.id" :span="8" :xs="{ span: 20, offset: 2 }" class="mb-3" :style="{ animationDelay: index * 0.05 + 's' }">
+                  <a :href="link.linkAddress" target="_blank" rel="noopener noreferrer" class="link-card">
+                    <el-card shadow="never" class="link-inner">
+                      <div class="link-avatar-wrap">
+                        <el-avatar :size="56" :src="link.linkAvatar" class="link-avatar" />
+                      </div>
+                      <div class="link-info">
+                        <div class="link-name">{{ link.linkName }}</div>
+                        <div class="link-intro">{{ link.linkIntro }}</div>
+                      </div>
+                      <svg-icon icon-class="arrow-right" class="link-arrow" />
+                    </el-card>
+                  </a>
                 </el-col>
-              </template>
+              </transition-group>
             </el-row>
           </div>
-          <div
-            class="post-html"
-            v-html="
-              `需要交换友链的可在下方留言💖<br><br>友链信息展示需要，你的信息格式要包含：名称、头像、链接、介绍`
-            " />
+          <transition name="msg-intro" appear>
+            <div class="friend-apply">
+              <svg-icon icon-class="link" class="apply-icon" />
+              <p class="apply-text">需要交换友链的可在下方留言</p>
+              <p class="apply-hint">友链信息展示需要，你的信息格式要包含：名称、头像、链接、介绍</p>
+            </div>
+          </transition>
           <Comment />
         </div>
         <div class="col-span-1">
@@ -134,30 +137,155 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.block {
-  display: inline-block;
-  width: 24%;
+.link-card {
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 0.625rem;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
 }
-.info {
-  display: inline-block;
-  width: 76%;
-  height: 100%;
+
+.link-inner {
+  background: var(--background-primary) !important;
+  border-radius: 0.625rem !important;
+  border: 1px solid transparent !important;
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem !important;
+  transition: border-color 0.25s ease, background 0.25s ease;
+
+  .link-card:hover & {
+    border-color: var(--text-accent);
+  }
 }
+
+.link-avatar-wrap {
+  flex-shrink: 0;
+}
+
+.link-avatar {
+  border-radius: 50% !important;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .link-card:hover & {
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+}
+
+.link-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .link-name {
-  margin-left: 20px;
-  margin-bottom: 5px;
-  margin-top: 2px;
-  color: var(--text-normal);
-  font-size: large;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-bright);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s ease;
+
+  .link-card:hover & {
+    color: var(--text-accent);
+  }
 }
+
 .link-intro {
-  margin-left: 20px;
-  margin-bottom: 1px;
-  color: var(--text-normal);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.el-card {
-  background: var(--background-primary);
-  border-radius: 10px;
-  border: 0;
+
+.link-arrow {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--text-dim);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+
+  .link-card:hover & {
+    opacity: 1;
+    transform: translateX(0);
+    color: var(--text-accent);
+  }
+}
+
+.friend-apply {
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.apply-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--text-accent);
+  opacity: 0.6;
+  margin-bottom: 0.75rem;
+}
+
+.apply-text {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.apply-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.link-stagger-enter-active {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.link-stagger-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.95);
+}
+
+.link-stagger-leave-active {
+  transition: all 0.2s ease;
+  position: absolute;
+}
+
+.link-stagger-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.link-stagger-move {
+  transition: transform 0.3s ease;
+}
+
+.msg-intro-enter-active {
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.msg-intro-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
 }
 </style>

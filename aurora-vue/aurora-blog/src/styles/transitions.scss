@@ -31,16 +31,16 @@
 
 /* fade-slide */
 .fade-slide-y-enter-active {
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .fade-slide-y-leave-active {
-  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+  transition: all 0.2s cubic-bezier(0.6, 0.04, 0.98, 0.34);
 }
 
 .fade-slide-y-enter-from,
 .fade-slide-y-leave-to {
-  transform: translateY(10px);
+  transform: translateY(12px);
   opacity: 0;
 }
 
@@ -64,6 +64,21 @@
   position: absolute;
 }
 
+/* stagger animation for lists */
+.stagger-fade-enter-active {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stagger-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.stagger-fade-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes gradient {
   0% {
     background-position: 0% 50%;
@@ -73,5 +88,103 @@
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* shimmer effect for skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* pulse glow */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* comment list transition */
+.comment-fade-enter-active {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.comment-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.comment-fade-leave-active {
+  transition: all 0.2s ease;
+  position: absolute;
+}
+
+.comment-fade-leave-to {
+  opacity: 0;
+}
+
+.comment-fade-move {
+  transition: transform 0.3s ease;
+}
+
+/* reply form slide */
+.reply-slide-enter-active {
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reply-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.reply-slide-enter-from,
+.reply-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .fade-slide-y-enter-active,
+  .fade-slide-y-leave-active,
+  .fade-bounce-y-enter-active,
+  .fade-bounce-y-leave-active,
+  .stagger-fade-enter-active,
+  .comment-fade-enter-active,
+  .comment-fade-leave-active,
+  .reply-slide-enter-active,
+  .reply-slide-leave-active {
+    transition: none;
+  }
+  .fade-slide-y-enter-from,
+  .fade-bounce-y-enter-from,
+  .stagger-fade-enter-from,
+  .comment-fade-enter-from,
+  .reply-slide-enter-from {
+    transform: none;
+    opacity: 1;
   }
 }

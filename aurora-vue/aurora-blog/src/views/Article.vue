@@ -175,7 +175,7 @@ import markdownToHtml from '@/utils/markdown'
 
 export default defineComponent({
   name: 'Article',
-  components: { Sidebar, Comment, SubTitle, ArticleCard, Profile, Sticky, Navigator, CopyrightStatement, Reward },
+  components: { Sidebar, Comment, SubTitle, ArticleCard, Profile, Sticky, Navigator, ArticleFooter, CopyrightStatement, Reward },
   setup() {
     const proxy: any = getCurrentInstance()?.appContext.config.globalProperties
     const commonStore = useCommonStore()
@@ -415,6 +415,19 @@ export default defineComponent({
 #toc1 {
   max-height: 470px;
   overflow: hidden scroll;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-accent) transparent;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-accent);
+    border-radius: 4px;
+    opacity: 0.4;
+  }
 }
 #toc1 > ol {
   list-style: none;
@@ -423,6 +436,11 @@ export default defineComponent({
 
   > li {
     @apply font-medium pb-1;
+    transition: color 0.2s ease;
+    cursor: pointer;
+    &:hover {
+      color: var(--text-bright);
+    }
     &.is-active-li > .node-name--H1 {
       @apply text-ob;
     }
@@ -437,6 +455,11 @@ export default defineComponent({
   ol li {
     @apply font-medium mt-1.5 mb-1.5;
     padding-left: 1.5rem;
+    transition: color 0.2s ease;
+    cursor: pointer;
+    &:hover {
+      color: var(--text-bright);
+    }
     &.is-active-li > .node-name--H2 {
       @apply text-ob;
     }
@@ -446,6 +469,11 @@ export default defineComponent({
     ol li {
       @apply font-medium mt-1.5 mb-1.5;
       padding-left: 1.5rem;
+      transition: color 0.2s ease;
+      cursor: pointer;
+      &:hover {
+        color: var(--text-bright);
+      }
       &.is-active-li .node-name--H3 {
         @apply text-ob;
       }
@@ -470,6 +498,12 @@ export default defineComponent({
     padding: 0;
     font-weight: medium;
     text-shadow: 0 0 0.5em var(--accent-2);
+    transition: transform 0.2s ease;
+  }
+
+  > li:hover::before,
+  ol li:hover::before {
+    transform: scale(1.3);
   }
 
   > li::before {
@@ -516,5 +550,19 @@ export default defineComponent({
 <style lang="scss" scoped>
 .my-gap {
   gap: 1rem;
+}
+</style>
+<style lang="scss">
+.pre-and-next-article {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+  &:hover {
+    transform: translateY(-3px);
+    .article {
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+    }
+    .article-title {
+      color: var(--text-accent);
+    }
+  }
 }
 </style>

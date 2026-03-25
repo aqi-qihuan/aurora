@@ -1,7 +1,8 @@
 <template>
-  <div>
+  <div class="about-page">
     <Breadcrumb :current="t('menu.about')" />
-    <div class="flex flex-col">
+    <div class="about-content">
+      <!-- Header -->
       <div class="post-header">
         <h1 v-if="about" class="post-title text-white uppercase">
           {{ t('titles.about') }}
@@ -12,19 +13,32 @@
           width="100%"
           height="clamp(1.2rem, calc(1rem + 3.5vw), 4rem)" />
       </div>
+
+      <!-- Main Grid -->
       <div class="main-grid">
-        <div class="relative">
-          <div v-if="about" class="post-html" ref="postRef" v-html="about" />
-          <div v-else class="bg-ob-deep-800 px-14 py-16 rounded-2xl shadow-xl block min-h-screen">
-            <ob-skeleton tag="div" :count="1" height="36px" width="150px" class="mb-6" />
-            <br />
-            <ob-skeleton tag="div" :count="35" height="16px" width="100px" class="mr-2" />
-            <br />
-            <br />
-            <ob-skeleton tag="div" :count="25" height="16px" width="100px" class="mr-2" />
-          </div>
+        <div class="about-main">
+          <!-- Content -->
+          <transition name="about-fade" mode="out-in">
+            <div v-if="about" class="post-html" ref="postRef" v-html="about" />
+            <div v-else class="about-skeleton">
+              <ob-skeleton tag="div" :count="1" height="36px" width="150px" class="mb-6" />
+              <div class="skeleton-paragraphs">
+                <div v-for="i in 6" :key="'p' + i" class="skeleton-line-group">
+                  <ob-skeleton
+                    v-for="j in lineCounts[i - 1]"
+                    :key="'l' + i + '-' + j"
+                    tag="div"
+                    height="16px"
+                    :width="j === lineCounts[i - 1] ? '60%' : '100%'"
+                    class="mr-2" />
+                </div>
+              </div>
+            </div>
+          </transition>
           <Comment />
         </div>
+
+        <!-- Sidebar -->
         <div class="col-span-1">
           <Sidebar>
             <Profile author="blog-author" />
@@ -77,7 +91,8 @@ export default defineComponent({
       comments: [] as any,
       haveMore: false as any,
       isReload: false as any,
-      images: [] as any
+      images: [] as any,
+      lineCounts: [8, 10, 6, 12, 7, 5]
     })
     const pageInfo = reactive({
       current: 1,
@@ -151,6 +166,8 @@ export default defineComponent({
           Prism.highlightAll()
           initTocbot()
         })
+      }).catch(() => {
+        reactiveData.about = '<p style="color:var(--text-dim);text-align:center;padding:2rem;">加载失败，请刷新重试</p>'
       })
     }
     const fetchComments = () => {
@@ -175,14 +192,12 @@ export default defineComponent({
           }
           pageInfo.current++
         }
-      }).catch((error) => {
-        console.error('获取评论失败:', error)
-      })
+      }).catch(() => {})
     }
     const fetchReplies = (index: any) => {
       api.getRepliesByCommentId(reactiveData.comments[index].id).then(({ data }) => {
         reactiveData.comments[index].replyDTOs = data.data
-      })
+      }).catch(() => {})
     }
     return {
       postRef,
@@ -192,6 +207,75 @@ export default defineComponent({
   }
 })
 </script>
+
+<style lang="scss" scoped>
+// Page wrapper
+.about-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-main {
+  position: relative;
+}
+
+// Skeleton loading
+.about-skeleton {
+  background: var(--background-secondary, var(--ob-deep-800));
+  padding: 3.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  min-height: 60vh;
+}
+
+.skeleton-paragraphs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.skeleton-line-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  :deep(.ob-skeleton) {
+    height: 14px !important;
+    border-radius: 4px;
+  }
+}
+
+// Content fade-in transition
+.about-fade-enter-active {
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.about-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.about-fade-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.about-fade-leave-to {
+  opacity: 0;
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .about-skeleton {
+    padding: 1.5rem;
+    min-height: 40vh;
+  }
+}
+</style>
 
 <style lang="scss">
 .post-title {
@@ -259,7 +343,7 @@ export default defineComponent({
   ol ol > li::before,
   ol ol ol > li::before,
   ol ol ol ol > li::before {
-    content: '•';
+    content: '\2022';
     color: var(--text-accent);
     display: inline-block;
     width: 1em;

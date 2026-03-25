@@ -96,21 +96,37 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .paginator {
-  @apply flex flex-row justify-center my-8;
+  @apply flex flex-row justify-center my-10;
   ul {
-    @apply flex flex-row;
+    @apply flex flex-row items-center gap-1;
     li {
-      @apply flex flex-row items-center uppercase font-extrabold cursor-pointer mr-2;
+      @apply flex flex-row items-center uppercase font-bold cursor-pointer px-3 py-1.5 rounded-lg text-sm;
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      background: transparent;
+      color: var(--text-dim);
       &:hover {
-        opacity: 0.5;
+        background: var(--bg-accent-05);
+        color: var(--text-normal);
+        transform: translateY(-1px);
       }
       svg {
-        @apply mx-2 font-extrabold text-ob;
+        @apply mx-1 font-bold;
+        transition: transform 0.25s ease;
+      }
+      &:hover svg {
+        transform: translateX(1px);
       }
     }
   }
   .active {
-    @apply text-ob;
+    background: var(--main-gradient);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    &:hover {
+      background: var(--main-gradient);
+      color: #fff;
+      opacity: 0.9;
+    }
   }
 }
 </style>

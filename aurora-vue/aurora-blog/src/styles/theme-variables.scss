@@ -227,25 +227,35 @@
 .tab {
   @apply flex flex-row flex-wrap bg-ob-deep-800 pl-6 pr-12 mb-8 rounded-2xl shadow-md overflow-y-hidden;
   height: 3.5rem;
-  transition: height 400ms ease;
+  transition: height 400ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  &:hover {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  }
   &.expanded-tab {
     overflow-y: initial;
     height: auto;
   }
   li {
-    @apply cursor-pointer hover:opacity-50 my-4 mr-3;
+    @apply cursor-pointer my-4 mr-3;
+    transition: all 0.2s ease;
+    &:hover {
+      opacity: 0.7;
+      transform: translateY(-1px);
+    }
     &.active {
       @apply shadow-lg text-white;
       text-shadow: 0 2px 2px rgba(0, 0, 0, 0.5);
     }
     span {
       @apply whitespace-nowrap bg-ob-deep-900 text-center px-3 py-2 rounded-tl-md rounded-bl-md text-sm;
+      transition: all 0.2s ease;
       &.first-tab {
         @apply rounded-md px-6;
       }
     }
     b {
       @apply whitespace-nowrap bg-ob-deep-900 text-ob text-center px-2 py-2 rounded-tr-md rounded-br-md text-sm opacity-70;
+      transition: opacity 0.2s ease;
     }
   }
 }

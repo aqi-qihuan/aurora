@@ -1,11 +1,14 @@
 <template>
   <div class="oauth-background">
-    <div id="preloader_1">
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
+    <div class="oauth-content">
+      <div class="loader-bar">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <p class="oauth-hint">正在登录中...</p>
     </div>
   </div>
 </template>
@@ -61,59 +64,64 @@ export default defineComponent({
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
+  background: var(--background-primary);
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-#preloader_1 {
+
+.oauth-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.oauth-hint {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  animation: hint-pulse 1.5s ease-in-out infinite;
+}
+
+.loader-bar {
   position: relative;
-  top: 45vh;
-  left: 45vw;
+  width: 56px;
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
 }
-#preloader_1 span {
+
+.loader-bar span {
   display: block;
-  bottom: 0px;
-  width: 9px;
-  height: 5px;
-  background: #9b59b6;
-  position: absolute;
-  animation: preloader_1 1.5s infinite ease-in-out;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--text-accent);
+  animation: loader-bounce 1.2s ease-in-out infinite;
 }
-#preloader_1 span:nth-child(2) {
-  left: 11px;
-  animation-delay: 0.2s;
-}
-#preloader_1 span:nth-child(3) {
-  left: 22px;
-  animation-delay: 0.4s;
-}
-#preloader_1 span:nth-child(4) {
-  left: 33px;
-  animation-delay: 0.6s;
-}
-#preloader_1 span:nth-child(5) {
-  left: 44px;
-  animation-delay: 0.8s;
-}
-@keyframes preloader_1 {
-  0% {
-    height: 5px;
-    transform: translateY(0px);
-    background: #9b59b6;
-  }
-  25% {
-    height: 30px;
-    transform: translateY(15px);
-    background: #3498db;
+
+.loader-bar span:nth-child(2) { animation-delay: 0.1s; }
+.loader-bar span:nth-child(3) { animation-delay: 0.2s; }
+.loader-bar span:nth-child(4) { animation-delay: 0.3s; }
+.loader-bar span:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes loader-bounce {
+  0%, 100% {
+    height: 6px;
+    opacity: 0.4;
   }
   50% {
-    height: 5px;
-    transform: translateY(0px);
-    background: #9b59b6;
+    height: 24px;
+    opacity: 1;
   }
-  100% {
-    height: 5px;
-    transform: translateY(0px);
-    background: #9b59b6;
-  }
+}
+
+@keyframes hint-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 </style>

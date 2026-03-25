@@ -31,7 +31,7 @@
                 <span>{{ article.articleTitle }}</span>
                 <svg-icon v-if="article.status == 2" icon-class="lock" class="lock-svg" />
               </h3>
-              <p>
+              <p class="article-desc">
                 {{ article.articleContent }}
               </p>
             </div>
@@ -145,6 +145,10 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+.archives-container {
+  transition: box-shadow 0.3s ease;
+}
+
 .timeline {
   position: relative;
   z-index: 2;
@@ -180,6 +184,7 @@ export default defineComponent({
   margin: 0 0 0.5em 0;
   text-transform: uppercase;
   white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
 .timeline-marker {
@@ -199,17 +204,20 @@ export default defineComponent({
     top: 4px;
     left: 0;
     width: 15px;
-    transition: background 0.3s ease-in-out, border 0.3s ease-in-out;
+    transition: background 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                border 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
   &:after {
     content: '';
     width: 3px;
-    background: var(--text-normal);
+    background: linear-gradient(to bottom, var(--text-accent), var(--text-dim));
     display: block;
     position: absolute;
     top: 24px;
     bottom: 0;
     left: 6px;
+    opacity: 0.35;
   }
   .timeline-item:last-child &:after {
     content: none;
@@ -218,6 +226,7 @@ export default defineComponent({
 .timeline-item:not(.period):hover .timeline-marker:before {
   background: transparent;
   border: 3px solid var(--text-accent);
+  transform: scale(1.2);
 }
 
 .timeline-content {
@@ -236,11 +245,16 @@ export default defineComponent({
 .timeline-title {
   @apply pb-2 mb-4 text-ob-bright relative text-2xl;
   font-weight: 600;
+  transition: color 0.2s ease;
   &:after {
     @apply absolute bottom-0 h-1 w-24 rounded-full;
     content: '';
     background: var(--main-gradient);
     left: 0;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  &:hover::after {
+    width: 3rem;
   }
 }
 
@@ -260,8 +274,9 @@ export default defineComponent({
       top: 0;
       bottom: 30px;
       position: absolute;
-      border-top: 3px solid var(--text-normal);
-      border-bottom: 3px solid var(--text-normal);
+      border-top: 3px solid var(--text-accent);
+      border-bottom: 3px solid var(--text-accent);
+      opacity: 0.5;
     }
     &:after {
       content: '';
@@ -278,6 +293,38 @@ export default defineComponent({
       content: none;
     }
   }
+}
+
+.period-title {
+  letter-spacing: 0.06em;
+}
+
+.article-title {
+  cursor: pointer;
+  span {
+    transition: color 0.2s ease;
+  }
+  &:hover span {
+    color: var(--text-accent);
+  }
+}
+
+.article-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+.lock-svg {
+  margin-left: 6px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.article-title:hover .lock-svg {
+  opacity: 1;
+  transform: scale(1.15);
 }
 
 .timeline-split {
@@ -389,7 +436,23 @@ export default defineComponent({
   }
 }
 
-.article-title {
-  cursor: default;
+.archive-fade-enter-active {
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.archive-fade-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.archive-fade-leave-active {
+  transition: all 0.25s ease;
+  position: absolute;
+  width: 100%;
+}
+.archive-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.archive-fade-move {
+  transition: transform 0.35s ease;
 }
 </style>

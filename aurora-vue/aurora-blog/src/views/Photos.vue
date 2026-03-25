@@ -20,13 +20,19 @@
               :infinite-scroll-disabled="noResult"
               infinite-scroll-watch-disabled="scrollDisabled"
               :infinite-scroll-distance="isMobile ? 0 : 30">
-              <div class="photo-wrap">
+              <transition-group name="photo-fade" tag="div" class="photo-wrap">
                 <img
                   v-for="(item, index) of photos"
                   class="photo"
-                  :key="index"
+                  :key="item"
                   :src="item"
+                  :style="{ animationDelay: index * 0.04 + 's' }"
+                  loading="lazy"
                   @click="handlePreview(index)" />
+              </transition-group>
+              <div v-if="noResult && photos.length === 0" class="photos-empty">
+                <svg-icon icon-class="eye" class="empty-icon" />
+                <p class="empty-text">暂无照片</p>
               </div>
             </div>
           </div>
@@ -105,22 +111,90 @@ export default defineComponent({
 .photo-wrap {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
 }
-.photo {
-  margin: 3px;
-  cursor: pointer;
-  flex-grow: 1;
-  object-fit: cover;
-  height: 200px;
-}
+
 .photo-wrap::after {
   content: '';
   display: block;
   flex-grow: 9999;
 }
+
+.photo {
+  flex-grow: 1;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: zoom-in;
+  background: var(--background-secondary);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.3s ease,
+              opacity 0.4s ease;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+    z-index: 2;
+  }
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.photos-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 0;
+  color: var(--text-dim);
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.3;
+  margin-bottom: 1rem;
+}
+
+.empty-text {
+  font-size: 0.9rem;
+  opacity: 0.5;
+}
+
+.photo-fade-enter-active {
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.photo-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.photo-fade-leave-active {
+  transition: all 0.25s ease;
+  position: absolute;
+}
+
+.photo-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.photo-fade-move {
+  transition: transform 0.3s ease;
+}
+
 @media (max-width: 759px) {
+  .photo-wrap {
+    gap: 4px;
+  }
+
   .photo {
     width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
   }
 }
 </style>

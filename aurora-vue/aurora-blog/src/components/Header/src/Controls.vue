@@ -38,75 +38,107 @@
       <ThemeToggle />
     </span>
   </div>
-  <el-dialog v-model="loginDialogVisible" width="30%" :fullscreen="isMobile">
-    <el-form @keyup.enter.native="login">
-      <el-form-item model="userInfo" class="mt-5">
+  <el-dialog v-model="loginDialogVisible" width="30%" :fullscreen="isMobile" class="auth-dialog">
+    <div class="dialog-header">
+      <svg-icon icon-class="author" class="dialog-icon" />
+      <h3 class="dialog-title">欢迎回来</h3>
+      <p class="dialog-subtitle">登录你的账号</p>
+    </div>
+    <el-form @keyup.enter.native="login" class="auth-form">
+      <el-form-item class="mt-5">
         <el-input v-model="loginInfo.username" placeholder="邮箱" />
       </el-form-item>
-      <el-form-item model="userInfo" type="password" class="mt-8">
+      <el-form-item class="mt-4">
         <el-input v-model="loginInfo.password" type="password" show-password placeholder="密码" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="login" size="large" class="mx-auto mt-3">登录</el-button>
+        <button type="button" class="auth-btn auth-btn-primary" @click="login">登录</button>
       </el-form-item>
+      <div class="dialog-divider">
+        <span class="divider-line"></span>
+        <span class="divider-text">或</span>
+        <span class="divider-line"></span>
+      </div>
       <el-form-item>
-        <el-button type="button" class="mx-auto my-el-button" @click="qqLogin">QQ登录</el-button>
+        <button type="button" class="auth-btn auth-btn-qq" @click="qqLogin">
+          <svg-icon icon-class="qqLogin" class="qq-icon" />
+          <span>QQ 登录</span>
+        </button>
       </el-form-item>
-      <div class="mt-8">
-        <span class="text" @click="openRegisterDialog">立即注册</span>
-        <span class="text float-right" @click="openForgetPasswordDialog">忘记密码?</span>
+      <div class="dialog-footer-links">
+        <span class="auth-link" @click="openRegisterDialog">立即注册</span>
+        <span class="auth-link" @click="openForgetPasswordDialog">忘记密码?</span>
       </div>
     </el-form>
   </el-dialog>
-  <el-dialog v-model="registerDialogVisible" width="30%" :fullscreen="isMobile">
-    <el-form>
-      <el-form-item model="userInfo" class="mt-5">
+  <el-dialog v-model="registerDialogVisible" width="30%" :fullscreen="isMobile" class="auth-dialog">
+    <div class="dialog-header">
+      <svg-icon icon-class="people" class="dialog-icon" />
+      <h3 class="dialog-title">创建账号</h3>
+      <p class="dialog-subtitle">注册一个新账号</p>
+    </div>
+    <el-form class="auth-form">
+      <el-form-item class="mt-5">
         <el-input v-model="loginInfo.username" placeholder="邮箱" />
       </el-form-item>
-      <el-form-item model="userInfo" class="mt-8">
+      <el-form-item class="mt-4">
         <el-input v-model="loginInfo.code" placeholder="验证码">
           <template #append>
-            <span class="text" @click="sendCode">发送</span>
+            <span class="auth-link" @click="sendCode">发送</span>
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item model="userInfo" type="password" class="mt-8">
+      <el-form-item class="mt-4">
         <el-input v-model="loginInfo.password" type="password" show-password placeholder="密码" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="register" size="large" class="mx-auto mt-3">注册</el-button>
+        <button type="button" class="auth-btn auth-btn-primary" @click="register">注册</button>
       </el-form-item>
-      <span class="text" @click="returnLoginDialog">已有帐号?登录</span>
+      <div class="dialog-footer-links">
+        <span class="auth-link" @click="returnLoginDialog">已有帐号? 登录</span>
+      </div>
     </el-form>
   </el-dialog>
-  <el-dialog v-model="forgetPasswordDialogVisible" width="30%" :fullscreen="isMobile">
-    <el-form>
-      <el-form-item model="userInfo" class="mt-5">
+  <el-dialog v-model="forgetPasswordDialogVisible" width="30%" :fullscreen="isMobile" class="auth-dialog">
+    <div class="dialog-header">
+      <svg-icon icon-class="shield" class="dialog-icon" />
+      <h3 class="dialog-title">重置密码</h3>
+      <p class="dialog-subtitle">通过邮箱验证码重置</p>
+    </div>
+    <el-form class="auth-form">
+      <el-form-item class="mt-5">
         <el-input v-model="loginInfo.username" placeholder="邮箱" />
       </el-form-item>
-      <el-form-item model="userInfo" class="mt-8">
+      <el-form-item class="mt-4">
         <el-input v-model="loginInfo.code" placeholder="验证码">
           <template #append>
-            <span class="text" @click="sendCode">发送</span>
+            <span class="auth-link" @click="sendCode">发送</span>
           </template>
         </el-input>
       </el-form-item>
-      <el-form-item model="userInfo" type="password" class="mt-8">
+      <el-form-item class="mt-4">
         <el-input v-model="loginInfo.password" type="password" show-password placeholder="新密码" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="updatePassword" size="large" class="mx-auto mt-3">确定</el-button>
+        <button type="button" class="auth-btn auth-btn-primary" @click="updatePassword">确定</button>
       </el-form-item>
-      <span class="text" @click="returnLoginDialog">返回登录</span>
+      <div class="dialog-footer-links">
+        <span class="auth-link" @click="returnLoginDialog">返回登录</span>
+      </div>
     </el-form>
   </el-dialog>
-  <el-dialog v-model="articlePasswordDialogVisible" width="30%" :fullscreen="isMobile">
-    <el-form @submit.native.prevent @keyup.enter.native="accessArticle">
-      <el-form-item model="userInfo" class="mt-5">
+  <el-dialog v-model="articlePasswordDialogVisible" width="30%" :fullscreen="isMobile" class="auth-dialog">
+    <div class="dialog-header">
+      <svg-icon icon-class="lock" class="dialog-icon" />
+      <h3 class="dialog-title">受密码保护</h3>
+      <p class="dialog-subtitle">请输入文章密码</p>
+    </div>
+    <el-form @submit.native.prevent @keyup.enter.native="accessArticle" class="auth-form">
+      <el-form-item class="mt-5">
         <el-input id="article-password-input" v-model="articlePassword" placeholder="文章受密码保护,请输入密码" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="accessArticle" size="large" class="mx-auto mt-3">校验密码</el-button>
+        <button type="button" class="auth-btn auth-btn-primary" @click="accessArticle">校验密码</button>
       </el-form-item>
     </el-form>
   </el-dialog>
@@ -350,29 +382,54 @@ export default defineComponent({
 })
 </script>
 <style lang="scss">
-.my-el-button {
-  width: 300px !important;
+.auth-dialog .el-dialog {
+  border-radius: 1rem !important;
+  overflow: hidden;
 }
-.el-button {
-  width: 300px;
+
+.auth-dialog .el-dialog__header {
+  display: none;
 }
+
+.auth-dialog .el-dialog__body {
+  padding: 2rem 2.5rem !important;
+}
+
 .el-dialog__headerbtn {
   outline: none !important;
 }
+
 .el-input-group__append {
   background-color: var(--background-primary-alt) !important;
 }
+
 .el-form-item__label {
   text-align: left;
   width: 70px;
   color: var(--text-normal) !important;
 }
+
 .el-input__inner {
   color: var(--text-normal) !important;
   background-color: var(--background-primary-alt) !important;
+  transition: border-color 0.25s ease !important;
 }
+
 .el-input__wrapper {
   background: var(--background-primary-alt) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  border: 1px solid transparent !important;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.el-input__wrapper:hover {
+  border-color: var(--text-dim) !important;
+}
+
+.el-input__wrapper.is-focus {
+  border-color: var(--text-accent) !important;
+  box-shadow: 0 0 0 2px rgba(var(--text-accent-rgb, 100, 149, 237), 0.15) !important;
 }
 </style>
 <style lang="scss" scoped>
@@ -380,10 +437,134 @@ export default defineComponent({
   color: var(--text-normal);
   cursor: pointer;
 }
-#submit-button {
-  outline: none;
-  background: #0fb6d6;
+
+.dialog-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
+
+.dialog-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--text-accent);
+  opacity: 0.7;
+  margin-bottom: 0.75rem;
+}
+
+.dialog-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin: 0 0 0.25rem;
+}
+
+.dialog-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.auth-form {
+  padding-top: 0.5rem;
+}
+
+.auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s ease,
+              opacity 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+}
+
+.auth-btn-primary {
+  background: var(--main-gradient);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.auth-btn-qq {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  gap: 0.5rem;
+
+  &:hover {
+    background: var(--background-tertiary, rgba(255, 255, 255, 0.1));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.qq-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dialog-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--text-dim), transparent);
+  opacity: 0.2;
+}
+
+.divider-text {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.dialog-footer-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.auth-link {
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--text-accent);
+  }
+}
+
 .header-controls {
   span {
     display: flex;

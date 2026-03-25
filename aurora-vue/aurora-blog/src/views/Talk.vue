@@ -172,43 +172,63 @@ export default defineComponent({
 .message-svg {
   margin-left: 5px;
   font-size: 15px;
-}
-.el-card {
-  background: var(--background-primary);
-  border-radius: 10px;
-  border: 0;
-}
-.talk-user-avatar {
-  flex: 1;
+  transition: transform 0.2s ease;
 }
 .talk-info {
   flex: 1;
-  margin-left: 10px;
+  margin-left: 12px;
 }
 .user-nickname {
   font-weight: 530;
+  color: var(--text-bright);
 }
 .time {
-  color: #999;
+  color: var(--text-dim);
   font-size: 13px;
   @media (min-width: 1280px) {
     margin-top: 4px;
   }
 }
 .talk-content {
-  margin-top: 10px;
-  font-size: 14px;
-  line-height: 26px;
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.8;
   white-space: pre-line;
   word-wrap: break-word;
   word-break: break-all;
+  color: var(--text-normal);
+}
+.talk-content :deep(img) {
+  border-radius: 10px;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+  cursor: zoom-in;
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  }
+}
+.talk-content :deep(a) {
+  color: var(--text-accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+  &:hover {
+    border-bottom-color: var(--text-accent);
+  }
 }
 .talk-images {
-  margin-top: 8px;
+  margin-top: 12px;
 }
-.images-items {
-  cursor: pointer;
-  border-radius: 3px;
-  margin-right: 5px;
+.images-talks {
+  cursor: zoom-in;
+  border-radius: 10px;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  }
 }
 </style>

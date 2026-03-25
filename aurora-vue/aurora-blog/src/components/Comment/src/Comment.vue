@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-ob-deep-800 p-4 mt-8 lg:px-14 lg:py-10 rounded-2xl shadow-xl mb-8 lg:mb-0" id="comments">
+  <div class="comment-section" id="comments">
     <SubTitle :title="'titles.comment'" />
     <CommentForm />
     <CommentList />
@@ -18,3 +18,20 @@ export default defineComponent({
   }
 })
 </script>
+<style lang="scss" scoped>
+.comment-section {
+  background: var(--background-secondary, var(--ob-deep-800));
+  padding: 1rem;
+  margin-top: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .comment-section {
+    padding: 2.5rem 3.5rem;
+    margin-bottom: 0;
+  }
+}
+</style>
