@@ -1,0 +1,20 @@
+# Aurora 博客系统 - GraalVM JDK 25
+FROM ghcr.io/graalvm/jdk-community:25
+
+WORKDIR /app
+VOLUME /tmp
+ADD aurora-springboot-0.0.1.jar blog.jar
+
+ENV TZ=Asia/Shanghai
+
+ENTRYPOINT ["java", \
+  "-Xms64m", "-Xmx128m", \
+  "-XX:+UseSerialGC", \
+  "-XX:MetaspaceSize=64m", "-XX:MaxMetaspaceSize=128m", \
+  "-XX:ReservedCodeCacheSize=32m", "-Xss256k", \
+  "-XX:+UseCompressedOops", "-XX:+UseCompressedClassPointers", \
+  "-XX:+UseStringDeduplication", "-XX:+OptimizeStringConcat", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-Dspring.jmx.enabled=false", \
+  "-Dspring.profiles.active=prod", \
+  "-jar", "blog.jar"]

@@ -107,9 +107,11 @@ services:
     restart: always
 
   springboot:
-    image: tencentcloud/tencentkona25:jre-alpine
+    # HotSpot JVM: tencentcloud/tencentkona25:jre-alpine
+    # GraalVM JIT: ghcr.io/graalvm/jdk-community:25
+    image: ghcr.io/graalvm/jdk-community:25
     container_name: aurora-springboot
-    environment: 
+    environment:
       SPRING_PROFILES_ACTIVE: prod
       TZ: Asia/Shanghai
       # Docker网络内部服务名覆盖配置
@@ -126,17 +128,15 @@ services:
       - aurora-network
     restart: always
     command: >
-      java -Xms96m -Xmx192m -XX:+UseSerialGC
-          -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=256m
-          -XX:ReservedCodeCacheSize=64m -Xss256k
+      java -Xms64m -Xmx128m -XX:+UseSerialGC
+          -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m
+          -XX:ReservedCodeCacheSize=32m -Xss256k
           -XX:+UseCompressedOops
           -XX:+UseCompressedClassPointers
           -XX:+UseStringDeduplication
           -XX:+OptimizeStringConcat
-          -XX:+AlwaysPreTouch
           -Djava.security.egd=file:/dev/./urandom
           -Dspring.jmx.enabled=false
-          -Dspring.backgroundpreinitializer.ignore=true
           -jar /app/blog.jar
 
   maxwell:
