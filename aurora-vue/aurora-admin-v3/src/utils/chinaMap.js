@@ -1,11 +1,13 @@
 /**
  * 中国地图 ES Module
- * 从阿里云 DataV 加载完整的省份边界多边形数据
+ * 优先使用本地打包的地图数据，确保云端可用
  * 
  * 数据源: https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json
  */
 
 import * as echarts from 'echarts'
+// 直接导入本地地图数据 JSON (会被 Vite 打包)
+import localChinaMapData from '@/assets/json/china-map.json'
 
 // 省份坐标映射（用于散点图）
 export const provinceCoordinates = {
@@ -45,8 +47,8 @@ export const provinceCoordinates = {
   '澳门': [113.5, 22.2]
 }
 
-// 地图数据缓存
-let chinaMapData = null
+// 地图数据缓存 (用于远程加载的缓存)
+let remoteMapDataCache = null
 let chinaMapRegistered = false
 
 /**
@@ -54,8 +56,8 @@ let chinaMapRegistered = false
  * @returns {Promise<Object>} GeoJSON 数据
  */
 async function fetchChinaMapData() {
-  if (chinaMapData) {
-    return chinaMapData
+  if (remoteMapDataCache) {
+    return remoteMapDataCache
   }
   
   try {
@@ -63,8 +65,8 @@ async function fetchChinaMapData() {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    chinaMapData = await response.json()
-    return chinaMapData
+    remoteMapDataCache = await response.json()
+    return remoteMapDataCache
   } catch (error) {
     console.error('加载中国地图数据失败:', error)
     throw error
@@ -73,6 +75,7 @@ async function fetchChinaMapData() {
 
 /**
  * 注册中国地图到 ECharts
+ * 直接使用本地打包的 JSON 数据，确保云端可用
  * @returns {Promise<boolean>} 是否注册成功
  */
 export async function registerChinaMap() {
@@ -81,21 +84,31 @@ export async function registerChinaMap() {
   }
   
   try {
-    // 从在线加载完整的省份边界数据
-    const geoJSON = await fetchChinaMapData()
-    
-    // 注册到 ECharts
-    echarts.registerMap('china', geoJSON)
+    // 直接使用导入的本地地图数据 (优先，确保云端可用)
+    echarts.registerMap('china', localChinaMapData)
     chinaMapRegistered = true
-    
-    console.log('✅ 中国地图注册成功 - 包含详细省份边界')
+    console.log('✅ 中国地图注册成功 (本地数据)')
     return true
-  } catch (error) {
-    console.warn('⚠️ 完整地图加载失败，使用简化版:', error.message)
+  } catch (localError) {
+    console.warn('⚠️ 本地地图加载失败，尝试在线加载:', localError.message)
     
-    // 降级使用简化版地图
-    registerSimplifiedChinaMap()
-    return true
+    try {
+      // 降级方案: 从在线加载完整的省份边界数据
+      const geoJSON = await fetchChinaMapData()
+      
+      // 注册到 ECharts
+      echarts.registerMap('china', geoJSON)
+      chinaMapRegistered = true
+      
+      console.log('✅ 中国地图注册成功 - 在线数据')
+      return true
+    } catch (onlineError) {
+      console.warn('⚠️ 在线地图加载失败，使用简化版:', onlineError.message)
+      
+      // 最终降级: 使用简化版地图
+      registerSimplifiedChinaMap()
+      return true
+    }
   }
 }
 

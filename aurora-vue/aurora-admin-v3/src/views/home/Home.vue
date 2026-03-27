@@ -565,7 +565,7 @@ const listUserArea = async () => {
   try {
     mapLoading.value = true
     const { data } = await request.get('/admin/users/area', { params: { type: userType.value } })
-    if (data?.data) {
+    if (data?.data && Array.isArray(data.data)) {
       const municipalities = ['北京','天津','上海','重庆']
       const specialRegions = ['香港','澳门']
       const autonomousRegions = {
@@ -582,8 +582,14 @@ const listUserArea = async () => {
         }
         return { name, value: item.count || item.value || 0 }
       })
+    } else {
+      console.warn('用户地域分布数据为空或格式错误:', data)
+      userAreaData.value = []
     }
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.error('获取用户地域分布失败:', err)
+    userAreaData.value = []
+  }
   finally { mapLoading.value = false }
 }
 
