@@ -222,22 +222,28 @@ const chartColors = computed(() => {
     return {
       textPrimary: '#F8FAFC',
       textSecondary: '#94A3B8',
-      textMuted: '#64748B',
+      textMuted: '#94A3B8',
       border: '#475569',
       splitLine: '#334155',
       tooltipBg: 'rgba(15, 23, 42, 0.95)',
-      tooltipBorder: '#334155',
+      tooltipBorder: 'rgba(0, 212, 255, 0.3)',
       tooltipText: '#F8FAFC',
-      primary: '#3B82F6',
+      primary: '#00D4FF',
       primaryLight: '#60A5FA',
-      mapArea: '#1E293B',
-      mapBorder: '#334155',
-      mapEmphasis: '#272F42',
+      // 深色模式地图 - 提高对比度，增加可读性
+      mapArea: '#272F42',
+      mapBorder: 'rgba(0, 212, 255, 0.6)',
+      mapEmphasis: '#3D4A5C',
+      mapShadow: 'rgba(0, 212, 255, 0.4)',
+      visualMapBg: '#272F42',
+      visualMapText: '#E2E8F0',
+      // 深色模式 visualMap 颜色 - 使用霓虹色系
+      visualMapColors: ['#FF2D92', '#BF5AF2', '#00D4FF', '#00FF88'],
       gradient1: '#60A5FA',
       gradient2: '#2563EB',
-      areaOpacity1: 'rgba(59, 130, 246, 0.35)',
-      areaOpacity2: 'rgba(59, 130, 246, 0.02)',
-      pieColors: ['#3B82F6','#60A5FA','#8B5CF6','#A78BFA','#F97316','#22C55E','#EF4444','#F59E0B','#06B6D4','#EC4899']
+      areaOpacity1: 'rgba(0, 212, 255, 0.35)',
+      areaOpacity2: 'rgba(0, 212, 255, 0.02)',
+      pieColors: ['#00D4FF','#60A5FA','#BF5AF2','#A78BFA','#FF9F0A','#00FF88','#FF2D92','#F59E0B','#06B6D4','#EC4899']
     }
   }
   return {
@@ -252,8 +258,11 @@ const chartColors = computed(() => {
     primary: '#3B82F6',
     primaryLight: '#93C5FD',
     mapArea: '#F8FAFC',
-    mapBorder: '#E2E8F0',
-    mapEmphasis: '#EFF6FF',
+    mapBorder: '#CBD5E1',
+    mapEmphasis: '#DBEAFE',
+    mapShadow: 'rgba(59, 130, 246, 0.15)',
+    visualMapBg: 'rgba(255, 255, 255, 0.9)',
+    visualMapText: '#475569',
     gradient1: '#60A5FA',
     gradient2: '#3B82F6',
     areaOpacity1: 'rgba(59, 130, 246, 0.25)',
@@ -427,9 +436,21 @@ const userAreaOption = computed(() => ({
     min: 0, max: 100, left: 'left', top: 'bottom',
     text: ['高', '低'],
     calculable: true,
-    textStyle: { color: chartColors.value.textMuted, fontSize: 11 },
-    itemWidth: 12, itemHeight: 100,
-    pieces: [
+    textStyle: { color: chartColors.value.visualMapText, fontSize: 11 },
+    itemWidth: 14, itemHeight: 110,
+    backgroundColor: chartColors.value.visualMapBg,
+    padding: [8, 10],
+    borderRadius: 6,
+    borderWidth: isDark.value ? 1 : 1,
+    borderColor: isDark.value ? 'rgba(71, 85, 105, 0.5)' : '#E2E8F0',
+    pieces: isDark.value ? [
+      // 深色模式 - 霓虹色系，对比度更高
+      { gt: 100, label: '100+', color: '#FF2D92' },
+      { gte: 51, lte: 100, label: '51-100', color: '#BF5AF2' },
+      { gte: 21, lte: 50, label: '21-50', color: '#00D4FF' },
+      { gt: 0, lte: 20, label: '1-20', color: '#00FF88' }
+    ] : [
+      // 浅色模式 - 经典色系
       { gt: 100, label: '100+', color: '#EF4444' },
       { gte: 51, lte: 100, label: '51-100', color: '#22C55E' },
       { gte: 21, lte: 50, label: '21-50', color: '#F59E0B' },
@@ -445,20 +466,52 @@ const userAreaOption = computed(() => ({
     itemStyle: {
       areaColor: chartColors.value.mapArea,
       borderColor: chartColors.value.mapBorder,
-      borderWidth: 1
+      borderWidth: isDark.value ? 1.5 : 1
     },
     emphasis: {
       itemStyle: {
         areaColor: chartColors.value.mapEmphasis,
-        shadowOffsetX: 0, shadowOffsetY: 0, borderWidth: 0
+        borderColor: isDark.value ? '#00D4FF' : '#3B82F6',
+        borderWidth: isDark.value ? 2 : 1.5,
+        shadowColor: isDark.value ? chartColors.value.mapShadow : 'rgba(59, 130, 246, 0.2)',
+        shadowBlur: isDark.value ? 15 : 12,
+        shadowOffsetX: 0,
+        shadowOffsetY: 0
+      },
+      label: {
+        show: true,
+        color: isDark.value ? '#00D4FF' : '#1E293B',
+        fontSize: 12,
+        fontWeight: 600
       }
+    },
+    label: {
+      show: false
     }
   },
   series: [{
     name: '用户人数',
     type: 'map',
     geoIndex: 0,
-    data: userAreaData.value
+    data: userAreaData.value,
+    emphasis: {
+      itemStyle: {
+        areaColor: chartColors.value.mapEmphasis,
+        borderColor: isDark.value ? '#00D4FF' : '#3B82F6',
+        borderWidth: isDark.value ? 2 : 1.5,
+        shadowColor: isDark.value ? chartColors.value.mapShadow : 'rgba(59, 130, 246, 0.2)',
+        shadowBlur: isDark.value ? 20 : 15
+      }
+    },
+    select: {
+      itemStyle: {
+        areaColor: isDark.value ? '#3D4A5C' : '#DBEAFE',
+        borderColor: isDark.value ? '#00D4FF' : '#2563EB',
+        borderWidth: 2,
+        shadowColor: isDark.value ? 'rgba(0, 212, 255, 0.3)' : 'rgba(59, 130, 246, 0.25)',
+        shadowBlur: 10
+      }
+    }
   }]
 }))
 
@@ -903,6 +956,41 @@ onBeforeUnmount(() => {
 
 [data-theme="dark"] .card:hover {
   border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* 深色模式地图增强 */
+[data-theme="dark"] .card:has(.chart-map) {
+  background: linear-gradient(145deg, rgba(27, 35, 54, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .card:has(.chart-map):hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+}
+
+/* 地图切换按钮深色模式 */
+[data-theme="dark"] .toggle-group {
+  border-color: rgba(71, 85, 105, 0.5);
+}
+
+[data-theme="dark"] .toggle-btn {
+  background: rgba(30, 41, 59, 0.6);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .toggle-btn + .toggle-btn {
+  border-left-color: rgba(71, 85, 105, 0.5);
+}
+
+[data-theme="dark"] .toggle-btn.active {
+  background: linear-gradient(135deg, var(--neon-blue) 0%, var(--neon-purple) 100%);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+}
+
+[data-theme="dark"] .toggle-btn:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--neon-blue);
 }
 
 /* ===== 动画 ===== */
