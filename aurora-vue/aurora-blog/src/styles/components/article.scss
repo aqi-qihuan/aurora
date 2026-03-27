@@ -13,7 +13,7 @@
     }
     .article-thumbnail img,
     .feature-thumbnail img {
-      transform: scale(1.06);
+      transform: scale(1.08);
     }
     .article-title {
       color: var(--text-accent);
@@ -35,35 +35,52 @@
 }
 
 .article {
-  @apply relative top-0 z-10 rounded-2xl bg-ob-deep-800 shadow-lg grid grid-rows-3 overflow-hidden h-full;
+  @apply relative top-0 z-10 rounded-2xl bg-ob-deep-800 shadow-lg overflow-hidden h-full;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+  /* 图片在上半部分 */
   .article-thumbnail {
-    @apply row-span-1 relative;
-    overflow: hidden;
+    @apply relative h-48 overflow-hidden;
     img {
-      @apply rounded-2xl block absolute z-20 bg-cover bg-no-repeat object-cover w-full h-12/10;
+      @apply w-full h-full object-cover;
       transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .thumbnail-screen {
-      @apply z-30 absolute w-full h-12/10 left-0 pointer-events-none opacity-40;
-      max-width: 120%;
-      mix-blend-mode: screen;
+      @apply absolute inset-0 pointer-events-none opacity-40;
       transition: opacity 0.4s ease;
     }
+    /* 底部渐变过渡到内容区域 */
     &:after {
       pointer-events: none;
       content: '';
       position: absolute;
-      z-index: 35;
-      top: 13%;
+      z-index: 20;
       left: 0;
-      height: 120%;
-      width: 100%;
-      background: var(--article-cover);
+      right: 0;
+      bottom: 0;
+      height: 60%;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 40%,
+        rgba(255, 255, 255, 0.7) 70%,
+        var(--background-secondary) 100%
+      );
+    }
+    @at-root .theme-dark & {
+      &:after {
+        background: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba(33, 33, 33, 0.3) 40%,
+          rgba(33, 33, 33, 0.7) 70%,
+          var(--background-secondary) 100%
+        );
+      }
     }
   }
+  /* 内容区域 - 在背景色上 */
   .article-content {
-    @apply row-span-2 flex flex-col z-40 relative px-6 pb-6 bg-transparent;
+    @apply flex flex-col relative px-6 py-5 bg-transparent;
     span {
       filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.1));
       b {
@@ -99,33 +116,33 @@
 }
 
 .feature-article {
-  @apply grid grid-rows-3 lg:grid-cols-2 lg:grid-rows-none relative top-0 z-10 lg:w-full lg:h-98 rounded-2xl shadow-lg overflow-hidden bg-ob-deep-800;
+  @apply grid grid-rows-3 lg:grid-cols-2 lg:grid-rows-none relative top-0 z-10 lg:w-full lg:h-98 rounded-2xl shadow-lg overflow-hidden;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+  /* 图片覆盖整个卡片作为背景 */
   .feature-thumbnail {
-    @apply relative row-span-1 lg:row-auto;
+    @apply absolute inset-0 z-10;
     overflow: hidden;
     img {
-      @apply block absolute z-20 left-0 bg-cover bg-no-repeat w-full h-12/10 lg:h-98 lg:w-12/10 object-cover;
+      @apply w-full h-full object-cover;
       transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
     span {
-      @apply z-30 absolute w-full h-12/10 lg:h-98 lg:w-12/10 left-0 pointer-events-none opacity-40;
+      @apply absolute inset-0 pointer-events-none opacity-40;
       transition: opacity 0.4s ease;
     }
+    /* 渐变遮罩 - 让右侧文字可读 */
     &:after {
       pointer-events: none;
       content: '';
       position: absolute;
-      z-index: 35;
-      left: 71%;
-      top: 0;
-      height: 100%;
-      width: 50%;
+      z-index: 20;
+      inset: 0;
       background: var(--gradient-cover);
     }
   }
+  /* 内容区域 - 透明背景，浮在图片上方 */
   .feature-content {
-    @apply flex flex-col relative px-6 pb-6 lg:p-12 z-40 row-span-2 lg:row-auto;
+    @apply flex flex-col relative px-6 pb-6 lg:p-12 z-30 row-span-2 lg:row-auto lg:col-start-2 bg-transparent;
     b {
       @apply text-ob text-xs lg:text-base uppercase;
     }
@@ -162,14 +179,8 @@
 }
 
 @media (max-width: 1023px) {
-  .feature-article > div:first-of-type {
-    &:after {
-      top: 13%;
-      left: 0;
-      height: 120%;
-      width: 100%;
-      background: var(--article-cover);
-    }
+  .feature-article .feature-thumbnail:after {
+    background: var(--article-cover);
   }
 }
 
