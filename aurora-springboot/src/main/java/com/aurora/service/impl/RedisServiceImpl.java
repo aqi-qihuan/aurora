@@ -320,7 +320,7 @@ public class RedisServiceImpl implements RedisService {
     @Override
     public List<String> geoGetHash(String key, String... place) {
         return redisTemplate.opsForGeo()
-                .hash(key, place);
+                .hash(key, (Object[]) place);
     }
 
 }
