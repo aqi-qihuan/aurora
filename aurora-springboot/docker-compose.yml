@@ -45,7 +45,7 @@ services:
     restart: always
 
   elasticsearch:
-    image: elasticsearch:8.13.4
+    image: elasticsearch:8.17.2
     container_name: aurora-elasticsearch
     environment:
       discovery.type: single-node

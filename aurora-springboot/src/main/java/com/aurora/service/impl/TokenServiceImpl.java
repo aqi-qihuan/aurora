@@ -3,6 +3,7 @@ package com.aurora.service.impl;
 import com.aurora.model.dto.UserDetailsDTO;
 import com.aurora.service.RedisService;
 import com.aurora.service.TokenService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +33,8 @@ public class TokenServiceImpl implements TokenService {
 
     @Autowired
     private RedisService redisService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public String createToken(UserDetailsDTO userDetailsDTO) {
@@ -83,7 +87,24 @@ public class TokenServiceImpl implements TokenService {
         if (StringUtils.hasText(token) && !token.equals("null")) {
             Claims claims = parseToken(token);
             String userId = claims.getSubject();
-            return (UserDetailsDTO) redisService.hGet(LOGIN_USER, userId);
+            Object obj = redisService.hGet(LOGIN_USER, userId);
+            if (obj == null) {
+                return null;
+            }
+            // 如果已经是 UserDetailsDTO 类型，直接返回
+            if (obj instanceof UserDetailsDTO) {
+                return (UserDetailsDTO) obj;
+            }
+            // 如果是 Map 类型（从 Redis 反序列化得到），转换为 UserDetailsDTO
+            if (obj instanceof Map) {
+                try {
+                    return objectMapper.convertValue(obj, UserDetailsDTO.class);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+            return null;
         }
         return null;
     }

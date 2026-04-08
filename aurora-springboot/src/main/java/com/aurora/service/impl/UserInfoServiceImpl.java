@@ -21,6 +21,7 @@ import com.aurora.util.UserUtil;
 import com.aurora.model.vo.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,6 +56,8 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
 
     @Autowired
     private UploadStrategyContext uploadStrategyContext;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -146,7 +149,19 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
         Collection<Object> values = userMaps.values();
         ArrayList<UserDetailsDTO> userDetailsDTOs = new ArrayList<>();
         for (Object value : values) {
-            userDetailsDTOs.add((UserDetailsDTO) value);
+            // 如果已经是 UserDetailsDTO 类型，直接添加
+            if (value instanceof UserDetailsDTO) {
+                userDetailsDTOs.add((UserDetailsDTO) value);
+            } else {
+                // 如果是 Map 类型（从 Redis 反序列化得到），转换为 UserDetailsDTO
+                try {
+                    UserDetailsDTO dto = objectMapper.convertValue(value, UserDetailsDTO.class);
+                    userDetailsDTOs.add(dto);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // 转换失败则跳过该用户
+                }
+            }
         }
         List<UserOnlineDTO> userOnlineDTOs = BeanCopyUtil.copyList(userDetailsDTOs, UserOnlineDTO.class);
         List<UserOnlineDTO> onlineUsers = userOnlineDTOs.stream()

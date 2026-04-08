@@ -18,10 +18,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- 核心框架 -->
-        <spring-boot.version>3.5.10</spring-boot.version>
+        <spring-boot.version>4.0.5</spring-boot.version>
 
         <!-- 数据检索与存储 -->
-        <elasticsearch.version>8.13.4</elasticsearch.version>
+        <elasticsearch.version>8.17.2</elasticsearch.version>
         <spring-data-elasticsearch.version>5.2.2</spring-data-elasticsearch.version>
         <mybatis-plus.version>3.5.16</mybatis-plus.version>
         <mysql.connector.version>9.6.0</mysql.connector.version>
@@ -91,7 +91,7 @@
                 <version>${fastjson.version}</version>
             </dependency>
 
-            <!-- API 文档 - Knife4j Spring Boot 3 版本 -->
+            <!-- API 文档 - Knife4j Spring Boot 4 版本 -->
             <dependency>
                 <groupId>com.github.xiaoymin</groupId>
                 <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
@@ -193,9 +193,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- Spring Security 7 Access API 模块 (包含 AccessDecisionManager, ConfigAttribute 等) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-access</artifactId>
+        </dependency>
+
+        <!-- AOP 支持 (SB 4.0 中 spring-boot-starter-aop 已移除，直接添加 aspectjweaver) -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>1.9.22.1</version>
         </dependency>
 
         <!-- 消息队列 -->
@@ -226,7 +234,13 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-            <version>3.5.6</version>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <!-- MyBatis-Plus 3.5.9+ 分页插件独立模块 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>

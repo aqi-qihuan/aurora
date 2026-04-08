@@ -113,8 +113,11 @@ public class ElasticsearchIndexInitializer implements ApplicationRunner {
                 return;
             }
             
+            log.info("找到 {} 篇文章需要同步", articles.size());
+            
             // 批量同步到 ES
             int successCount = 0;
+            int failCount = 0;
             for (ArticleSearchDTO article : articles) {
                 try {
                     elasticsearchClient.index(i -> i
@@ -123,14 +126,25 @@ public class ElasticsearchIndexInitializer implements ApplicationRunner {
                         .document(article)
                     );
                     successCount++;
+                    // 每同步 10 篇打印一次日志
+                    if (successCount % 10 == 0) {
+                        log.info("已同步 {}/{} 篇文章", successCount, articles.size());
+                    }
                 } catch (Exception e) {
+                    failCount++;
                     log.error("同步文章 ID={} 失败：{}", article.getId(), e.getMessage());
+                    // 如果连续失败超过 5 次，停止同步
+                    if (failCount > 5) {
+                        log.error("连续失败次数过多，停止同步。已成功: {}, 已失败: {}", successCount, failCount);
+                        break;
+                    }
                 }
             }
             
             log.info("========== 文章数据同步完成 ==========");
             log.info("应同步文章数：{}", articles.size());
             log.info("实际同步成功：{}", successCount);
+            log.info("同步失败：{}", failCount);
             log.info("======================================");
             
         } catch (Exception e) {
