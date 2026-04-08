@@ -133,7 +133,7 @@ services:
     restart: always
     command: >
       java -Xms48m -Xmx96m -XX:+UseSerialGC
-          -XX:MetaspaceSize=48m -XX:MaxMetaspaceSize=96m
+          -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=192m
           -XX:ReservedCodeCacheSize=24m -Xss256k
           -XX:+UseCompressedOops
           -XX:+UseCompressedClassPointers

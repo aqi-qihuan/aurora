@@ -16,7 +16,7 @@
 |:---|:---|
 | 📅 **更新时间** | 2026-04-09 |
 | 👤 **维护者** | 七七 |
-| 🔖 **文档版本** | v2.0 |
+| 🔖 **文档版本** | v2.1 |
 
 </div>
 
@@ -392,7 +392,7 @@ java -Xms96m -Xmx192m \
 ```bash
 java -Xms48m -Xmx96m \
      -XX:+UseSerialGC \
-     -XX:MetaspaceSize=48m -XX:MaxMetaspaceSize=96m \
+     -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=192m \
      -XX:ReservedCodeCacheSize=24m -Xss256k \
      -XX:+UseCompressedOops \
      -XX:+UseCompressedClassPointers \
@@ -455,10 +455,10 @@ ES_JAVA_OPTS: "-Xms128m -Xmx160m"
 **启动日志关键时间点**：
 
 ```
-09:56:52.992 - 应用开始启动
-09:57:14.005 - Tomcat 启动完成 (21.013 秒)
-09:57:15.107 - 应用完全启动 (22.115 秒)
-09:57:17.063 - ES 同步完成 (24.071 秒)
+21:56:52.992 - 应用开始启动
+21:57:14.005 - Tomcat 启动完成 (21.013 秒)
+21:57:15.107 - 应用完全启动 (22.115 秒)
+21:57:17.063 - ES 同步完成 (24.071 秒)
 ```
 
 ### 内存占用
@@ -514,11 +514,12 @@ ES_JAVA_OPTS: "-Xms128m -Xmx160m"
 
 | # | 时间 | 问题 | 根因 | 解决方案 | 状态 |
 |:---:|:---:|------|------|---------|:----:|
-| 1 | 03:12 | ES 启动崩溃 | `cache.max_size` 无效配置项（ES 8.x 不支持） | 从 docker-compose.yml 删除 | ✅ |
-| 2 | 03:14 | IK 分词器 NPE 空指针 | IK **7.17.12** 与 ES **8.17.2** 版本不匹配 | 重装 IK **8.17.2** | ✅ |
-| 3 | 03:22 | IK 字典文件缺失 | 手动下载 zip 缺少 `config/` 目录 + volume 挂载覆盖容器内正确插件 | 去掉 plugins volume 挂载，改用 `elasticsearch-plugin install` 安装 | ✅ |
-| 4 | 03:23 | ES OOM 崩溃 | 64MB 堆内存不够用（ES 8.x + IK 插件需要更多内存） | 调大到 128MB → 最终 **160MB** | ✅ |
-| 5 | 03:27 | 文章同步 circuit_breaking | HTTP 熔断器限制太小（108MB），大文章内容超限 | 调大堆内存 + breaker.limit 60% | ✅ |
+| 1 | 23:12 | ES 启动崩溃 | `cache.max_size` 无效配置项（ES 8.x 不支持） | 从 docker-compose.yml 删除 | ✅ |
+| 2 | 23:14 | IK 分词器 NPE 空指针 | IK **7.17.12** 与 ES **8.17.2** 版本不匹配 | 重装 IK **8.17.2** | ✅ |
+| 3 | 23:22 | IK 字典文件缺失 | 手动下载 zip 缺少 `config/` 目录 + volume 挂载覆盖容器内正确插件 | 去掉 plugins volume 挂载，改用 `elasticsearch-plugin install` 安装 | ✅ |
+| 4 | 23:23 | ES OOM 崩溃 | 64MB 堆内存不够用（ES 8.x + IK 插件需要更多内存） | 调大到 128MB → 最终 **160MB** | ✅ |
+| 5 | 23:27 | 文章同步 circuit_breaking | HTTP 熔断器限制太小（108MB），大文章内容超限 | 调大堆内存 + breaker.limit 60% | ✅ |
+| 6 | 24:00 | SpringBoot Metaspace OOM | 异步任务动态加载 MySQL 驱动类，Metaspace 96m 不够 | 增加 MetaspaceSize 到 128m，MaxMetaspaceSize 到 192m | ✅ |
 
 ### IK 分词器安装命令
 
@@ -540,7 +541,7 @@ docker restart aurora-elasticsearch
 ```bash
 java -Xms48m -Xmx96m \
      -XX:+UseSerialGC \
-     -XX:MetaspaceSize=48m -XX:MaxMetaspaceSize=96m \
+     -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=192m \
      -XX:ReservedCodeCacheSize=24m -Xss256k \
      -XX:+UseCompressedOops \
      -XX:+UseCompressedClassPointers \
@@ -595,9 +596,10 @@ Swap: 无
 
 | 指标 | 数值 |
 |:---|:---|
-| 启动耗时 | **11.8 秒** |
+| 启动耗时 | **11.2 秒** |
 | 文章同步成功率 | **28/28 (100%)** |
 | 同步失败数 | **0** |
+| API 响应时间 | **176ms** |
 
 ### 优化前后对比
 
@@ -637,6 +639,7 @@ Swap: 无
 | 6️⃣ | **IK 分词器版本匹配**：必须使用与 ES 完全一致的 IK 版本（ES 8.17.2 → IK 8.17.2）|
 | 7️⃣ | **IK 安装方式**：用 `elasticsearch-plugin install` 安装到容器内部，不要用宿主机 volume 挂载 plugins 目录 |
 | 8️⃣ | **ES 堆内存规划**：ES 8.x + IK 插件至少需要 128MB 堆内存，64MB 会 OOM |
+| 9️⃣ | **Metaspace 规划**：异步任务中动态加载驱动类可能导致 Metaspace 增长，建议初始 128m，最大 192m |
 
 ---
 
@@ -652,6 +655,7 @@ Swap: 无
 | 6️⃣ | **GraalVM JIT**：零代码改动，改 Dockerfile 基础镜像即可，预计节省 5-15%（约 20-30 MiB）|
 | 7️⃣ | **ES 无效配置项**：ES 8.x 不支持 `cache.max_size` 等旧版设置，需清理 |
 | 8️⃣ | **容器重建后插件丢失**：每次 `docker compose up -d elasticsearch` 会重建容器，需重新安装 IK 插件 |
+| 9️⃣ | **Metaspace OOM**：异步任务动态加载类（如 MySQL 驱动）可能导致 Metaspace 爆满，需监控并预留充足空间 |
 
 ---
 
@@ -662,8 +666,7 @@ Swap: 无
 ---
 
 <div align="center">
-
-**文档版本**: v2.0 | **创建日期**: 2026-04-08 | **更新日期**: 2026-04-09
+**文档版本**: v2.1 | **创建日期**: 2026-04-08 | **更新日期**: 2026-04-09 
 
 ![Built with ❤️](https://img.shields.io/badge/Built%20with-%E2%9D%A4%EF%B8%8F-blue?style=flat-square)
 
