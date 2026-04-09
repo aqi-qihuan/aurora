@@ -6,13 +6,20 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- ================================================================
+         🌸 Aurora 博客系统 - Spring Boot 后端
+         ================================================================ -->
     <groupId>com.aurora</groupId>
     <artifactId>aurora-springboot</artifactId>
     <version>0.0.1</version>
     <name>aurora-springboot</name>
     <description>Aurora 博客系统后端服务</description>
 
+    <!-- ================================================================
+         🔧 项目属性配置
+         ================================================================ -->
     <properties>
+        <!-- 编译配置 -->
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -28,11 +35,11 @@
 
         <!-- 工具类库 -->
         <fastjson.version>2.0.61</fastjson.version>
-        <hutool.version>5.8.43</hutool.version>
+        <hutool.version>5.8.44</hutool.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
 
-        <!-- API 文档 -->
-        <knife4j.version>4.5.0</knife4j.version>
+        <!-- API 文档 - 暂时禁用，等待支持 Spring Boot 4.x 的版本 -->
+        <!-- <knife4j.version>4.5.0</knife4j.version> -->
 
         <!-- 安全与验证 -->
         <jjwt.version>0.12.7</jjwt.version>
@@ -49,9 +56,14 @@
         <okhttp.version>4.12.0</okhttp.version>
     </properties>
 
+    <!-- ================================================================
+         📦 依赖版本管理
+         ================================================================ -->
     <dependencyManagement>
         <dependencies>
-            <!-- Spring Boot 依赖管理 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🏗️ Spring Boot 依赖管理
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -60,7 +72,9 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Elasticsearch 8.x -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🔍 Elasticsearch 8.x
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>co.elastic.clients</groupId>
                 <artifactId>elasticsearch-java</artifactId>
@@ -72,10 +86,12 @@
                 <version>${elasticsearch.version}</version>
             </dependency>
 
-            <!-- 数据库与 ORM -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🗄️ 数据库与 ORM
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
             <dependency>
@@ -84,21 +100,27 @@
                 <version>${mysql.connector.version}</version>
             </dependency>
 
-            <!-- JSON 序列化 - FastJSON2 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 📄 JSON 序列化 - FastJSON2
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>com.alibaba.fastjson2</groupId>
                 <artifactId>fastjson2</artifactId>
                 <version>${fastjson.version}</version>
             </dependency>
 
-            <!-- API 文档 - Knife4j Spring Boot 4 版本 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 📚 API 文档 - Knife4j Spring Boot 4
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>com.github.xiaoymin</groupId>
                 <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
                 <version>${knife4j.version}</version>
             </dependency>
 
-            <!-- 工具类库 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🛠️ 工具类库
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
@@ -110,14 +132,18 @@
                 <version>${commons-lang3.version}</version>
             </dependency>
 
-            <!-- 敏感词过滤 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🔒 敏感词过滤
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>com.github.houbb</groupId>
                 <artifactId>sensitive-word</artifactId>
                 <version>${sensitive-word.version}</version>
             </dependency>
 
-            <!-- JWT -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🔐 JWT 认证
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt-api</artifactId>
@@ -136,28 +162,36 @@
                 <scope>runtime</scope>
             </dependency>
 
-            <!-- 参数校验 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 ✅ 参数校验
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${hibernate-validator.version}</version>
             </dependency>
 
-            <!-- IP 地址归属地 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 🌐 IP 地址归属地
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>org.lionsoul</groupId>
                 <artifactId>ip2region</artifactId>
                 <version>${ip2region.version}</version>
             </dependency>
 
-            <!-- User-Agent 解析 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 📱 User-Agent 解析
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>eu.bitwalker</groupId>
                 <artifactId>UserAgentUtils</artifactId>
                 <version>${useragentutils.version}</version>
             </dependency>
 
-            <!-- 文件存储 -->
+            <!-- ───────────────────────────────────────────────────────────
+                 ☁️ 文件存储
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>com.aliyun.oss</groupId>
                 <artifactId>aliyun-sdk-oss</artifactId>
@@ -174,7 +208,9 @@
                 <version>${okhttp.version}</version>
             </dependency>
 
-            <!--Lombok -->
+            <!-- ───────────────────────────────────────────────────────────
+                 📦 Lombok
+                 ─────────────────────────────────────────────────────────── -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -183,8 +219,13 @@
         </dependencies>
     </dependencyManagement>
 
+    <!-- ================================================================
+         📚 依赖声明
+         ================================================================ -->
     <dependencies>
-        <!-- Spring Boot 核心 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🏠 Spring Boot 核心
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -193,26 +234,34 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        <!-- Spring Security 7 Access API 模块 (包含 AccessDecisionManager, ConfigAttribute 等) -->
+        <!-- Spring Security 7 Access API (包含 AccessDecisionManager, ConfigAttribute 等) -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-access</artifactId>
         </dependency>
 
-        <!-- AOP 支持 (SB 4.0 中 spring-boot-starter-aop 已移除，直接添加 aspectjweaver) -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🔧 AOP 支持
+             (SB 4.0 中 spring-boot-starter-aop 已移除，直接添加 aspectjweaver)
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
             <version>1.9.22.1</version>
         </dependency>
 
-        <!-- 消息队列 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             📮 消息队列
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
-        <!-- Elasticsearch Java Client - 不使用 Spring Data ES -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🔍 Elasticsearch Java Client
+             (不使用 Spring Data ES)
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
@@ -222,7 +271,9 @@
             <artifactId>elasticsearch-rest-client</artifactId>
         </dependency>
 
-        <!-- 数据检索与存储 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🗄️ 数据检索与存储
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
@@ -249,7 +300,9 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- 任务调度与邮件 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             ⏰ 任务调度与邮件
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-quartz</artifactId>
@@ -263,7 +316,9 @@
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
-        <!-- 工具类库 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🛠️ 工具类库
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
@@ -287,13 +342,24 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- API 文档 - Spring Boot 3 版本 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             📚 API 文档 - 使用 SpringDoc OpenAPI（基础版）
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
-            <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.8.0</version>
+        </dependency>
+        
+        <!-- Kotlin 反射库（SpringDoc 2.x 必需） -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-reflect</artifactId>
         </dependency>
 
-        <!-- 安全与验证 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🔐 安全与验证
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -317,7 +383,9 @@
             <artifactId>sensitive-word</artifactId>
         </dependency>
 
-        <!-- 网络与设备识别 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🌐 网络与设备识别
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.lionsoul</groupId>
             <artifactId>ip2region</artifactId>
@@ -327,7 +395,9 @@
             <artifactId>UserAgentUtils</artifactId>
         </dependency>
 
-        <!-- 文件存储 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             ☁️ 文件存储
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
@@ -341,7 +411,10 @@
             <artifactId>okhttp</artifactId>
         </dependency>
 
-        <!-- Jakarta XML Binding (Spring Boot 3) -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🏷️ Jakarta XML Binding
+             (Spring Boot 3+)
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
@@ -351,14 +424,18 @@
             <artifactId>jaxb-runtime</artifactId>
         </dependency>
 
-        <!-- 配置处理器 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             ⚙️ 配置处理器
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- 测试 -->
+        <!-- ─────────────────────────────────────────────────────────────
+             🧪 测试依赖
+             ───────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -372,12 +449,18 @@
         </dependency>
     </dependencies>
 
+    <!-- ================================================================
+         🔨 构建配置
+         ================================================================ -->
     <build>
         <plugins>
+            <!-- ───────────────────────────────────────────────────────────
+                 🖥️ Maven 编译器插件
+                 ─────────────────────────────────────────────────────────── -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.15.0</version>
                 <configuration>
                     <source>25</source>
                     <target>25</target>
@@ -391,6 +474,10 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- ───────────────────────────────────────────────────────────
+                 📦 Spring Boot Maven 插件
+                 ─────────────────────────────────────────────────────────── -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

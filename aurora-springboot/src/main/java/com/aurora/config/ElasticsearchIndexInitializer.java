@@ -58,7 +58,7 @@ public class ElasticsearchIndexInitializer implements ApplicationRunner {
             elasticsearchClient.indices().create(c -> c
                 .index("article")
                 .mappings(m -> m
-                    .properties("articleId", p -> p.integer(i -> i.store(true)))
+                    .properties("id", p -> p.integer(i -> i.store(true)))
                     .properties("articleTitle", p -> p.text(t -> t
                         .analyzer("ik_max_word")
                         .searchAnalyzer("ik_smart")

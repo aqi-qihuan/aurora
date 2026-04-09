@@ -8,12 +8,12 @@
       <ul class="timeline timeline-centered">
         <template
           v-for="archive in archives"
-          :key="t(`settings.months[${archive.time.split('-')[1]}]`) + '-' + archive.time.split('-')[0]">
+          :key="archive.time ? t(`settings.months[${archive.time.split('-')[1]}]`) + '-' + archive.time.split('-')[0] : ''">
           <li class="timeline-item period">
             <div class="timeline-info"></div>
             <div class="timeline-marker"></div>
             <div class="timeline-content">
-              <h2 class="timeline-title">
+              <h2 class="timeline-title" v-if="archive.time">
                 {{ t(`settings.months[${archive.time.split('-')[1] - 1}]`) }}&nbsp{{ archive.time.split('-')[0] }}
               </h2>
             </div>
@@ -83,7 +83,7 @@ export default defineComponent({
       commonStore.resetHeaderImage()
     })
     const fetchArchives = () => {
-      articleStore.archives = ''
+      articleStore.archives = []
       api
         .getAllArchives({
           current: pagination.current,

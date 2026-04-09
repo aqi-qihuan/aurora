@@ -38,11 +38,12 @@ public class EsSearchStrategyImpl implements SearchStrategy {
     }
 
     private SearchRequest buildQuery(String keywords) {
-        // 构建布尔查询
+        // 构建布尔查询 - 使用 searchAnalyzer 而不是 analyzer
+        // searchAnalyzer 会在搜索时使用字段的 search_analyzer 配置，不需要显式指定
         BoolQuery boolQuery = BoolQuery.of(b -> b
             .must(m -> m.bool(bb -> bb
-                .should(s -> s.match(t -> t.field("articleTitle").query(keywords).analyzer("ik_max_word")))
-                .should(s -> s.match(t -> t.field("articleContent").query(keywords).analyzer("ik_max_word")))
+                .should(s -> s.match(t -> t.field("articleTitle").query(keywords)))
+                .should(s -> s.match(t -> t.field("articleContent").query(keywords)))
             ))
             .must(m -> m.term(t -> t.field("isDelete").value(FALSE)))
             .must(m -> m.term(t -> t.field("status").value(PUBLIC.getStatus())))
@@ -122,6 +123,10 @@ public class EsSearchStrategyImpl implements SearchStrategy {
                 return article;
             }).filter(obj -> obj != null)
               .collect(Collectors.toList());
+        } catch (co.elastic.clients.elasticsearch._types.ElasticsearchException e) {
+            log.error("Elasticsearch search error: {}", e.getMessage(), e);
+            log.error("Error details - Status: {}, ErrorType: {}", e.status(), e.error());
+            log.error("请检查：1) IK分词器是否已安装；2) article索引是否存在且mapping正确；3) ES集群健康状态");
         } catch (Exception e) {
             log.error("Elasticsearch search error: {}", e.getMessage(), e);
         }
