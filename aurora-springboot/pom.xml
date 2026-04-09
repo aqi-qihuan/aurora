@@ -18,7 +18,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- 核心框架 -->
-        <spring-boot.version>4.0.5</spring-boot.version>
+        <spring-boot.version>4.1.0-M4</spring-boot.version>
 
         <!-- 数据检索与存储 -->
         <elasticsearch.version>8.17.2</elasticsearch.version>
@@ -29,13 +29,13 @@
         <!-- 工具类库 -->
         <fastjson.version>2.0.61</fastjson.version>
         <hutool.version>5.8.43</hutool.version>
-        <commons-lang3.version>3.14.0</commons-lang3.version>
+        <commons-lang3.version>3.18.0</commons-lang3.version>
 
         <!-- API 文档 -->
         <knife4j.version>4.5.0</knife4j.version>
 
         <!-- 安全与验证 -->
-        <jjwt.version>0.12.5</jjwt.version>
+        <jjwt.version>0.12.7</jjwt.version>
         <hibernate-validator.version>9.1.0.Final</hibernate-validator.version>
         <sensitive-word.version>0.2.0</sensitive-word.version>
 
@@ -44,7 +44,7 @@
         <useragentutils.version>1.21</useragentutils.version>
 
         <!-- 文件存储 -->
-        <aliyun-oss.version>3.17.2</aliyun-oss.version>
+        <aliyun-oss.version>3.18.5</aliyun-oss.version>
         <minio.version>8.6.0</minio.version>
         <okhttp.version>4.12.0</okhttp.version>
     </properties>

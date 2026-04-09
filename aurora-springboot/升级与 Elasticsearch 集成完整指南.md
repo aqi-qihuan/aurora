@@ -237,7 +237,7 @@ elasticsearch-plugin install https://github.com/infinilabs/analysis-ik/releases/
 docker restart aurora-elasticsearch
 
 # 3. 删除损坏的索引
-curl -X DELETE "http://134.175.206.158:9200/article"
+curl -X DELETE "http://你的ip:9200/article"
 
 # 4. 重启应用，自动重建索引并同步数据
 ```
