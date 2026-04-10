@@ -1,0 +1,152 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/aurora-go/aurora/internal/agent"
+	"github.com/aurora-go/aurora/internal/config"
+	"github.com/aurora-go/aurora/internal/handler"
+	"github.com/aurora-go/aurora/internal/infrastructure"
+	"github.com/aurora-go/aurora/internal/middleware"
+	"github.com/gin-gonic/gin"
+)
+
+// @title Aurora Blog API
+// @version 1.0
+// @description Aurora 博客系统 Go 1.26 后端 - 基于 tRPC-Agent-Go 的 AI 驱动博客平台
+// @termsOfService https://github.com/nicepkg/aurora
+
+// @contact.name Aurora Team
+// @contact.email aurora@example.com
+
+// @license.name Apache 2.0
+// @license.url https://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @basePath /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT Token 认证，格式: Bearer <token>
+
+func main() {
+	// 解析命令行参数
+	configPath := flag.String("config", "configs/config.yaml", "配置文件路径")
+	flag.Parse()
+
+	// 1. 加载配置
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "加载配置失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 2. 初始化所有基础设施（按顺序: Logger → DB → Redis → MQ → ES → MinIO → Email）
+	infrastructure.Bootstrap(cfg)
+
+	// 3. 设置 Gin 模式
+	gin.SetMode(gin.ReleaseMode) // 生产模式（Gin默认已处理debug/release）
+
+	// 4. 创建 Gin 引擎并注册全局中间件
+	r := gin.New()
+	r.Use(middleware.Recovery())
+	r.Use(middleware.Logger())
+	r.Use(middleware.CORS())
+	r.Use(middleware.RateLimit()) // Redis滑动窗口限流
+
+	// 5. 健康检查端点（无需认证）- 对标 Spring Actuator /health
+	r.GET("/health", func(c *gin.Context) {
+		status := infrastructure.HealthCheck()
+		allUp := true
+		for _, s := range status {
+			if s == "DOWN" {
+				allUp = false
+				break
+			}
+		}
+
+		httpStatus := http.StatusOK
+		if !allUp {
+			httpStatus = http.StatusServiceUnavailable
+		}
+
+		c.JSON(httpStatus, gin.H{
+			"status":     map[string]interface{}{"components": status},
+			"timestamp":  time.Now().Unix(),
+			"version":    "1.0.0-go",
+			"agentReady": cfg.Agent.Enabled,
+		})
+	})
+
+	// 6. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
+	router := handler.NewRouter(cfg)
+	router.RegisterRoutes(r)
+	slog.Info("All routes registered (80+ endpoints)")
+
+	// 7. Agent 路由 (可选插件 - 5级隔离保证 L2/L3)
+	if cfg.Agent.Enabled {
+		// 初始化Agent引擎
+		if err := agent.InitAgent(&cfg.Agent); err != nil {
+			slog.Error("Agent init failed (non-fatal)", "error", err)
+		} else {
+			registerAgentRoutes(r) // 传入根路由, 内部创建 /api/agent/* 路由组
+			slog.Info("Agent 模块已启用")
+		}
+	} else {
+		slog.Info("Agent 模块已禁用（零初始化、零路由、零内存）")
+	}
+
+	// 8. 创建 HTTP Server
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// 9. 启动服务
+	go func() {
+		slog.Info("Aurora Go 服务启动",
+			"addr", srv.Addr,
+			"mode", cfg.Server.Mode,
+			"agent_enabled", cfg.Agent.Enabled,
+		)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Fatal("服务启动失败", "error", err.Error())
+		}
+	}()
+
+	// 10. 等待关闭信号 → 优雅关闭所有基础设施
+	infrastructure.WaitForSignal()
+}
+
+// registerAgentRoutes 注册 Agent 相关路由 (P0-10 阶段实现)
+// 隔离保证: 仅在 agent.enabled=true 时注册 /api/agent/* 路由组
+// L3 路由隔离: 独立RouterGroup, 不影响其他路由
+func registerAgentRoutes(r *gin.Engine) {
+	agentHandler := handler.NewAgentHandler()
+
+	// 创建独立路由组, 带JWT认证
+	agentGroup := r.Group("/api/agent")
+	agentGroup.Use(middleware.JWTAuth())
+
+	// 核心端点 (4个)
+	agentGroup.GET("/chat", agentHandler.Chat)       // SSE流式对话 (支持GET/POST)
+	agentGroup.POST("/chat", agentHandler.Chat)      // 同步对话
+	agentGroup.POST("/write", agentHandler.Write)    // AI写作助手
+	agentGroup.POST("/search", agentHandler.Search)  // AI语义搜索
+	agentGroup.POST("/analyze", agentHandler.Analyze) // 数据分析+洞察
+	agentGroup.GET("/sessions", agentHandler.Sessions)// 会话列表
+
+	slog.Info("Agent routes registered: /api/agent/{chat,write,search,analyze,sessions}")
+}

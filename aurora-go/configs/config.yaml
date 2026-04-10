@@ -1,0 +1,129 @@
+# Aurora Go 博客系统配置文件
+# 基于 Java application-prod.yml 迁移
+
+server:
+  port: 8080
+  mode: release # debug / release
+  site_url: ${SITE_URL:https://www.aurora.blog} # 网站URL (用于邮件链接)
+
+mysql:
+  host: 134.175.206.158
+  port: 3306
+  user: root
+  password: ${MYSQL_PASSWORD:your_password}
+  dbname: aurora
+  max_open_conns: 50
+  max_idle_conns: 10
+  max_lifetime: 3600
+
+redis:
+  host: 134.175.206.158
+  port: 6379
+  password: ${REDIS_PASSWORD:}
+  db: 1
+  pool_size: 20
+
+rabbitmq:
+  host: 134.175.206.158
+  port: 5672
+  user: guest
+  password: ${RABBITMQ_PASSWORD:guest}
+  vhost: /
+  prefetch_count: 10 # QoS预取计数, 控制消费者并发度
+
+elasticsearch:
+  urls:
+    - "http://134.175.206.158:9200"
+  index_name: article
+  username: ${ES_USERNAME:elastic}
+  password: ${ES_PASSWORD:your_password}
+  sniff_enabled: false
+
+minio:
+  endpoint: "http://134.175.206.158:9000"
+  access_key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret_key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: aurora
+  use_ssl: false
+
+# ===== 阿里云OSS配置 (可选, 对标Java upload.oss.*) =====
+# oss:
+#   url: https://bucket.oss-cn-hangzhou.aliyuncs.com/
+#   endpoint: oss-cn-hangzhou.aliyuncs.com
+#   access_key_id: ${OSS_ACCESS_KEY_ID:your_key}
+#   access_key_secret: ${OSS_ACCESS_KEY_SECRET:your_secret}
+#   bucket_name: aurora
+
+# ===== 搜索模式配置 (对标Java search.mode) =====
+search:
+  mode: elasticsearch # mysql(默认降级) / elasticsearch(需要ES启用)
+
+# ===== 文件上传模式配置 (对标Java upload.mode) =====
+upload:
+  mode: minio # minio(推荐) / oss(需配置oss段)
+
+jwt:
+  secret: ${JWT_SECRET:aurora-go-jwt-secret-key-2026-change-in-production}
+  expire_time: 168 # 小时 (7天, 对齐Java版)
+  issuer: aurora-go
+
+# ===== QQ OAuth 登录配置 (对标Java qq.*) =====
+qq:
+  app_id: ${QQ_APP_ID:102007196}
+  check_token_url: "https://graph.qq.com/oauth2.0/me?access_token={access_token}"
+  user_info_url: "https://graph.qq.com/user/get_user_info?openid={openid}&access_token={access_token}&oauth_consumer_key={oauth_consumer_key}"
+
+log:
+  level: info # debug/info/warn/error
+  format: json # json/console
+  output_path: "" # 空值输出到stdout, 设为logs/aurora.log则写入文件
+
+# ===== 邮件SMTP配置 (对标Java spring.mail.*) =====
+email:
+  enabled: ${EMAIL_ENABLED:false}
+  host: ${EMAIL_HOST:smtp.qq.com}
+  port: ${EMAIL_PORT:465}
+  username: ${EMAIL_USERNAME:your_email@qq.com}
+  password: ${EMAIL_PASSWORD:your_smtp_auth_code}
+  from_name: ${EMAIL_FROM_NAME:Aurora Blog}
+  is_ssl: true
+  verify_code_expire: 5 # 验证码过期时间(分钟)
+
+# ===== 百度SEO推送配置 (对标Java baiduSeo任务) =====
+baidu_seo:
+  enabled: ${BAIDU_SEO_ENABLED:false}       # 是否启用百度SEO推送
+  token: ${BAIDU_SEO_TOKEN:your_token_here} # 百度推送Token (从百度站长平台获取)
+
+# ===== AI Agent 模块配置 (可选) =====
+agent:
+  enabled: false # 总开关: false = 零初始化零路由, 核心博客不受影响
+  llm:
+    default_provider: deepseek
+    providers:
+      openai:
+        api_key: ${OPENAI_API_KEY:}
+        base_url: https://api.openai.com/v1
+        model: gpt-4o-mini
+        temperature: 0.7
+        max_tokens: 2000
+      deepseek:
+        api_key: ${DEEPSEEK_API_KEY:}
+        base_url: https://api.deepseek.com/v1
+        model: deepseek-chat
+        temperature: 0.7
+        max_tokens: 2000
+      qwen:
+        api_key: ${QWEN_API_KEY:}
+        base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+        model: qwen-plus
+        temperature: 0.7
+        max_tokens: 2000
+      claude:
+        api_key: ${CLAUDE_API_KEY:}
+        base_url: https://api.anthropic.com/v1
+        model: claude-sonnet-4-20250514
+        temperature: 0.7
+        max_tokens: 2000
+  memory:
+    type: redis # inmemory / redis
+    max_turns: 20

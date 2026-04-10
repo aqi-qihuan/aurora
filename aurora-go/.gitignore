@@ -1,0 +1,39 @@
+# === 二进制 ===
+/aurora-server
+/build/
+/dist/
+
+# === 依赖 ===
+/vendor/
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === 配置 (含敏感信息) ===
+.env
+configs/config-local.yaml
+
+# === 测试 ===
+*.test
+*.out
+coverage.txt
+profile.out
+
+# === 日志 ===
+logs/
+*.log
+
+# === Docker ===
+docker-compose.override.yml
+
+# === 临时文件 ===
+*.tmp
+*.bak
+temp/

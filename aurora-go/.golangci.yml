@@ -1,0 +1,36 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  tests: false
+
+linters:
+  enable:
+    - errcheck       # 未检查的错误
+    - gosimple      # 简化代码建议
+    - govet         # vet 检查
+    - ineffassign   # 无效赋值
+    - staticcheck   # 静态分析
+    - unused        # 未使用的变量/导入
+    - gofmt         # 格式检查
+    - misspell      # 拼写错误
+    - unconvert     # 不必要的类型转换
+    - unparam       # 未使用参数
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  govet:
+    check-shadowing: true
+  misspell:
+    locale: US
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    # 排除测试文件中的某些规则
+    - path: _test\.go
+      linters:
+        - unparam
+        - unused
