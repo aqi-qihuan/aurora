@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (h *CategoryHandler) GetCategoryById(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的分类ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的分类ID"))
 		return
 	}
 	util.ResponseSuccess(c, nil)
@@ -50,7 +50,7 @@ func (h *CategoryHandler) ListCategoriesOption(c *gin.Context) {
 func (h *CategoryHandler) SaveOrUpdate(c *gin.Context) {
 	var categoryVO dto.CategoryVO
 	if err := c.ShouldBindJSON(&categoryVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = categoryVO
@@ -65,7 +65,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的分类ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的分类ID"))
 		return
 	}
 

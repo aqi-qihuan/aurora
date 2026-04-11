@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 func (h *RoleHandler) SaveOrUpdate(c *gin.Context) {
 	var roleVO dto.RoleVO
 	if err := c.ShouldBindJSON(&roleVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = roleVO
@@ -45,7 +45,7 @@ func (h *RoleHandler) SaveOrUpdate(c *gin.Context) {
 func (h *RoleHandler) DeleteRoles(c *gin.Context) {
 	idsStr := c.Query("ids")
 	if idsStr == "" {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要删除的角色"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的角色"))
 		return
 	}
 
@@ -74,7 +74,7 @@ func (h *RoleHandler) GetRoleById(c *gin.Context) {
 func (h *RoleHandler) UpdateRoleMenu(c *gin.Context) {
 	var menuIds dto.MenuIdsVO
 	if err := c.ShouldBindJSON(&menuIds); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = menuIds

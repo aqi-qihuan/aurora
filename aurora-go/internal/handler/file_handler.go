@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -21,12 +21,12 @@ func NewFileHandler() *FileHandler { return &FileHandler{} }
 func (h *FileHandler) UploadFile(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要上传的文件"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的文件"))
 		return
 	}
 	defer file.Close()
 
-	zap.L().Info("File upload", "filename", header.Filename, "size", header.Size)
+	zap.L().Info("File upload", zap.String("filename", header.Filename), zap.Int64("size", header.Size))
 
 	// TODO: P0-5:
 	//   1. AnalyzeFile(file) → 检测类型/扩展名白名单
@@ -45,17 +45,17 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 func (h *FileHandler) BatchUpload(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("文件上传失败"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("文件上传失败"))
 		return
 	}
 
 	files := form.File["files"]
 	if len(files) == 0 {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要上传的文件"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的文件"))
 		return
 	}
 
-	zap.L().Info("Batch file upload", "count", len(files))
+	zap.L().Info("Batch file upload", zap.Int("count", len(files)))
 	// TODO: P0-5 并发上传 goroutine pool
 
 	results := make([]map[string]interface{}, len(files))
@@ -80,7 +80,7 @@ func (h *FileHandler) UploadImage(c *gin.Context) {
 	}
 	defer file.Close()
 
-	zap.L().Debug("Image upload for markdown editor", "filename", header.Filename)
+	zap.L().Debug("Image upload for markdown editor", zap.String("filename", header.Filename))
 
 	// TODO: P0-5 仅允许图片格式 → 上传MinIO → 返回Markdown格式URL
 

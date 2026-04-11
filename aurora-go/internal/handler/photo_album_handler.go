@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -30,7 +30,7 @@ func (h *PhotoAlbumHandler) GetAlbumById(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的相册ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *PhotoAlbumHandler) GetAlbumById(c *gin.Context) {
 func (h *PhotoAlbumHandler) SaveOrUpdate(c *gin.Context) {
 	var albumVO dto.PhotoAlbumVO
 	if err := c.ShouldBindJSON(&albumVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = albumVO

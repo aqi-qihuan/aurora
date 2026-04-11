@@ -112,6 +112,11 @@ var (
 	ErrNotImplemented = New(1001, "功能尚未实现（需集成SDK）")
 )
 
+// WithMsg 返回新的AppError，使用自定义消息
+func (e *AppError) WithMsg(msg string) *AppError {
+	return &AppError{Code: e.Code, Message: msg}
+}
+
 // Is 判断错误是否匹配
 func Is(err error, target *AppError) bool {
 	if appErr, ok := err.(*AppError); ok {

@@ -1,7 +1,10 @@
 package util
 
 import (
+	"fmt"
 	"net/http"
+
+	apperrors "github.com/aurora-go/aurora/internal/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -65,8 +68,34 @@ func ResponseSuccess(c *gin.Context, data interface{}) {
 }
 
 // ResponseError 错误响应别名
-func ResponseError(c *gin.Context, code int, message string) {
-	Fail(c, code, message)
+// 支持3种调用方式:
+//   ResponseError(c, code, message)   - 标准方式
+//   ResponseError(c, appError)        - 传入 *AppError
+//   ResponseError(c, err)             - 传入普通 error
+func ResponseError(c *gin.Context, args ...interface{}) {
+	switch len(args) {
+	case 1:
+		// 单参数: *AppError 或 error
+		switch v := args[0].(type) {
+		case *apperrors.AppError:
+			Fail(c, v.Code, v.Message)
+		case error:
+			Fail(c, 500, v.Error())
+		default:
+			Fail(c, 500, fmt.Sprintf("%v", v))
+		}
+	case 2:
+		// 双参数: code int, message string
+		if code, ok := args[0].(int); ok {
+			if msg, ok := args[1].(string); ok {
+				Fail(c, code, msg)
+				return
+			}
+		}
+		Fail(c, 500, "invalid ResponseError arguments")
+	default:
+		Fail(c, 500, "invalid ResponseError arguments")
+	}
 }
 
 // ResponseSuccessWithPage 分页成功响应别名
@@ -76,10 +105,7 @@ func ResponseSuccessWithPage(c *gin.Context, list interface{}, count int64, page
 
 // ResponseErrorWithAppError 使用AppError响应
 func ResponseErrorWithAppError(c *gin.Context, appErr error) {
-	if ae, ok := appErr.(*interface {
-		Code    int
-		Message string
-	}); ok {
+	if ae, ok := appErr.(*apperrors.AppError); ok {
 		Fail(c, ae.Code, ae.Message)
 	} else {
 		Fail(c, 500, appErr.Error())

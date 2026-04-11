@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (h *FriendLinkHandler) ListFriendLinks(c *gin.Context) {
 func (h *FriendLinkHandler) SaveFriendLink(c *gin.Context) {
 	var friendLinkVO dto.FriendLinkVO
 	if err := c.ShouldBindJSON(&friendLinkVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = friendLinkVO // TODO: P0-5 保存为PENDING状态
@@ -54,7 +54,7 @@ func (h *FriendLinkHandler) ListAdminFriendLinks(c *gin.Context) {
 func (h *FriendLinkHandler) UpdateFriendLink(c *gin.Context) {
 	var friendLinkVO dto.FriendLinkVO
 	if err := c.ShouldBindJSON(&friendLinkVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = friendLinkVO
@@ -67,18 +67,18 @@ func (h *FriendLinkHandler) UpdateFriendLink(c *gin.Context) {
 func (h *FriendLinkHandler) ReviewFriendLink(c *gin.Context) {
 	var reviewVO dto.ReviewVO
 	if err := c.ShouldBindJSON(&reviewVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的友链ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的友链ID"))
 		return
 	}
 
-	zap.L().Debug("Review friend link", "id", idStr, "isApproved", reviewVO.IsApproved)
+	zap.L().Debug("Review friend link", zap.String("id", idStr), zap.Bool("isApproved", reviewVO.IsApproved))
 	util.ResponseSuccess(c, "审核完成")
 }
 
@@ -97,7 +97,7 @@ func (h *FriendLinkHandler) ToggleOnline(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的友链ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的友链ID"))
 		return
 	}
 	util.ResponseSuccess(c, nil)

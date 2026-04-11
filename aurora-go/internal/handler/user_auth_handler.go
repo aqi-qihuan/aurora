@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -25,7 +25,7 @@ func NewUserAuthHandler() *UserAuthHandler {
 func (h *UserAuthHandler) Register(c *gin.Context) {
 	var registerVO dto.RegisterVO
 	if err := c.ShouldBindJSON(&registerVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = registerVO // TODO: P0-5 调用Service注册
@@ -39,7 +39,7 @@ func (h *UserAuthHandler) Register(c *gin.Context) {
 func (h *UserAuthHandler) Login(c *gin.Context) {
 	var loginVO dto.LoginVO
 	if err := c.ShouldBindJSON(&loginVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = loginVO // TODO: P0-5 验证用户名密码 → 生成JWT → 返回
@@ -67,7 +67,7 @@ func (h *UserAuthHandler) Logout(c *gin.Context) {
 func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 	var qqVO dto.QQLoginVO
 	if err := c.ShouldBindJSON(&qqVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = qqVO // TODO: P0-6 OAuth流程
@@ -84,7 +84,7 @@ func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
 	var emailVO dto.EmailVO
 	if err := c.ShouldBindJSON(&emailVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = emailVO // TODO: P0-5 生成验证码 → 存入Redis(5分钟过期) → 发送邮件
@@ -98,7 +98,7 @@ func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
 func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
 	var passwordVO dto.PasswordVO
 	if err := c.ShouldBindJSON(&passwordVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = passwordVO // TODO: P0-5 校验旧密码 → BCrypt新密码存储
@@ -111,7 +111,7 @@ func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
 func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 	var resetVO dto.ResetPasswordVO
 	if err := c.ShouldBindJSON(&resetVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = resetVO // TODO: P0-5 校验验证码 → 更新密码

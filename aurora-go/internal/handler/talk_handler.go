@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (h *TalkHandler) GetTalkById(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的说说ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
 		return
 	}
 	// TODO: P0-5 查询说说 + 嵌套评论
@@ -44,7 +44,7 @@ func (h *TalkHandler) GetTalkById(c *gin.Context) {
 func (h *TalkHandler) SaveOrUpdate(c *gin.Context) {
 	var talkVO dto.TalkVO
 	if err := c.ShouldBindJSON(&talkVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = talkVO
@@ -67,7 +67,7 @@ func (h *TalkHandler) LikeTalk(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的说说ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
 		return
 	}
 	util.ResponseSuccess(c, map[string]interface{}{"likes": 1})
@@ -78,7 +78,7 @@ func (h *TalkHandler) LikeTalk(c *gin.Context) {
 func (h *TalkHandler) AddTalkComment(c *gin.Context) {
 	var commentVO dto.CommentVO
 	if err := c.ShouldBindJSON(&commentVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = commentVO // TODO: P0-5 保存说说评论(复用Comment表+type字段)

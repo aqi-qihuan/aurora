@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (h *ResourceHandler) ListResources(c *gin.Context) {
 func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 	var resourceVO dto.ResourceVO
 	if err := c.ShouldBindJSON(&resourceVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = resourceVO
@@ -45,7 +45,7 @@ func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 func (h *ResourceHandler) DeleteResources(c *gin.Context) {
 	idsStr := c.Query("ids")
 	if idsStr == "" {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要删除的资源"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的资源"))
 		return
 	}
 
@@ -60,13 +60,13 @@ func (h *ResourceHandler) UpdateRoleResource(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的角色ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的角色ID"))
 		return
 	}
 
 	var resourceIds dto.ResourceIdsVO
 	if err := c.ShouldBindJSON(&resourceIds); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = resourceIds

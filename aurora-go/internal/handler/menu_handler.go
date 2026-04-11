@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -35,7 +35,7 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 
 	// TODO: P0-5 根据用户角色 → 查询角色关联菜单 → 过滤 → 返回树形结构
 
-	zap.L().Debug("Get user menus", "userId", userID)
+	zap.L().Debug("Get user menus", zap.Int64("userId", userID))
 	util.ResponseSuccess(c, []interface{}{})
 }
 
@@ -45,7 +45,7 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 func (h *MenuHandler) SaveOrUpdate(c *gin.Context) {
 	var menuVO dto.MenuVO
 	if err := c.ShouldBindJSON(&menuVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = menuVO

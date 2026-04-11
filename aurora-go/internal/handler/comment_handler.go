@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -26,7 +26,7 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 	articleIdStr := c.Param("articleId")
 	_, err := strconv.ParseInt(articleIdStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的文章ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
 	pageNum, pageSize := util.PageQuery(c)
@@ -39,7 +39,7 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 func (h *CommentHandler) AddComment(c *gin.Context) {
 	var commentVO dto.CommentVO
 	if err := c.ShouldBindJSON(&commentVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = commentVO // TODO: P0-5 保存评论 → 异步发送MQ邮件通知
@@ -53,7 +53,7 @@ func (h *CommentHandler) AddComment(c *gin.Context) {
 func (h *CommentHandler) ReplyComment(c *gin.Context) {
 	var replyVO dto.ReplyVO
 	if err := c.ShouldBindJSON(&replyVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = replyVO
@@ -67,7 +67,7 @@ func (h *CommentHandler) LikeComment(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的评论ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的评论ID"))
 		return
 	}
 	// TODO: P0-5 Redis ZINCRBY 计数 或 DB更新
@@ -93,7 +93,7 @@ func (h *CommentHandler) ListAdminComments(c *gin.Context) {
 func (h *CommentHandler) UpdateCommentReview(c *gin.Context) {
 	var reviewVO dto.ReviewVO
 	if err := c.ShouldBindJSON(&reviewVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = reviewVO
@@ -112,7 +112,7 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	}
 	_ = idsStr // TODO: P0-5 批量软删除
 
-	zap.L().Debug("Delete comments", "ids", idsStr)
+	zap.L().Debug("Delete comments", zap.String("ids", idsStr))
 	util.ResponseSuccess(c, "评论已删除")
 }
 

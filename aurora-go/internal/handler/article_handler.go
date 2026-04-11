@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -43,9 +43,9 @@ func (h *ArticleHandler) ListArticles(c *gin.Context) {
 // 对标 ArticleController.getArticleById()
 func (h *ArticleHandler) GetArticleById(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的文章ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *ArticleHandler) GetArticleById(c *gin.Context) {
 func (h *ArticleHandler) SearchArticles(c *gin.Context) {
 	keyword := c.DefaultQuery("keyword", "")
 	if keyword == "" {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("搜索关键词不能为空"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("搜索关键词不能为空"))
 		return
 	}
 	pageNum, pageSize := util.PageQuery(c)
@@ -111,7 +111,7 @@ func (h *ArticleHandler) GetArchives(c *gin.Context) {
 func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 	var articleVO dto.ArticleVO
 	if err := c.ShouldBindJSON(&articleVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = articleVO // TODO: P0-5 调用Service保存
@@ -125,7 +125,7 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 func (h *ArticleHandler) UpdateArticleStatus(c *gin.Context) {
 	var statusVO dto.ArticleStatusUpdateVO
 	if err := c.ShouldBindJSON(&statusVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = statusVO // TODO: P0-5
@@ -140,7 +140,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的文章ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 func (h *ArticleHandler) ImportArticle(c *gin.Context) {
 	file, _, err := c.Request.FormFile("file")
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要导入的Markdown文件"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要导入的Markdown文件"))
 		return
 	}
 	defer file.Close()
@@ -173,7 +173,7 @@ func (h *ArticleHandler) ExportArticle(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的文章ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *ArticleHandler) ExportArticle(c *gin.Context) {
 func (h *ArticleHandler) ListAdminArticles(c *gin.Context) {
 	var condition dto.ConditionVO
 	if err := c.ShouldBindQuery(&condition); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = condition // TODO: P0-5 按条件查询(状态/关键词/分类/时间范围)
@@ -206,7 +206,7 @@ func (h *ArticleHandler) ListAdminArticles(c *gin.Context) {
 func (h *ArticleHandler) UpdateArticlePassword(c *gin.Context) {
 	var pwdVO dto.ArticlePasswordVO
 	if err := c.ShouldBindJSON(&pwdVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = pwdVO // TODO: P0-5
@@ -219,7 +219,7 @@ func (h *ArticleHandler) UpdateArticlePassword(c *gin.Context) {
 func (h *ArticleHandler) VerifyArticlePassword(c *gin.Context) {
 	var pwdVO dto.ArticlePasswordVerifyVO
 	if err := c.ShouldBindJSON(&pwdVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = pwdVO // TODO: P0-5 验证密码 → 返回JWT token或cookie

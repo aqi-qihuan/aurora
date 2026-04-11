@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/util"
+	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // AboutHandler 关于页面处理器（对标 Java AboutController）
@@ -29,9 +29,9 @@ func (h *AboutHandler) GetAbout(c *gin.Context) {
 // POST /api/admin/about
 // PUT /api/admin/about/:id
 func (h *AboutHandler) SaveOrUpdate(c *gin.Context) {
-	var aboutVO dto.AboutVO
+	var aboutVO vo.WebsiteConfigVO
 	if err := c.ShouldBindJSON(&aboutVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = aboutVO

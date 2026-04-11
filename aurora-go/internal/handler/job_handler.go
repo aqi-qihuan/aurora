@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -31,7 +31,7 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 func (h *JobHandler) SaveOrUpdate(c *gin.Context) {
 	var jobVO dto.JobVO
 	if err := c.ShouldBindJSON(&jobVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = jobVO
@@ -60,11 +60,11 @@ func (h *JobHandler) UpdateJobStatus(c *gin.Context) {
 
 	var statusVO dto.StatusUpdateVO
 	if err := c.ShouldBindJSON(&statusVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 
-	zap.L().Debug("Update job status", "id", id, "status", statusVO.Status)
+	zap.L().Debug("Update job status", zap.Int64("id", id), zap.Int8("status", statusVO.Status))
 	util.ResponseSuccess(c, "任务状态已更新")
 }
 

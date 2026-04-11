@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -38,7 +38,7 @@ func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
 func (h *WebsiteConfigHandler) UpdateWebsiteConfig(c *gin.Context) {
 	var configVO dto.WebsiteConfigVO
 	if err := c.ShouldBindJSON(&configVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 
@@ -53,12 +53,12 @@ func (h *WebsiteConfigHandler) UpdateWebsiteConfig(c *gin.Context) {
 func (h *WebsiteConfigHandler) UploadConfigImage(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要上传的文件"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的文件"))
 		return
 	}
 	defer file.Close()
 
-	zap.L().Info("Upload config image", "filename", header.Filename)
+	zap.L().Info("Upload config image", zap.String("filename", header.Filename))
 	// TODO: P0-5 上传MinIO → 返回URL
 
 	util.ResponseSuccess(c, map[string]interface{}{

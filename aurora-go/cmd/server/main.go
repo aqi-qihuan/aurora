@@ -1,20 +1,18 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/aurora-go/aurora/internal/agent"
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/handler"
 	"github.com/aurora-go/aurora/internal/infrastructure"
+	"github.com/aurora-go/aurora/internal/infrastructure/logger"
 	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -58,10 +56,11 @@ func main() {
 
 	// 4. 创建 Gin 引擎并注册全局中间件
 	r := gin.New()
-	r.Use(middleware.Recovery())
-	r.Use(middleware.Logger())
+	zapLogger := logger.GetLogger()
+	r.Use(middleware.Recovery(zapLogger))
+	r.Use(middleware.Logger(zapLogger))
 	r.Use(middleware.CORS())
-	r.Use(middleware.RateLimit()) // Redis滑动窗口限流
+	// r.Use(middleware.RateLimiter(rdb, slog.Default())) // P0-6 限流需Redis客户端
 
 	// 5. 健康检查端点（无需认证）- 对标 Spring Actuator /health
 	r.GET("/health", func(c *gin.Context) {
@@ -122,7 +121,8 @@ func main() {
 			"agent_enabled", cfg.Agent.Enabled,
 		)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Fatal("服务启动失败", "error", err.Error())
+			slog.Error("服务启动失败", "error", err.Error())
+			os.Exit(1)
 		}
 	}()
 

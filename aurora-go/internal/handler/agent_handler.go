@@ -100,7 +100,7 @@ func (h *AgentHandler) handleStreamChat(c *gin.Context, a *agent.AuroraAgent, re
 
 	for chunk := range ch {
 		data, _ := json.Marshal(chunk)
-		fmt.Fprintf(c.Writer(), "data: %s\n\n", data)
+		fmt.Fprintf(c.Writer, "data: %s\n\n", data)
 		flusher.Flush()
 
 		if chunk.Done {
@@ -180,7 +180,7 @@ func (h *AgentHandler) Analyze(c *gin.Context) {
 	resp, err := a.Analyze(ctx, &req)
 	if err != nil {
 		slog.Error("Agent analyze failed", "error", err)
-		c.JSON(http.StatusInternalServerError, gin{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

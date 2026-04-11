@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/util"
 )
@@ -24,7 +23,7 @@ func (h *PhotoHandler) ListPhotos(c *gin.Context) {
 	albumIdStr := c.Param("albumId")
 	_, err := strconv.ParseInt(albumIdStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的相册ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
 		return
 	}
 	pageNum, pageSize := util.PageQuery(c)
@@ -36,16 +35,16 @@ func (h *PhotoHandler) ListPhotos(c *gin.Context) {
 func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("文件上传失败"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("文件上传失败"))
 		return
 	}
 	files := form.File["files"]
 	if len(files) == 0 {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要上传的照片"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的照片"))
 		return
 	}
 
-	zap.L().Info("Uploading photos", "count", len(files))
+	zap.L().Info("Uploading photos", zap.Int("count", len(files)))
 	// TODO: P0-5 遍历files → 上传MinIO → 保存Photo记录
 
 	util.ResponseSuccess(c, map[string]interface{}{

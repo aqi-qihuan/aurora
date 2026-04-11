@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"strconv"
@@ -37,7 +37,7 @@ func (h *TagHandler) GetTagById(c *gin.Context) {
 	idStr := c.Param("id")
 	_, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("无效的标签ID"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的标签ID"))
 		return
 	}
 	util.ResponseSuccess(c, nil)
@@ -60,7 +60,7 @@ func (h *TagHandler) SearchTags(c *gin.Context) {
 func (h *TagHandler) SaveOrUpdate(c *gin.Context) {
 	var tagVO dto.TagVO
 	if err := c.ShouldBindJSON(&tagVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 	_ = tagVO
@@ -73,7 +73,7 @@ func (h *TagHandler) SaveOrUpdate(c *gin.Context) {
 func (h *TagHandler) DeleteTags(c *gin.Context) {
 	idsStr := c.Query("ids")
 	if idsStr == "" {
-		util.ResponseError(c, errors.ErrInvalidParam.WithMsg("请选择要删除的标签"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的标签"))
 		return
 	}
 

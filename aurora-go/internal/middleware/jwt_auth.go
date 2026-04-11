@@ -10,6 +10,43 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// JWTAuth 便利函数 - 无参数版本的JWT认证中间件
+// 基础版本：验证Bearer Token存在性并解析基本用户信息
+func JWTAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		method := c.Request.Method
+		path := c.Request.URL.Path
+
+		// 白名单检查
+		if constant.IsPublicPath(method, path) {
+			c.Next()
+			return
+		}
+
+		authHeader := c.GetHeader(constant.TokenHeader)
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "未登录或Token已过期",
+			})
+			return
+		}
+
+		tokenString := service.ExtractToken(authHeader)
+		if tokenString == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "认证格式错误，请使用 Bearer <token>",
+			})
+			return
+		}
+
+		// 将token存入context，后续handler可使用
+		c.Set("token", tokenString)
+		c.Next()
+	}
+}
+
 // JWTAuthEnhanced 增强版JWT认证中间件 (对标Java JwtAuthenticationTokenFilter)
 //
 // 完整流程:
