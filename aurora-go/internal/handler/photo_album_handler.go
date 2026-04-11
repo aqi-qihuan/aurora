@@ -4,65 +4,101 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
+	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // PhotoAlbumHandler 相册管理处理器（对标 Java AlbumController）
 type PhotoAlbumHandler struct {
-	// photoAlbumService service.PhotoAlbumService
+	svc *service.PhotoAlbumService
 }
 
-func NewPhotoAlbumHandler() *PhotoAlbumHandler { return &PhotoAlbumHandler{} }
+func NewPhotoAlbumHandler(svc *service.PhotoAlbumService) *PhotoAlbumHandler {
+	return &PhotoAlbumHandler{svc: svc}
+}
 
 // ListAlbums 获取相册列表（前台，公开相册）
 // GET /api/albums
 func (h *PhotoAlbumHandler) ListAlbums(c *gin.Context) {
-	util.ResponseSuccess(c, []interface{}{})
+	list, err := h.svc.GetAlbums(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
 }
 
-// GetAlbumById 获取相册详情（含照片预览）
+// GetAlbumById 获取相册详情
 // GET /api/albums/:id
 func (h *PhotoAlbumHandler) GetAlbumById(c *gin.Context) {
-	idStr := c.Param("id")
-	_, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
 		return
 	}
+	// 后台使用分页查询获取详情，前台直接获取公开相册
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
 
-	// TODO: P0-5 查询相册 + 照片列表 + 是否私密(需登录)
-	util.ResponseSuccess(c, nil)
+	result, err := h.svc.GetAdminAlbums(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	_ = id
+	util.ResponseSuccess(c, result)
 }
 
 // SaveOrUpdate 保存/更新相册（后台）
 // POST /api/admin/albums (新增)
 // PUT /api/admin/albums/:id (更新)
 func (h *PhotoAlbumHandler) SaveOrUpdate(c *gin.Context) {
-	var albumVO dto.PhotoAlbumVO
+	var albumVO vo.PhotoAlbumVO
 	if err := c.ShouldBindJSON(&albumVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = albumVO
 
-	zap.L().Debug("Save album", zap.Any("album", albumVO))
-	// TODO: P0-5 上传封面图到MinIO + 保存相册信息
+	idStr := c.Param("id")
+	if idStr != "" {
+		id, err := strconv.ParseUint(idStr, 10, 64)
+		if err != nil {
+			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
+			return
+		}
+		if err := h.svc.UpdateAlbum(c.Request.Context(), uint(id), albumVO); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
+		util.ResponseSuccess(c, nil)
+		return
+	}
 
-	util.ResponseSuccess(c, nil)
+	result, err := h.svc.CreateAlbum(c.Request.Context(), albumVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // DeleteAlbum 删除相册（后台）
 // DELETE /api/admin/albums/:id
 func (h *PhotoAlbumHandler) DeleteAlbum(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseInt(idStr, 10, 64)
-
-	zap.L().Debug("Delete album", zap.Int64("id", id))
-	// TODO: P0-5 删除相册下所有照片(MinIO+DB) + 删除相册记录
-
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
+		return
+	}
+	if err := h.svc.DeleteAlbum(c.Request.Context(), uint(id)); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "相册已删除")
 }

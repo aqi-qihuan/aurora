@@ -5,104 +5,119 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
+	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // UserAuthHandler 用户认证处理器（对标 Java UserController + UserAuthController）
-// 端点: 8个 (注册/登录/登出/OAuth/密码/邮箱验证码)
 type UserAuthHandler struct {
-	// userAuthService service.UserAuthService // P0-5 注入
+	registry *service.Registry
 }
 
-// NewUserAuthHandler 创建用户认证Handler
-func NewUserAuthHandler() *UserAuthHandler {
-	return &UserAuthHandler{}
+func NewUserAuthHandler(registry *service.Registry) *UserAuthHandler {
+	return &UserAuthHandler{registry: registry}
 }
 
 // Register 用户注册
 // POST /api/auth/register
-// 对标 UserController.register()
 func (h *UserAuthHandler) Register(c *gin.Context) {
-	var registerVO dto.RegisterVO
+	var registerVO vo.RegisterVO
 	if err := c.ShouldBindJSON(&registerVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = registerVO // TODO: P0-5 调用Service注册
-
-	util.ResponseSuccess(c, "注册成功")
+	result, err := h.registry.UserAuth.Register(c.Request.Context(), registerVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // Login 用户登录
 // POST /api/auth/login
-// 对标 UserController.login() - 返回JWT Token + UserInfo
 func (h *UserAuthHandler) Login(c *gin.Context) {
-	var loginVO dto.LoginVO
+	var loginVO vo.LoginVO
 	if err := c.ShouldBindJSON(&loginVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = loginVO // TODO: P0-5 验证用户名密码 → 生成JWT → 返回
-
-	util.ResponseSuccess(c, map[string]interface{}{
-		"token":     "jwt_token_placeholder",
-		"userInfo":  nil,
-		"expiresIn": 86400,
-	})
+	result, err := h.registry.UserAuth.Login(c.Request.Context(), loginVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
-// Logout 用户登出（将Token加入Redis黑名单）
+// Logout 用户登出
 // POST /api/auth/logout
-// 对标 UserController.logout() - Redis黑名单机制
 func (h *UserAuthHandler) Logout(c *gin.Context) {
-	token := c.GetHeader("Authorization")
-	_ = token // TODO: P0-5 将Token加入Redis黑名单
-
+	userID, _ := c.Get("userId")
+	uid := uint(0)
+	if id, ok := userID.(uint); ok {
+		uid = id
+	}
+	if err := h.registry.UserAuth.Logout(c.Request.Context(), uid); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "登出成功")
 }
 
 // QQLogin QQ OAuth 登录回调
 // POST /api/auth/qq/callback
-// 对标 QQLoginStrategy.login()
 func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 	var qqVO dto.QQLoginVO
 	if err := c.ShouldBindJSON(&qqVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = qqVO // TODO: P0-6 OAuth流程
-
-	util.ResponseSuccess(c, map[string]interface{}{
-		"token":    "qq_jwt_token",
-		"isNewUser": false,
-	})
+	if h.registry.QQOAuthSvc == nil {
+		util.ResponseError(c, errors.ErrInternalServer.WithMsg("QQ登录功能未启用"))
+		return
+	}
+	result, err := h.registry.QQOAuthSvc.Login(c.Request.Context(), &qqVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // SendVerificationCode 发送邮箱验证码
 // POST /api/auth/code
-// 用于: 注册绑定邮箱 / 修改邮箱 / 找回密码
 func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
 	var emailVO dto.EmailVO
 	if err := c.ShouldBindJSON(&emailVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = emailVO // TODO: P0-5 生成验证码 → 存入Redis(5分钟过期) → 发送邮件
-
+	if err := h.registry.UserAuth.SendVerificationCode(c.Request.Context(), emailVO.Email); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "验证码已发送，请查收邮件")
 }
 
 // UpdatePassword 修改密码
 // PUT /api/user/password
-// 对标 UserController.updatePassword()
 func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
-	var passwordVO dto.PasswordVO
+	var passwordVO vo.PasswordVO
 	if err := c.ShouldBindJSON(&passwordVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = passwordVO // TODO: P0-5 校验旧密码 → BCrypt新密码存储
-
+	userID, _ := c.Get("userId")
+	uid := uint(0)
+	if id, ok := userID.(uint); ok {
+		uid = id
+	}
+	if err := h.registry.UserAuth.ChangePassword(c.Request.Context(), uid, passwordVO); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "密码修改成功")
 }
 
@@ -114,26 +129,26 @@ func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = resetVO // TODO: P0-5 校验验证码 → 更新密码
-
+	// TODO: 校验验证码后重置密码
 	util.ResponseSuccess(c, "密码重置成功")
 }
 
 // GetUserInfo 获取当前登录用户信息
 // GET /api/user/info
-// 对标 UserController.getUserInfo()
 func (h *UserAuthHandler) GetUserInfo(c *gin.Context) {
-	// 从 JWT 中提取 userId
 	userID, exists := c.Get("userId")
 	if !exists {
 		util.ResponseError(c, errors.ErrUnauthorized)
 		return
 	}
-	_ = userID // TODO: P0-5 根据ID查询完整UserInfo
-
-	util.ResponseSuccess(c, map[string]interface{}{
-		"id":       userID,
-		"nickname": "",
-		"avatar":   "",
-	})
+	uid := uint(0)
+	if id, ok := userID.(uint); ok {
+		uid = id
+	}
+	result, err := h.registry.UserAuth.GetUserInfoByID(c.Request.Context(), uid)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }

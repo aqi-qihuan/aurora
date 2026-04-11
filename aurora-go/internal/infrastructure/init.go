@@ -26,6 +26,7 @@ import (
 // Bootstrap 按顺序初始化所有基础设施组件
 // 初始化顺序: Logger → DB → Redis → RabbitMQ → ES → MinIO → Email → 策略模式 → 调度器
 // 对标 Java 的 @Configuration + @Bean 依赖注入
+// 降级模式: 核心依赖(MySQL/Redis)不可用时仅 warn，路由层仍可运行
 func Bootstrap(cfg *config.Config) {
 	slog.Info("=== Aurora Go Infrastructure Bootstrap Start ===")
 
@@ -33,34 +34,49 @@ func Bootstrap(cfg *config.Config) {
 	logger.InitZapLogger(&cfg.Log)
 	slog.Info("[1/10] Zap logger initialized", "level", cfg.Log.Level, "format", cfg.Log.Format)
 
-	// 2. MySQL 数据库连接
-	database.InitMySQL(&cfg.MySQL)
-	slog.Info("[2/10] MySQL connected")
+	// 2. MySQL 数据库连接（降级: 失败不退出，仅路由层可用）
+	if err := database.InitMySQL(&cfg.MySQL); err != nil {
+		slog.Warn("[2/10] MySQL connection failed (degraded mode - API stubs only)", "error", err)
+	} else {
+		slog.Info("[2/10] MySQL connected")
+	}
 
-	// 3. Redis 缓存连接
-	database.InitRedis(&cfg.Redis)
-	slog.Info("[3/10] Redis connected")
+	// 3. Redis 缓存连接（降级: 失败不退出）
+	if err := database.InitRedis(&cfg.Redis); err != nil {
+		slog.Warn("[3/10] Redis connection failed (caching disabled)", "error", err)
+	} else {
+		slog.Info("[3/10] Redis connected")
+	}
 
 	// 4. RabbitMQ 消息队列（可选）
 	if cfg.RabbitMQ.Host != "" {
-		mq.InitRabbitMQ(&cfg.RabbitMQ)
-		slog.Info("[4/10] RabbitMQ connected")
+		if err := mq.InitRabbitMQ(&cfg.RabbitMQ); err != nil {
+			slog.Warn("[4/10] RabbitMQ connection failed (async messaging disabled)", "error", err)
+		} else {
+			slog.Info("[4/10] RabbitMQ connected")
+		}
 	} else {
 		slog.Warn("[4/10] RabbitMQ not configured, skipping")
 	}
 
 	// 5. Elasticsearch 全文搜索（可选）
 	if len(cfg.ES.URLs) > 0 {
-		search.InitElasticsearch(&cfg.ES)
-		slog.Info("[5/10] Elasticsearch connected")
+		if err := search.InitElasticsearch(&cfg.ES); err != nil {
+			slog.Warn("[5/10] Elasticsearch connection failed (falling back to MySQL search)", "error", err)
+		} else {
+			slog.Info("[5/10] Elasticsearch connected")
+		}
 	} else {
 		slog.Warn("[5/10] Elasticsearch not configured, falling back to MySQL search")
 	}
 
 	// 6. MinIO 对象存储（可选，OSS为替代方案）
 	if cfg.MinIO.Endpoint != "" {
-		storage.InitMinIO(&cfg.MinIO)
-		slog.Info("[6/10] MinIO connected")
+		if err := storage.InitMinIO(&cfg.MinIO); err != nil {
+			slog.Warn("[6/10] MinIO connection failed (file upload disabled)", "error", err)
+		} else {
+			slog.Info("[6/10] MinIO connected")
+		}
 	} else if cfg.OSS != nil && cfg.OSS.Endpoint != "" {
 		slog.Info("[6/10] MinIO not configured, using OSS instead")
 	} else {
@@ -73,19 +89,27 @@ func Bootstrap(cfg *config.Config) {
 
 	// 8. 策略模式 (ES/MySQL双搜索 + MinIO/OSS双上传, 对标Java StrategyContext)
 	db := database.GetDB()
-	if err := strategy.InitStrategies(cfg, db); err != nil {
-		slog.Error("[8/10] Strategy init failed (non-fatal), using defaults", "error", err)
-	} else {
-		if sc := strategy.GetSearchContext(); sc != nil {
-			slog.Info("[8/10] Search+Upload strategies initialized",
-				"search_mode", sc.GetMode(),
-			)
+	if db != nil {
+		if err := strategy.InitStrategies(cfg, db); err != nil {
+			slog.Error("[8/10] Strategy init failed (non-fatal), using defaults", "error", err)
+		} else {
+			if sc := strategy.GetSearchContext(); sc != nil {
+				slog.Info("[8/10] Search+Upload strategies initialized",
+					"search_mode", sc.GetMode(),
+				)
+			}
 		}
+	} else {
+		slog.Warn("[8/10] Skipped strategy init (no DB connection)")
 	}
 
 	// 9. 定时任务调度器 (robfig/cron, 对标Java Quartz)
-	InitScheduler(cfg)
-	slog.Info("[9/10] Scheduler initialized with default tasks")
+	if db != nil {
+		InitScheduler(cfg)
+		slog.Info("[9/10] Scheduler initialized with default tasks")
+	} else {
+		slog.Warn("[9/10] Skipped scheduler init (no DB connection)")
+	}
 
 	slog.Info("=== Aurora Go Infrastructure Bootstrap Complete ===")
 }

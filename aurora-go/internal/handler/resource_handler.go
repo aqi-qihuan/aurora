@@ -5,39 +5,70 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
+	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // ResourceHandler 资源权限管理处理器（对标 Java ResourceController）
 type ResourceHandler struct {
-	// resourceService service.ResourceService
+	svc *service.ResourceService
 }
 
-func NewResourceHandler() *ResourceHandler { return &ResourceHandler{} }
+func NewResourceHandler(svc *service.ResourceService) *ResourceHandler {
+	return &ResourceHandler{svc: svc}
+}
 
 // ListResources 获取资源权限列表
 // GET /api/admin/resources
 func (h *ResourceHandler) ListResources(c *gin.Context) {
-	util.ResponseSuccess(c, []interface{}{})
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	result, err := h.svc.ListResources(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // SaveOrUpdate 保存/更新资源
 // POST /api/admin/resources
 // PUT /api/admin/resources/:id
 func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
-	var resourceVO dto.ResourceVO
+	var resourceVO vo.ResourceVO
 	if err := c.ShouldBindJSON(&resourceVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = resourceVO
 
-	zap.L().Debug("Save resource", zap.Any("resource", resourceVO))
-	util.ResponseSuccess(c, nil)
+	idStr := c.Param("id")
+	if idStr != "" {
+		id, err := strconv.ParseUint(idStr, 10, 64)
+		if err != nil {
+			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的资源ID"))
+			return
+		}
+		if err := h.svc.UpdateResource(c.Request.Context(), uint(id), resourceVO); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
+		util.ResponseSuccess(c, nil)
+		return
+	}
+
+	result, err := h.svc.CreateResource(c.Request.Context(), resourceVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // DeleteResources 批量删除资源
@@ -48,28 +79,35 @@ func (h *ResourceHandler) DeleteResources(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的资源"))
 		return
 	}
-
-	ids := strings.Split(idsStr, ",")
-	zap.L().Debug("Delete resources", zap.Strings("ids", ids))
+	parts := strings.Split(idsStr, ",")
+	for _, p := range parts {
+		id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
+		if err != nil {
+			continue
+		}
+		_ = h.svc.DeleteResource(c.Request.Context(), uint(id))
+	}
 	util.ResponseSuccess(c, "资源已删除")
 }
 
 // UpdateRoleResource 更新角色的资源关联
 // PUT /api/admin/roles/:id/resources
 func (h *ResourceHandler) UpdateRoleResource(c *gin.Context) {
-	idStr := c.Param("id")
-	_, err := strconv.ParseInt(idStr, 10, 64)
+	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的角色ID"))
 		return
 	}
-
-	var resourceIds dto.ResourceIdsVO
-	if err := c.ShouldBindJSON(&resourceIds); err != nil {
+	var body struct {
+		ResourceIDs []uint `json:"resourceIds"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = resourceIds
-
+	if err := h.svc.AssignResourceToRole(c.Request.Context(), uint(roleID), body.ResourceIDs); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "资源权限已更新")
 }

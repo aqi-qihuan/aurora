@@ -13,7 +13,7 @@ import (
 var RDB *redis.Client
 
 // InitRedis 初始化 Redis 连接（对标 Java 版 RedisTemplate 全部数据结构操作）
-func InitRedis(cfg *config.RedisConfig) {
+func InitRedis(cfg *config.RedisConfig) error {
 	RDB = redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr(),
 		Password: cfg.Password,
@@ -26,7 +26,7 @@ func InitRedis(cfg *config.RedisConfig) {
 
 	if err := RDB.Ping(ctx).Err(); err != nil {
 		slog.Error("Failed to connect to Redis", "error", err)
-		panic("Failed to connect to Redis: " + err.Error())
+		return err
 	}
 
 	slog.Info("Redis connected successfully",
@@ -34,6 +34,7 @@ func InitRedis(cfg *config.RedisConfig) {
 		"db", cfg.DB,
 		"pool_size", cfg.PoolSize,
 	)
+	return nil
 }
 
 // CloseRedis 关闭 Redis 连接

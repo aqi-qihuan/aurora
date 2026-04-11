@@ -14,6 +14,7 @@ import (
 	"github.com/aurora-go/aurora/internal/infrastructure"
 	"github.com/aurora-go/aurora/internal/infrastructure/logger"
 	"github.com/aurora-go/aurora/internal/middleware"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -86,12 +87,19 @@ func main() {
 		})
 	})
 
-	// 6. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
-	router := handler.NewRouter(cfg)
+	// 6. 创建Service注册中心（所有Handler通过Registry获取Service实例）
+	db := infrastructure.GetDB()
+	rdb := infrastructure.GetRedis()
+	registry := service.NewRegistry(db, rdb, *cfg, slog.Default())
+	service.SetGlobalRegistry(registry)
+	slog.Info("Service registry initialized", "services", 24)
+
+	// 7. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
+	router := handler.NewRouter(registry)
 	router.RegisterRoutes(r)
 	slog.Info("All routes registered (80+ endpoints)")
 
-	// 7. Agent 路由 (可选插件 - 5级隔离保证 L2/L3)
+	// 8. Agent 路由 (可选插件 - 5级隔离保证 L2/L3)
 	if cfg.Agent.Enabled {
 		// 初始化Agent引擎
 		if err := agent.InitAgent(&cfg.Agent); err != nil {
@@ -104,7 +112,7 @@ func main() {
 		slog.Info("Agent 模块已禁用（零初始化、零路由、零内存）")
 	}
 
-	// 8. 创建 HTTP Server
+	// 9. 创建 HTTP Server
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      r,
@@ -113,7 +121,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 9. 启动服务
+	// 10. 启动服务
 	go func() {
 		slog.Info("Aurora Go 服务启动",
 			"addr", srv.Addr,
@@ -126,7 +134,7 @@ func main() {
 		}
 	}()
 
-	// 10. 等待关闭信号 → 优雅关闭所有基础设施
+	// 11. 等待关闭信号 → 优雅关闭所有基础设施
 	infrastructure.WaitForSignal()
 }
 

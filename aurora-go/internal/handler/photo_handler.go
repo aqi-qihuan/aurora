@@ -4,35 +4,45 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
 )
 
 // PhotoHandler 相册照片处理器（对标 Java PhotoController）
 type PhotoHandler struct {
-	// photoService service.PhotoService
+	svc *service.PhotoService
 }
 
-func NewPhotoHandler() *PhotoHandler { return &PhotoHandler{} }
+func NewPhotoHandler(svc *service.PhotoService) *PhotoHandler {
+	return &PhotoHandler{svc: svc}
+}
 
 // ListPhotos 获取相册下的照片列表
-// GET /api/albums/:albumId/photos
+// GET /api/albums/:id/photos
 func (h *PhotoHandler) ListPhotos(c *gin.Context) {
-	albumIdStr := c.Param("albumId")
-	_, err := strconv.ParseInt(albumIdStr, 10, 64)
+	albumId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
 		return
 	}
-	pageNum, pageSize := util.PageQuery(c)
-	util.ResponseSuccessWithPage(c, []interface{}{}, int64(0), pageNum, pageSize)
+	list, err := h.svc.GetPhotosByAlbum(c.Request.Context(), uint(albumId))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
 }
 
 // UploadPhoto 上传照片到指定相册（支持批量）
-// POST /api/admin/albums/:albumId/photos
+// POST /api/admin/albums/:id/photos
 func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
+	albumId, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
+		return
+	}
 	form, err := c.MultipartForm()
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("文件上传失败"))
@@ -44,23 +54,32 @@ func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
 		return
 	}
 
-	zap.L().Info("Uploading photos", zap.Int("count", len(files)))
-	// TODO: P0-5 遍历files → 上传MinIO → 保存Photo记录
+	// TODO: P0-9 上传到MinIO后获取URL列表
+	// 暂时使用模拟URL
+	urls := make([]string, len(files))
+	for i := range files {
+		urls[i] = "/uploads/" + files[i].Filename
+	}
 
-	util.ResponseSuccess(c, map[string]interface{}{
-		"uploadedCount": len(files),
-		"urls":          []string{},
-	})
+	photos, err := h.svc.UploadPhotos(c.Request.Context(), uint(albumId), urls)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, photos)
 }
 
 // DeletePhoto 删除照片
 // DELETE /api/admin/photos/:id
 func (h *PhotoHandler) DeletePhoto(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseInt(idStr, 10, 64)
-
-	zap.L().Debug("Delete photo", zap.Int64("id", id))
-	// TODO: P0-5 从MinIO删除 + DB删除记录
-
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的照片ID"))
+		return
+	}
+	if err := h.svc.DeletePhoto(c.Request.Context(), uint(id)); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "照片已删除")
 }

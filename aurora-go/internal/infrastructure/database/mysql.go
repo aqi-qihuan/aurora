@@ -14,7 +14,7 @@ import (
 var DB *gorm.DB
 
 // InitMySQL 初始化 MySQL 数据库连接
-func InitMySQL(cfg *config.MySQLConfig) {
+func InitMySQL(cfg *config.MySQLConfig) error {
 	var err error
 
 	DB, err = gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{
@@ -23,13 +23,13 @@ func InitMySQL(cfg *config.MySQLConfig) {
 
 	if err != nil {
 		slog.Error("Failed to connect to MySQL", "error", err)
-		panic("Failed to connect to MySQL: " + err.Error())
+		return err
 	}
 
 	sqlDB, err := DB.DB()
 	if err != nil {
 		slog.Error("Failed to get sql.DB instance", "error", err)
-		panic(err.Error())
+		return err
 	}
 
 	// 连接池配置（对标Java版HikariCP优化参数）
@@ -44,6 +44,7 @@ func InitMySQL(cfg *config.MySQLConfig) {
 		"max_open_conns", cfg.MaxOpenConns,
 		"max_idle_conns", cfg.MaxIdleConns,
 	)
+	return nil
 }
 
 // Close 关闭数据库连接

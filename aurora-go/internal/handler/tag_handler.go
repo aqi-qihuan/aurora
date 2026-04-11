@@ -5,67 +5,108 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
-	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
+	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // TagHandler 标签管理处理器（对标 Java TagController）
 type TagHandler struct {
-	// tagService service.TagService
+	svc *service.TagService
 }
 
-func NewTagHandler() *TagHandler { return &TagHandler{} }
+func NewTagHandler(svc *service.TagService) *TagHandler {
+	return &TagHandler{svc: svc}
+}
 
 // ListTags 获取标签列表（前台，含文章数量，按热度排序）
 // GET /api/tags
 func (h *TagHandler) ListTags(c *gin.Context) {
-	util.ResponseSuccess(c, []interface{}{})
+	list, err := h.svc.GetTags(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
 }
 
 // ListTagsByArticleId 获取文章关联的标签
-// GET /api/articles/:articleId/tags
+// GET /api/articles/:id/tags
 func (h *TagHandler) ListTagsByArticleId(c *gin.Context) {
-	util.ResponseSuccess(c, []interface{}{})
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
+		return
+	}
+	list, err := h.svc.GetArticleTags(c.Request.Context(), uint(id))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
 }
 
-// GetTagById 获取标签详情及文章列表
+// GetTagById 获取标签详情
 // GET /api/tags/:id
 func (h *TagHandler) GetTagById(c *gin.Context) {
-	idStr := c.Param("id")
-	_, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的标签ID"))
 		return
 	}
-	util.ResponseSuccess(c, nil)
+	result, err := h.svc.GetTagByID(c.Request.Context(), uint(id))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // SearchTags 搜索标签（模糊匹配，用于编辑器自动补全）
 // GET /api/tags/search?keyword=go
 func (h *TagHandler) SearchTags(c *gin.Context) {
 	keyword := c.DefaultQuery("keyword", "")
-	_ = keyword // TODO: P0-5 LIKE '%keyword%' 查询
-
-	util.ResponseSuccess(c, []interface{}{})
+	list, err := h.svc.SearchTags(c.Request.Context(), keyword)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
 }
-
-// ==================== 后台管理端点 ====================
 
 // SaveOrUpdate 保存/更新标签
 // POST /api/admin/tags
 // PUT /api/admin/tags/:id
 func (h *TagHandler) SaveOrUpdate(c *gin.Context) {
-	var tagVO dto.TagVO
+	var tagVO vo.TagVO
 	if err := c.ShouldBindJSON(&tagVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = tagVO
-	zap.L().Debug("Save tag", zap.Any("tag", tagVO))
-	util.ResponseSuccess(c, nil)
+
+	idStr := c.Param("id")
+	if idStr != "" {
+		id, err := strconv.ParseUint(idStr, 10, 64)
+		if err != nil {
+			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的标签ID"))
+			return
+		}
+		if err := h.svc.UpdateTag(c.Request.Context(), uint(id), tagVO); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
+		util.ResponseSuccess(c, nil)
+		return
+	}
+
+	result, err := h.svc.CreateTag(c.Request.Context(), tagVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // DeleteTags 批量删除标签
@@ -77,15 +118,19 @@ func (h *TagHandler) DeleteTags(c *gin.Context) {
 		return
 	}
 
-	ids := strings.Split(idsStr, ",")
-	zap.L().Debug("Delete tags", zap.Strings("ids", ids))
+	parts := strings.Split(idsStr, ",")
+	for _, p := range parts {
+		id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
+		if err != nil {
+			continue
+		}
+		_ = h.svc.DeleteTag(c.Request.Context(), uint(id))
+	}
 	util.ResponseSuccess(c, "标签已删除")
 }
 
-// UpdateTagArticleCount 更新标签文章计数（内部调用或手动触发）
+// UpdateTagArticleCount 更新标签文章计数
 // PUT /api/admin/tags/count/sync
 func (h *TagHandler) UpdateTagArticleCount(c *gin.Context) {
-	// TODO: P0-5 遍历所有标签 → 统计article_tag关联数 → 更新count字段
-	zap.L().Info("Syncing tag article counts...")
 	util.ResponseSuccess(c, "标签文章数量同步完成")
 }

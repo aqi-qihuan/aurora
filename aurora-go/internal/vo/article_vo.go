@@ -8,11 +8,11 @@ type ArticleVO struct {
 	CategoryID     uint   `json:"categoryId" binding:"required"`
 	TagIDs         []uint `json:"tagIds"`                     // 标签ID列表
 	Type           int8   `json:"type" binding:"omitempty,oneof=1 2 3"`
-	OriginalURL    string `json:"originalUrl,omitempty" max=500`
+	OriginalURL    string `json:"originalUrl,omitempty" binding:"omitempty,max=500"`
 	IsTop          int8   `json:"isTop" binding:"omitempty,oneof=0 1"`
 	IsFeatured     int8   `json:"isFeatured" binding:"omitempty,oneof=0 1"`
 	Status         *int8  `json:"status" binding:"omitempty,oneof=0 1 2 3"`
-	Password       string `json:"password,omitempty" max=64` // 密码保护文章
+	Password       string `json:"password,omitempty" binding:"omitempty,max=64"` // 密码保护文章
 }
 
 // ArticleTopFeaturedVO 置顶/推荐操作

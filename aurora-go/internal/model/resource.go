@@ -27,9 +27,9 @@ func (Resource) TableName() string { return "t_resource" }
 
 // RoleResource 角色-资源权限关联表
 type RoleResource struct {
- RoleID      uint `gorm:"primaryKey"json:"roleId"`
- ResourceID uint `gorm:"primaryKey"json:"resourceId"`
- IsForbidden int8 `gorm:"default:0"json:"isForbidden"` // 0允许 -1禁止
+	RoleID      uint `gorm:"primaryKey" json:"roleId"`
+	ResourceID uint `gorm:"primaryKey" json:"resourceId"`
+	IsForbidden int8 `gorm:"default:0" json:"isForbidden"` // 0允许 -1禁止
 }
 func (RoleResource) TableName() string { return "t_role_resource" }
 

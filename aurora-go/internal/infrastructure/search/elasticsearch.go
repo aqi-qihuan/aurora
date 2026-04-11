@@ -30,11 +30,11 @@ type ESClient struct {
 var Client *ESClient
 
 // InitElasticsearch 初始化 Elasticsearch 连接
-func InitElasticsearch(cfg *config.ESConfig) {
+func InitElasticsearch(cfg *config.ESConfig) error {
 	// 从URLs列表提取主节点地址
 	host := cfg.GetPrimaryURL()
 	if host == "" {
-		panic("Elasticsearch URL is not configured")
+		return fmt.Errorf("elasticsearch URL is not configured")
 	}
 
 	timeout := cfg.Timeout
@@ -61,14 +61,15 @@ func InitElasticsearch(cfg *config.ESConfig) {
 	health, err := Client.Health(ctx)
 	if err != nil {
 		slog.Error("Failed to connect to Elasticsearch", "error", err)
-		panic("Failed to connect to Elasticsearch: " + err.Error())
+		Client = nil // 确保降级
+		return err
 	}
 
 	slog.Info("Elasticsearch connected successfully",
-		"host", cfg.Host,
 		"cluster_name", health.ClusterName,
 		"status", health.Status,
 	)
+	return nil
 }
 
 // Health 检查ES集群健康状态

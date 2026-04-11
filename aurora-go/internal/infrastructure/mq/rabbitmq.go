@@ -14,19 +14,19 @@ var Conn *amqp.Connection
 var Channel *amqp.Channel
 
 // InitRabbitMQ 初始化 RabbitMQ 连接
-func InitRabbitMQ(cfg *config.RabbitMQConfig) {
+func InitRabbitMQ(cfg *config.RabbitMQConfig) error {
 	var err error
 
 	Conn, err = amqp.Dial(cfg.URL())
 	if err != nil {
 		slog.Error("Failed to connect to RabbitMQ", "error", err)
-		panic("Failed to connect to RabbitMQ: " + err.Error())
+		return err
 	}
 
 	Channel, err = Conn.Channel()
 	if err != nil {
 		slog.Error("Failed to open channel", "error", err)
-		panic("Failed to open channel: " + err.Error())
+		return err
 	}
 
 	// 声明交换机
@@ -36,7 +36,7 @@ func InitRabbitMQ(cfg *config.RabbitMQConfig) {
 	)
 	if err != nil {
 		slog.Error("Failed to declare direct exchange", "error", err)
-		panic(err.Error())
+		return err
 	}
 
 	err = Channel.ExchangeDeclare(
@@ -45,7 +45,7 @@ func InitRabbitMQ(cfg *config.RabbitMQConfig) {
 	)
 	if err != nil {
 		slog.Error("Failed to declare topic exchange", "error", err)
-		panic(err.Error())
+		return err
 	}
 
 	// 设置QoS
@@ -58,6 +58,7 @@ func InitRabbitMQ(cfg *config.RabbitMQConfig) {
 		"host", fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		"prefetch_count", cfg.PrefetchCount,
 	)
+	return nil
 }
 
 // CloseRabbitMQ 关闭 RabbitMQ 连接

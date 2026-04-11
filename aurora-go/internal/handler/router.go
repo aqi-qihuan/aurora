@@ -3,15 +3,13 @@
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/middleware"
+	"github.com/aurora-go/aurora/internal/service"
 )
 
 // Router 路由注册器（对标Java的WebMvcConfigurer/路由配置）
 // 将所有Handler端点注册到Gin Engine上
 type Router struct {
-	cfg *config.Config
-
 	// Handler 实例
 	ArticleHandler       *ArticleHandler
 	UserAuthHandler      *UserAuthHandler
@@ -36,34 +34,33 @@ type Router struct {
 }
 
 // NewRouter 创建路由器并初始化所有Handler实例
-func NewRouter(cfg *config.Config) *Router {
+// 所有Handler通过Registry获取Service实例, 确保单例共享
+func NewRouter(registry *service.Registry) *Router {
 	return &Router{
-		cfg: cfg,
-		ArticleHandler:       NewArticleHandler(),
-		UserAuthHandler:      NewUserAuthHandler(),
-		CommentHandler:       NewCommentHandler(),
-		CategoryHandler:      NewCategoryHandler(),
-		TagHandler:           NewTagHandler(),
-		FriendLinkHandler:    NewFriendLinkHandler(),
-		TalkHandler:          NewTalkHandler(),
-		PhotoHandler:         NewPhotoHandler(),
-		PhotoAlbumHandler:    NewPhotoAlbumHandler(),
-		RoleHandler:          NewRoleHandler(),
-		MenuHandler:          NewMenuHandler(),
-		JobHandler:           NewJobHandler(),
-		JobLogHandler:        NewJobLogHandler(),
-		OperationLogHandler:  NewOperationLogHandler(),
-		ExceptionLogHandler:  NewExceptionLogHandler(),
-		AuroraInfoHandler:    NewAuroraInfoHandler(),
-		WebsiteConfigHandler: NewWebsiteConfigHandler(),
-		FileHandler:          NewFileHandler(),
-		ResourceHandler:      NewResourceHandler(),
-		AboutHandler:         NewAboutHandler(),
+		ArticleHandler:       NewArticleHandler(registry.Article),
+		UserAuthHandler:      NewUserAuthHandler(registry),
+		CommentHandler:       NewCommentHandler(registry.Comment),
+		CategoryHandler:      NewCategoryHandler(registry.Category),
+		TagHandler:           NewTagHandler(registry.Tag),
+		FriendLinkHandler:    NewFriendLinkHandler(registry.FriendLink),
+		TalkHandler:          NewTalkHandler(registry.Talk),
+		PhotoHandler:         NewPhotoHandler(registry.Photo),
+		PhotoAlbumHandler:    NewPhotoAlbumHandler(registry.PhotoAlbum),
+		RoleHandler:          NewRoleHandler(registry.Role),
+		MenuHandler:          NewMenuHandler(registry.Menu),
+		JobHandler:           NewJobHandler(registry.Job),
+		JobLogHandler:        NewJobLogHandler(registry.JobLog),
+		OperationLogHandler:  NewOperationLogHandler(registry.OperationLog),
+		ExceptionLogHandler:  NewExceptionLogHandler(registry.ExceptionLog),
+		AuroraInfoHandler:    NewAuroraInfoHandler(registry.AuroraInfo),
+		WebsiteConfigHandler: NewWebsiteConfigHandler(registry.WebsiteConfig),
+		FileHandler:          NewFileHandler(registry.File),
+		ResourceHandler:      NewResourceHandler(registry.Resource),
+		AboutHandler:         NewAboutHandler(registry.About),
 	}
 }
 
 // RegisterRoutes 注册所有路由（在main.go中调用）
-// 对标 Java 的 @RequestMapping + @GetMapping/@PostMapping 等注解
 func (r *Router) RegisterRoutes(engine *gin.Engine) {
 	api := engine.Group("/api")
 
@@ -74,14 +71,12 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 	// ==================== 受保护路由（需JWT认证）====================
 	protected := api.Group("")
 	protected.Use(middleware.JWTAuth())
-	// protected.Use(middleware.RBAC()) // P0-6 添加RBAC权限控制
 
 	r.registerProtectedRoutes(protected)
 
 	// ==================== 后台管理路由（需JWT + 管理员角色）====================
 	admin := api.Group("/admin")
 	admin.Use(middleware.JWTAuth())
-	// admin.Use(middleware.RequireRole("admin")) // P0-6 角色过滤
 
 	r.registerAdminRoutes(admin)
 }
@@ -108,8 +103,8 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	rg.POST("/auth/logout", r.UserAuthHandler.Logout)
 
 	// --- 评论 ---
-	rg.GET("/articles/:articleId/comments", r.CommentHandler.ListComments)
-	rg.POST("/articles/:articleId/comments", r.CommentHandler.AddComment)
+	rg.GET("/articles/:id/comments", r.CommentHandler.ListComments)
+	rg.POST("/articles/:id/comments", r.CommentHandler.AddComment)
 	rg.POST("/comments/:id/reply", r.CommentHandler.ReplyComment)
 	rg.POST("/comments/:id/like", r.CommentHandler.LikeComment)
 
@@ -119,7 +114,7 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	rg.GET("/tags", r.TagHandler.ListTags)
 	rg.GET("/tags/search", r.TagHandler.SearchTags)
 	rg.GET("/tags/:id", r.TagHandler.GetTagById)
-	rg.GET("/articles/:articleId/tags", r.TagHandler.ListTagsByArticleId)
+	rg.GET("/articles/:id/tags", r.TagHandler.ListTagsByArticleId)
 
 	// --- 友链 ---
 	rg.GET("/links", r.FriendLinkHandler.ListFriendLinks)
@@ -134,7 +129,7 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	// --- 相册 ---
 	rg.GET("/albums", r.PhotoAlbumHandler.ListAlbums)
 	rg.GET("/albums/:id", r.PhotoAlbumHandler.GetAlbumById)
-	rg.GET("/albums/:albumId/photos", r.PhotoHandler.ListPhotos)
+	rg.GET("/albums/:id/photos", r.PhotoHandler.ListPhotos)
 
 	// --- 关于页 ---
 	rg.GET("/about", r.AboutHandler.GetAbout)
@@ -163,8 +158,8 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	// --- 文章管理 ---
 	rg.GET("/articles", r.ArticleHandler.ListAdminArticles)
 	rg.POST("/articles", r.ArticleHandler.SaveArticle)
-	rg.PUT("/articles/:id", r.ArticleHandler.SaveArticle)        // 更新
-	rg.DELETE("/articles/:ids", r.ArticleHandler.DeleteArticle)    // 批量删除
+	rg.PUT("/articles/:id", r.ArticleHandler.SaveArticle)
+	rg.DELETE("/articles/:ids", r.ArticleHandler.DeleteArticle)
 	rg.PUT("/articles/:id/status", r.ArticleHandler.UpdateArticleStatus)
 	rg.PUT("/articles/:id/password", r.ArticleHandler.UpdateArticlePassword)
 	rg.POST("/articles/import", r.ArticleHandler.ImportArticle)
@@ -200,7 +195,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.POST("/albums", r.PhotoAlbumHandler.SaveOrUpdate)
 	rg.PUT("/albums/:id", r.PhotoAlbumHandler.SaveOrUpdate)
 	rg.DELETE("/albums/:id", r.PhotoAlbumHandler.DeleteAlbum)
-	rg.POST("/albums/:albumId/photos", r.PhotoHandler.UploadPhoto)
+	rg.POST("/albums/:id/photos", r.PhotoHandler.UploadPhoto)
 	rg.DELETE("/photos/:id", r.PhotoHandler.DeletePhoto)
 
 	// --- 评论管理 ---

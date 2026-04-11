@@ -54,8 +54,8 @@ func (UserAuth) TableName() string {
 
 // UserRole 用户-角色关联表 (多对多)
 type UserRole struct {
- UserID uint `gorm:"primaryKey"json:"userId"`
- RoleID uint `gorm:"primaryKey"json:"roleId"`
+	UserID uint `gorm:"primaryKey" json:"userId"`
+	RoleID uint `gorm:"primaryKey" json:"roleId"`
 }
 
 func (UserRole) TableName() string { return "t_user_role" }

@@ -234,9 +234,8 @@ var (
 		"免费领取", "代写", "代做", "兼职", "赚钱", "贷款", "彩票",
 		"刷单", "推广", "加微信", "加QQ", "代理", "加盟", "投资回报",
 	}
-	repeatCharPattern = regexp.MustCompile(`(.)\1{5,}`)
 	allCapsPattern    = regexp.MustCompile(`^[A-Z\s\d!@#$%^&*()]{8,}$`)
-	excessiveEmoji    = regexp.MustCompile(`[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{2700}-\x{27BF}\x{FE00}-\x{FE0F}]{5,}`)
+	// excessiveEmoji: 检测连续5个以上emoji，用 countEmojis() 函数替代正则（RE2不支持\Uxxxxxx语法）
 	minContentLength  = 2
 	maxContentLength  = 2000
 )
@@ -296,13 +295,13 @@ func (ca *CommentAssistant) ruleEngineCheck(comment *SingleComment) *CommentRevi
 	}
 
 	// 6. 异常文本特征
-	if repeatCharPattern.MatchString(content) {
+	if hasRepeats(content, 5) {
 		ca.deductScore(result, 15, "medium", "repeat_chars", "存在连续重复字符", []string{"可能是测试或灌水"})
 	}
 	if allCapsPattern.MatchString(content) {
 		ca.deductScore(result, 10, "low", "all_caps", "全大写文本", nil)
 	}
-	emojiCount := len(excessiveEmoji.FindAllStringIndex(content, -1))
+	emojiCount := countEmojis(content)
 	if emojiCount > 3 {
 		ca.deductScore(result, 10, "low", "excessive_emoji", "表情过多", nil)
 	}
@@ -500,4 +499,48 @@ func (r *CommentReviewResult) ToMap() map[string]interface{} {
 func (r *CommentReviewResult) ToJSON() string {
 	b, _ := json.Marshal(r.ToMap())
 	return string(b)
+}
+
+// hasRepeats 检测字符串中是否有连续重复N次以上的同一字符
+// Go RE2 正则不支持反向引用 \1，用代码逻辑替代
+func hasRepeats(s string, minRepeat int) bool {
+	if len(s) < minRepeat {
+		return false
+	}
+	runes := []rune(s)
+	count := 1
+	for i := 1; i < len(runes); i++ {
+		if runes[i] == runes[i-1] {
+			count++
+			if count >= minRepeat {
+				return true
+			}
+		} else {
+			count = 1
+		}
+	}
+	return false
+}
+
+// countEmojis 统计字符串中的emoji数量（Unicode范围检测）
+// Go RE2 不支持 \Uxxxxxx 语法，用代码逻辑替代
+func countEmojis(s string) int {
+	count := 0
+	for _, r := range s {
+		switch {
+		case r >= 0x1F600 && r <= 0x1F64F: // Emoticons
+			count++
+		case r >= 0x1F300 && r <= 0x1F5FF: // Misc Symbols and Pictographs
+			count++
+		case r >= 0x2700 && r <= 0x27BF: // Dingbats
+			count++
+		case r >= 0xFE00 && r <= 0xFE0F: // Variation Selectors
+			count++
+		case r >= 0x1F900 && r <= 0x1F9FF: // Supplemental Symbols and Pictographs
+			count++
+		case r >= 0x2600 && r <= 0x26FF: // Misc symbols
+			count++
+		}
+	}
+	return count
 }

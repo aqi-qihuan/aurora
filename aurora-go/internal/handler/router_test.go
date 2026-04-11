@@ -14,7 +14,7 @@ func TestRouter_RegisterRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
-	router := NewRouter(nil) // cfg can be nil for route registration test
+	router := NewRouter(nil) // registry can be nil for route registration test
 	router.RegisterRoutes(r)
 
 	// 验证关键公开路由已注册

@@ -20,7 +20,7 @@ var minIOEndpoint string // 内部endpoint（用于SDK连接）
 var externalURL   string // 外部访问端点（用于生成公开访问URL）
 
 // InitMinIO 初始化 MinIO 客户端连接
-func InitMinIO(cfg *config.MinIOConfig) {
+func InitMinIO(cfg *config.MinIOConfig) error {
 	var err error
 	useSSL := false
 
@@ -38,7 +38,7 @@ func InitMinIO(cfg *config.MinIOConfig) {
 	})
 	if err != nil {
 		slog.Error("Failed to connect to MinIO", "error", err)
-		panic("Failed to connect to MinIO: " + err.Error())
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -47,14 +47,16 @@ func InitMinIO(cfg *config.MinIOConfig) {
 	bucketExists, err := MinIOClient.BucketExists(ctx, cfg.Bucket)
 	if err != nil {
 		slog.Error("Failed to check bucket existence", "error", err)
-		panic(err.Error())
+		MinIOClient = nil
+		return err
 	}
 
 	if !bucketExists {
 		err = MinIOClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{})
 		if err != nil {
 			slog.Error("Failed to create bucket", "error", err)
-			panic(err.Error())
+			MinIOClient = nil
+			return err
 		}
 		slog.Info("MinIO bucket created", "bucket", cfg.Bucket)
 	}
@@ -67,6 +69,7 @@ func InitMinIO(cfg *config.MinIOConfig) {
 		"endpoint", endpoint,
 		"bucket", cfg.Bucket,
 	)
+	return nil
 }
 
 // UploadFile 上传文件到 MinIO（从本地路径上传）

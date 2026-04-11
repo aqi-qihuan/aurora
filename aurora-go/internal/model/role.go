@@ -25,8 +25,8 @@ func (Role) TableName() string { return "t_role" }
 
 // RoleMenu 角色-菜单关联表
 type RoleMenu struct {
- RoleID uint `gorm:"primaryKey"json:"roleId"`
- MenuID uint `gorm:"primaryKey"json:"menuId"`
+	RoleID uint `gorm:"primaryKey" json:"roleId"`
+	MenuID uint `gorm:"primaryKey" json:"menuId"`
 }
 func (RoleMenu) TableName() string { return "t_role_menu" }
 

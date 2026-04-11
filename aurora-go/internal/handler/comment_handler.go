@@ -2,77 +2,105 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
+	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // CommentHandler 评论处理器（对标 Java CommentController）
-// 端点: 8个 (评论CRUD + 回复 + 审核 + 通知)
 type CommentHandler struct {
-	// commentService service.CommentService
+	svc *service.CommentService
 }
 
-func NewCommentHandler() *CommentHandler { return &CommentHandler{} }
+func NewCommentHandler(svc *service.CommentService) *CommentHandler {
+	return &CommentHandler{svc: svc}
+}
 
 // ListComments 获取文章评论列表（前台）
-// GET /api/articles/:articleId/comments
-// 对标 CommentController.listCommentsByArticleId()
+// GET /api/articles/:id/comments
 func (h *CommentHandler) ListComments(c *gin.Context) {
-	articleIdStr := c.Param("articleId")
-	_, err := strconv.ParseInt(articleIdStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
-	pageNum, pageSize := util.PageQuery(c)
-	util.ResponseSuccessWithPage(c, []interface{}{}, int64(0), pageNum, pageSize)
+	list, err := h.svc.GetCommentsByArticle(c.Request.Context(), uint(id))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
 }
 
-// AddComment 发表评论/回复（支持嵌套回复）
-// POST /api/articles/:articleId/comments
-// 对标 CommentController.saveComment() - 含嵌套逻辑
+// AddComment 发表评论/回复
+// POST /api/articles/:id/comments
 func (h *CommentHandler) AddComment(c *gin.Context) {
-	var commentVO dto.CommentVO
+	var commentVO vo.CommentVO
 	if err := c.ShouldBindJSON(&commentVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = commentVO // TODO: P0-5 保存评论 → 异步发送MQ邮件通知
+	// 从上下文中获取用户ID
+	userID, _ := c.Get("userId")
+	uid := uint(0)
+	if id, ok := userID.(uint); ok {
+		uid = id
+	}
+	clientIP := c.ClientIP()
 
-	zap.L().Info("New comment added", zap.Any("comment", commentVO))
-	util.ResponseSuccess(c, "评论发表成功")
+	result, err := h.svc.CreateComment(c.Request.Context(), uid, commentVO, clientIP)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // ReplyComment 回复指定评论
 // POST /api/comments/:id/reply
 func (h *CommentHandler) ReplyComment(c *gin.Context) {
-	var replyVO dto.ReplyVO
+	var replyVO vo.CommentVO
 	if err := c.ShouldBindJSON(&replyVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = replyVO
+	userID, _ := c.Get("userId")
+	uid := uint(0)
+	if id, ok := userID.(uint); ok {
+		uid = id
+	}
+	if parentID, err := strconv.ParseUint(c.Param("id"), 10, 64); err == nil {
+		replyVO.ParentID = uint(parentID)
+	}
+	clientIP := c.ClientIP()
 
-	util.ResponseSuccess(c, "回复成功")
+	result, err := h.svc.CreateComment(c.Request.Context(), uid, replyVO, clientIP)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // LikeComment 点赞评论
 // POST /api/comments/:id/like
 func (h *CommentHandler) LikeComment(c *gin.Context) {
-	idStr := c.Param("id")
-	_, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的评论ID"))
 		return
 	}
-	// TODO: P0-5 Redis ZINCRBY 计数 或 DB更新
-
-	util.ResponseSuccess(c, map[string]interface{}{"likes": 1})
+	if err := h.svc.LikeComment(c.Request.Context(), uint(id)); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, "点赞成功")
 }
 
 // ==================== 后台管理端点 ====================
@@ -82,47 +110,68 @@ func (h *CommentHandler) LikeComment(c *gin.Context) {
 func (h *CommentHandler) ListAdminComments(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
-	_ = condition
 	pageNum, pageSize := util.PageQuery(c)
-	util.ResponseSuccessWithPage(c, []interface{}{}, int64(0), pageNum, pageSize)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	result, err := h.svc.ListAdminComments(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // UpdateCommentReview 审核评论（通过/拒绝）
 // PUT /api/admin/comments/:id/review
-// 对标 CommentController.updateCommentReview()
 func (h *CommentHandler) UpdateCommentReview(c *gin.Context) {
-	var reviewVO dto.ReviewVO
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的评论ID"))
+		return
+	}
+	var reviewVO struct {
+		IsReview int8 `json:"isReview"`
+	}
 	if err := c.ShouldBindJSON(&reviewVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	_ = reviewVO
-
+	if err := h.svc.ReviewComment(c.Request.Context(), uint(id), reviewVO.IsReview); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, nil)
 }
 
 // DeleteComment 删除评论
 // DELETE /api/admin/comments/:ids
-// 对标 CommentController.deleteComments()
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
-	idsStr := c.Query("ids") // 支持批量删除: "1,2,3"
+	idsStr := c.Param("ids")
 	if idsStr == "" {
-		idStr := c.Param("id")
-		idsStr = idStr
+		idsStr = c.Query("ids")
 	}
-	_ = idsStr // TODO: P0-5 批量软删除
-
-	zap.L().Debug("Delete comments", zap.String("ids", idsStr))
+	if idsStr == "" {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的评论"))
+		return
+	}
+	parts := strings.Split(idsStr, ",")
+	for _, p := range parts {
+		id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
+		if err != nil {
+			continue
+		}
+		_ = h.svc.DeleteComment(c.Request.Context(), uint(id))
+	}
 	util.ResponseSuccess(c, "评论已删除")
 }
 
-// GetCommentStats 获取评论统计信息（总数/待审核数）
+// GetCommentStats 获取评论统计信息
 // GET /api/admin/comments/stats
 func (h *CommentHandler) GetCommentStats(c *gin.Context) {
-	util.ResponseSuccess(c, map[string]interface{}{
-		"total":       0,
-		"pendingReview": 0,
-		"approved":    0,
-		"rejected":    0,
-	})
+	stats, err := h.svc.GetCommentStats(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, stats)
 }

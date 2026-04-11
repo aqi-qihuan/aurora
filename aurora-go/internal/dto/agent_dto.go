@@ -9,7 +9,7 @@ type ChatRequest struct {
 	Message   string            `json:"message" binding:"required" example:"写一篇关于Go语言的文章"`     // 用户消息
 	SessionID string            `json:"sessionId" example:"sess_abc123"`                          // 会话ID（为空则新建）
 	Mode      string            `json:"mode" enum:"chat,write,search,analyze" example:"chat"`       // 对话模式
-	Stream    bool              `json:"stream" example:true`                                       // 是否SSE流式输出
+	Stream    bool              `json:"stream" example:"true"`                                       // 是否SSE流式输出
 	Context   map[string]interface{} `json:"context,omitempty"`                                    // 上下文信息（文章ID、搜索关键词等）
 }
 
@@ -49,7 +49,7 @@ type SearchRequest struct {
 	Query      string `json:"query" binding:"required" example:"Go语言如何实现高并发"`
 	PageNum    int    `json:"pageNum" example:"1"`
 	PageSize   int    `json:"pageSize" example:"10"`
-	UseRAG     bool   `json:"useRag" example:true`        // 是否启用RAG增强
+	UseRAG     bool   `json:"useRag" example:"true"`        // 是否启用RAG增强
 	TopK       int    `json:"topK" example:"5"`            // RAG检索数量
 }
 

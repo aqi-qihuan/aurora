@@ -2,26 +2,30 @@
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
-	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
-	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // AboutHandler 关于页面处理器（对标 Java AboutController）
 type AboutHandler struct {
-	// aboutService service.AboutService
+	svc *service.AboutService
 }
 
-func NewAboutHandler() *AboutHandler { return &AboutHandler{} }
+func NewAboutHandler(svc *service.AboutService) *AboutHandler {
+	return &AboutHandler{svc: svc}
+}
 
 // GetAbout 获取关于页面内容（前台公开）
 // GET /api/about
 func (h *AboutHandler) GetAbout(c *gin.Context) {
-	// TODO: P0-5 从DB查询关于页内容(支持Markdown)
+	content, err := h.svc.GetAbout(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, map[string]interface{}{
-		"content": "",
+		"content": content,
 	})
 }
 
@@ -29,13 +33,17 @@ func (h *AboutHandler) GetAbout(c *gin.Context) {
 // POST /api/admin/about
 // PUT /api/admin/about/:id
 func (h *AboutHandler) SaveOrUpdate(c *gin.Context) {
-	var aboutVO vo.WebsiteConfigVO
-	if err := c.ShouldBindJSON(&aboutVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+	var body struct {
+		Content string `json:"content"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, err)
 		return
 	}
-	_ = aboutVO
 
-	zap.L().Debug("Save about page content")
+	if err := h.svc.UpdateAbout(c.Request.Context(), body.Content); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "关于页面已更新")
 }
