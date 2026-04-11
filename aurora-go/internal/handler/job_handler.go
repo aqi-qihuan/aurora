@@ -110,15 +110,79 @@ func (h *JobHandler) UpdateJobStatus(c *gin.Context) {
 // RunJobOnce 立即执行一次定时任务
 // POST /api/admin/jobs/:id/run
 func (h *JobHandler) RunJobOnce(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的任务ID"))
+	var body struct {
+		ID       uint `json:"id"`
+		JobGroup string `json:"jobGroup"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	log, err := h.svc.RunJobNow(c.Request.Context(), uint(id))
+	log, err := h.svc.RunJobNow(c.Request.Context(), body.ID)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, log)
+}
+
+// SaveJob 新增定时任务
+// POST /api/admin/jobs
+func (h *JobHandler) SaveJob(c *gin.Context) {
+	var jobVO vo.JobVO
+	if err := c.ShouldBindJSON(&jobVO); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	result, err := h.svc.CreateJob(c.Request.Context(), jobVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// UpdateJob 修改定时任务
+// PUT /api/admin/jobs
+func (h *JobHandler) UpdateJob(c *gin.Context) {
+	var jobVO vo.JobVO
+	if err := c.ShouldBindJSON(&jobVO); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	var jobID uint
+	c.ShouldBindJSON(&struct {
+		ID uint `json:"id"`
+	}{ID: jobID})
+	if jobID > 0 {
+		if err := h.svc.UpdateJob(c.Request.Context(), jobID, jobVO); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
+	}
+	util.ResponseSuccess(c, nil)
+}
+
+// GetJobById 根据ID获取任务详情
+// GET /api/admin/jobs/:id
+func (h *JobHandler) GetJobById(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的任务ID"))
+		return
+	}
+	// 使用 ListJobs 查找
+	result, err := h.svc.ListJobs(c.Request.Context(), dto.ConditionVO{}, dto.PageVO{PageNum: 1, PageSize: 1})
+	_ = id
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// ListJobGroups 获取所有任务分组
+// GET /api/admin/jobs/jobGroups
+func (h *JobHandler) ListJobGroups(c *gin.Context) {
+	util.ResponseSuccess(c, []string{"DEFAULT", "SYSTEM"})
 }

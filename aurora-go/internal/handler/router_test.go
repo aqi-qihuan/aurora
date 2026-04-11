@@ -17,33 +17,36 @@ func TestRouter_RegisterRoutes(t *testing.T) {
 	router := NewRouter(nil) // registry can be nil for route registration test
 	router.RegisterRoutes(r)
 
-	// 验证关键公开路由已注册
+	// 验证关键公开路由已注册（对齐 Java 原始路径）
 	publicRoutes := []struct {
 		method string
 		path   string
 	}{
 		// 文章
-		{http.MethodGet, "/api/articles"},
-		{http.MethodGet, "/api/articles/search"},
 		{http.MethodGet, "/api/articles/topAndFeatured"},
-		{http.MethodGet, "/api/articles/archives"},
-		// 认证
-		{http.MethodPost, "/api/auth/register"},
-		{http.MethodPost, "/api/auth/login"},
-		{http.MethodPost, "/api/auth/code"},
+		{http.MethodGet, "/api/articles/all"},
+		{http.MethodGet, "/api/articles/search"},
+		{http.MethodGet, "/api/archives/all"},
+		// 认证（对齐 Java 路径）
+		{http.MethodPost, "/api/users/login"},
+		{http.MethodPost, "/api/users/register"},
+		{http.MethodGet, "/api/users/code"},
+		{http.MethodPost, "/api/users/logout"},
 		// 分类标签
-		{http.MethodGet, "/api/categories"},
-		{http.MethodGet, "/api/tags"},
+		{http.MethodGet, "/api/categories/all"},
+		{http.MethodGet, "/api/tags/all"},
+		{http.MethodGet, "/api/tags/topTen"},
 		// 友链
 		{http.MethodGet, "/api/links"},
 		// 说说
 		{http.MethodGet, "/api/talks"},
 		// 相册
-		{http.MethodGet, "/api/albums"},
+		{http.MethodGet, "/api/photos/albums"},
 		// 首页信息
-		{http.MethodGet, "/api/home/info"},
-		// 网站配置
-		{http.MethodGet, "/api/website/config"},
+		{http.MethodGet, "/api/"},
+		// 评论
+		{http.MethodGet, "/api/comments/topSix"},
+		{http.MethodPost, "/api/comments/save"},
 		// 关于
 		{http.MethodGet, "/api/about"},
 	}
@@ -68,7 +71,7 @@ func TestRouter_AdminRoutes_RequireAuth(t *testing.T) {
 	router := NewRouter(nil)
 	router.RegisterRoutes(r)
 
-	// 验证管理路由需要认证
+	// 验证管理路由需要认证（对齐 Java 路径）
 	adminRoutes := []struct {
 		method string
 		path   string
@@ -76,7 +79,7 @@ func TestRouter_AdminRoutes_RequireAuth(t *testing.T) {
 		{http.MethodGet, "/api/admin/articles"},
 		{http.MethodGet, "/api/admin/roles"},
 		{http.MethodGet, "/api/admin/menus"},
-		{http.MethodGet, "/api/admin/info"},
+		{http.MethodGet, "/api/admin/"},
 	}
 
 	for _, route := range adminRoutes {

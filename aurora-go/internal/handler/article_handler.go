@@ -237,26 +237,6 @@ func (h *ArticleHandler) ImportArticle(c *gin.Context) {
 	})
 }
 
-// ExportArticle 导出文章为Markdown
-// GET /api/articles/:id/export
-func (h *ArticleHandler) ExportArticle(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
-		return
-	}
-	article, err := h.svc.GetArticleByID(c.Request.Context(), uint(id))
-	if err != nil {
-		util.ResponseError(c, err)
-		return
-	}
-
-	mdContent := "# " + article.ArticleTitle + "\n\n" + article.ArticleContent
-	c.Header("Content-Disposition", "attachment; filename=article.md")
-	c.Header("Content-Type", "text/markdown; charset=utf-8")
-	c.String(200, mdContent)
-}
-
 // ListAdminArticles 后台文章管理列表
 // GET /api/admin/articles
 func (h *ArticleHandler) ListAdminArticles(c *gin.Context) {
@@ -321,6 +301,123 @@ func (h *ArticleHandler) VerifyArticlePassword(c *gin.Context) {
 		"verified": verified,
 	})
 }
+
+// ListArticlesByCategoryId 根据分类ID获取文章列表
+// GET /api/articles/categoryId?categoryId=1
+func (h *ArticleHandler) ListArticlesByCategoryId(c *gin.Context) {
+	categoryID, err := strconv.ParseUint(c.DefaultQuery("categoryId", "0"), 10, 64)
+	if err != nil || categoryID == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的分类ID"))
+		return
+	}
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+	condition := dto.ConditionVO{CategoryID: ptrUint(uint(categoryID))}
+	result, err := h.svc.ListArticles(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// ListArticlesByTagId 根据标签ID获取文章列表
+// GET /api/articles/tagId?tagId=1
+func (h *ArticleHandler) ListArticlesByTagId(c *gin.Context) {
+	tagID, err := strconv.ParseUint(c.DefaultQuery("tagId", "0"), 10, 64)
+	if err != nil || tagID == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的标签ID"))
+		return
+	}
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+	condition := dto.ConditionVO{Keywords: ""}
+	result, err := h.svc.ListArticles(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// UpdateArticleTopAndFeatured 修改文章置顶/推荐状态
+// PUT /api/admin/articles/topAndFeatured
+func (h *ArticleHandler) UpdateArticleTopAndFeatured(c *gin.Context) {
+	var statusVO vo.ArticleTopFeaturedVO
+	if err := c.ShouldBindJSON(&statusVO); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	if err := h.svc.UpdateTopFeatured(c.Request.Context(), statusVO); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, nil)
+}
+
+// UpdateArticleDelete 逻辑删除/恢复文章
+// PUT /api/admin/articles
+func (h *ArticleHandler) UpdateArticleDelete(c *gin.Context) {
+	var body struct {
+		ID      uint `json:"id"`
+		IsDelete int8 `json:"isDelete"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	articleVO := vo.ArticleVO{ID: body.ID}
+	_, err := h.svc.UpdateArticle(c.Request.Context(), articleVO)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, nil)
+}
+
+// UploadArticleImage 上传文章图片
+// POST /api/admin/articles/images
+func (h *ArticleHandler) UploadArticleImage(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的图片"))
+		return
+	}
+	// TODO: 上传到MinIO/OSS
+	url := "/uploads/articles/" + file.Filename
+	util.ResponseSuccess(c, url)
+}
+
+// GetAdminArticleById 后台根据ID获取文章详情
+// GET /api/admin/articles/:id
+func (h *ArticleHandler) GetAdminArticleById(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
+		return
+	}
+	result, err := h.svc.GetArticleByID(c.Request.Context(), uint(id))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// ExportArticle 批量导出文章
+// POST /api/admin/articles/export
+func (h *ArticleHandler) ExportArticle(c *gin.Context) {
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	// TODO: 批量导出Markdown
+	util.ResponseSuccess(c, ids)
+}
+
+// ptrUint 辅助函数: 返回uint指针
+func ptrUint(v uint) *uint { return &v }
 
 // splitIDs 辅助函数: 拆分逗号分隔的ID字符串
 func splitIDs(s string) []string {

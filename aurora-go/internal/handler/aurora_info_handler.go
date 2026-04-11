@@ -29,7 +29,7 @@ func (h *AuroraInfoHandler) GetHomeInfo(c *gin.Context) {
 }
 
 // GetAdminInfo 获取后台管理首页统计数据
-// GET /api/admin/info (需JWT)
+// GET /api/admin/ (需JWT)
 func (h *AuroraInfoHandler) GetAdminInfo(c *gin.Context) {
 	dashboard, err := h.svc.GetAdminDashboard(c.Request.Context())
 	if err != nil {
@@ -37,4 +37,10 @@ func (h *AuroraInfoHandler) GetAdminInfo(c *gin.Context) {
 		return
 	}
 	util.ResponseSuccess(c, dashboard)
+}
+
+// Report 上报访客信息
+// POST /api/report
+func (h *AuroraInfoHandler) Report(c *gin.Context) {
+	util.ResponseSuccess(c, nil)
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
@@ -74,6 +75,34 @@ func (h *TagHandler) SearchTags(c *gin.Context) {
 		return
 	}
 	util.ResponseSuccess(c, list)
+}
+
+// ListTopTenTags 获取前10个热门标签
+// GET /api/tags/topTen
+func (h *TagHandler) ListTopTenTags(c *gin.Context) {
+	list, err := h.svc.GetTags(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	if len(list) > 10 {
+		list = list[:10]
+	}
+	util.ResponseSuccess(c, list)
+}
+
+// ListAdminTags 后台标签管理列表
+// GET /api/admin/tags
+func (h *TagHandler) ListAdminTags(c *gin.Context) {
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+
+	result, err := h.svc.GetTags(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // SaveOrUpdate 保存/更新标签

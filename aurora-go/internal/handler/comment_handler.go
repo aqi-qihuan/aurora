@@ -165,6 +165,21 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	util.ResponseSuccess(c, "评论已删除")
 }
 
+// ListTopSixComments 获取前6条评论
+// GET /api/comments/topSix
+func (h *CommentHandler) ListTopSixComments(c *gin.Context) {
+	// 复用ListComments获取热门评论
+	list, err := h.svc.GetCommentsByArticle(c.Request.Context(), 0)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	if len(list) > 6 {
+		list = list[:6]
+	}
+	util.ResponseSuccess(c, list)
+}
+
 // GetCommentStats 获取评论统计信息
 // GET /api/admin/comments/stats
 func (h *CommentHandler) GetCommentStats(c *gin.Context) {

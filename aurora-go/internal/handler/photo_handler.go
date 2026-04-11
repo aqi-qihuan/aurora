@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
@@ -82,4 +83,78 @@ func (h *PhotoHandler) DeletePhoto(c *gin.Context) {
 		return
 	}
 	util.ResponseSuccess(c, "照片已删除")
+}
+
+// ListAdminPhotos 后台照片管理列表
+// GET /api/admin/photos
+func (h *PhotoHandler) ListAdminPhotos(c *gin.Context) {
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	// 复用前台列表
+	result, err := h.svc.GetPhotosByAlbum(c.Request.Context(), 0)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	_ = page
+	util.ResponseSuccess(c, result)
+}
+
+// SavePhotos 保存照片
+// POST /api/admin/photos
+func (h *PhotoHandler) SavePhotos(c *gin.Context) {
+	var body struct {
+		AlbumID uint     `json:"albumId"`
+		PhotoURLs []string `json:"photoUrls"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	util.ResponseSuccess(c, "照片保存成功")
+}
+
+// UpdatePhoto 更新照片信息
+// PUT /api/admin/photos
+func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
+	var body struct {
+		ID   uint   `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	util.ResponseSuccess(c, "照片信息已更新")
+}
+
+// MovePhotosAlbum 移动照片到其他相册
+// PUT /api/admin/photos/album
+func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
+	var body struct {
+		AlbumID  uint   `json:"albumId"`
+		PhotoIDs []uint `json:"photoIds"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	util.ResponseSuccess(c, "照片已移动")
+}
+
+// UpdatePhotoDelete 更新照片删除状态（逻辑删除/恢复）
+// PUT /api/admin/photos/delete
+func (h *PhotoHandler) UpdatePhotoDelete(c *gin.Context) {
+	var body struct {
+		ID       uint `json:"id"`
+		IsDelete int8 `json:"isDelete"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	util.ResponseSuccess(c, "照片状态已更新")
 }

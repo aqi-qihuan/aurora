@@ -1,9 +1,6 @@
 ﻿package handler
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/dto"
@@ -39,23 +36,33 @@ func (h *JobLogHandler) ListJobLogs(c *gin.Context) {
 // DeleteJobLogs 清理调度日志
 // DELETE /api/admin/jobLogs
 func (h *JobLogHandler) DeleteJobLogs(c *gin.Context) {
-	idsStr := c.Query("ids")
-	if idsStr != "" {
-		// 按ID批量删除
-		parts := strings.Split(idsStr, ",")
-		for _, p := range parts {
-			id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
-			if err != nil {
-				continue
-			}
-			_ = h.svc.ClearJobLogs(c.Request.Context(), int(id)) // 复用清理方法
+	var ids []int
+	c.ShouldBindJSON(&ids)
+	if len(ids) > 0 {
+		for _, id := range ids {
+			_ = h.svc.ClearJobLogs(c.Request.Context(), id)
 		}
 	} else {
-		// 清理30天前的日志
 		if err := h.svc.ClearJobLogs(c.Request.Context(), 30); err != nil {
 			util.ResponseError(c, err)
 			return
 		}
 	}
 	util.ResponseSuccess(c, "日志已清理")
+}
+
+// CleanJobLogs 清除所有调度日志
+// DELETE /api/admin/jobLogs/clean
+func (h *JobLogHandler) CleanJobLogs(c *gin.Context) {
+	if err := h.svc.ClearJobLogs(c.Request.Context(), 0); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, "日志已清除")
+}
+
+// ListJobLogGroups 获取调度日志所有分组名
+// GET /api/admin/jobLogs/jobGroups
+func (h *JobLogHandler) ListJobLogGroups(c *gin.Context) {
+	util.ResponseSuccess(c, []string{"DEFAULT", "SYSTEM"})
 }

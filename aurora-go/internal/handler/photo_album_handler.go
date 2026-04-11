@@ -102,3 +102,43 @@ func (h *PhotoAlbumHandler) DeleteAlbum(c *gin.Context) {
 	}
 	util.ResponseSuccess(c, "相册已删除")
 }
+
+// ListAdminAlbums 后台相册管理列表
+// GET /api/admin/photos/albums
+func (h *PhotoAlbumHandler) ListAdminAlbums(c *gin.Context) {
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	result, err := h.svc.GetAdminAlbums(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// ListAlbumInfos 获取后台相册列表信息（用于下拉选择）
+// GET /api/admin/photos/albums/info
+func (h *PhotoAlbumHandler) ListAlbumInfos(c *gin.Context) {
+	list, err := h.svc.GetAlbums(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
+}
+
+// UploadAlbumCover 上传相册封面
+// POST /api/admin/photos/albums/upload
+func (h *PhotoAlbumHandler) UploadAlbumCover(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的封面"))
+		return
+	}
+	// TODO: 上传到MinIO
+	url := "/uploads/albums/" + file.Filename
+	util.ResponseSuccess(c, url)
+}

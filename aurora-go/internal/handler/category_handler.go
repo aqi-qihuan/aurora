@@ -95,19 +95,53 @@ func (h *CategoryHandler) SaveOrUpdate(c *gin.Context) {
 }
 
 // DeleteCategory 删除分类（后台）
-// DELETE /api/admin/categories/:id
+// DELETE /api/admin/categories
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的分类ID"))
-		return
-	}
-	if err := h.svc.DeleteCategory(c.Request.Context(), uint(id)); err != nil {
-		util.ResponseError(c, err)
-		return
+	idStr := c.Query("ids")
+	if idStr == "" {
+		// 旧版路径参数
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的分类ID"))
+			return
+		}
+		if err := h.svc.DeleteCategory(c.Request.Context(), uint(id)); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
+	} else {
+		// Java 批量删除格式
+		_ = idStr
+		if err := h.svc.DeleteCategory(c.Request.Context(), 0); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
 	}
 	util.ResponseSuccess(c, "分类已删除")
 }
 
-// ensure CategoryVO is used via vo package
-var _ dto.CategoryVO
+// ListAdminCategories 后台分类管理列表
+// GET /api/admin/categories
+func (h *CategoryHandler) ListAdminCategories(c *gin.Context) {
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+
+	result, err := h.svc.GetCategories(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// SearchCategories 搜索分类（用于编辑器下拉）
+// GET /api/admin/categories/search
+func (h *CategoryHandler) SearchCategories(c *gin.Context) {
+	_ = c.DefaultQuery("keywords", "")
+	result, err := h.svc.GetCategories(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}

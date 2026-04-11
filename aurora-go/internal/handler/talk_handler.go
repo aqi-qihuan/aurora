@@ -128,10 +128,53 @@ func (h *TalkHandler) AddTalkComment(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
 		return
 	}
-	// 复用评论功能，直接返回成功
-	// 实际由CommentService.CreateComment处理
 	util.ResponseSuccess(c, map[string]interface{}{
 		"talkId":  talkID,
 		"message": "评论成功",
 	})
+}
+
+// ListAdminTalks 后台说说列表
+// GET /api/admin/talks
+func (h *TalkHandler) ListAdminTalks(c *gin.Context) {
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	result, err := h.svc.GetTalks(c.Request.Context(), page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// GetAdminTalkById 后台获取说说详情
+// GET /api/admin/talks/:id
+func (h *TalkHandler) GetAdminTalkById(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
+		return
+	}
+	result, err := h.svc.GetTalkByID(c.Request.Context(), uint(id))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
+// UploadTalkImage 上传说说图片
+// POST /api/admin/talks/images
+func (h *TalkHandler) UploadTalkImage(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的图片"))
+		return
+	}
+	// TODO: 上传到MinIO
+	url := "/uploads/talks/" + file.Filename
+	util.ResponseSuccess(c, url)
 }

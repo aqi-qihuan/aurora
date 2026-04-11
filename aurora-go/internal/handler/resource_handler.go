@@ -90,6 +90,33 @@ func (h *ResourceHandler) DeleteResources(c *gin.Context) {
 	util.ResponseSuccess(c, "资源已删除")
 }
 
+// DeleteResource 删除单个资源
+// DELETE /api/admin/resources/:id
+func (h *ResourceHandler) DeleteResource(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的资源ID"))
+		return
+	}
+	if err := h.svc.DeleteResource(c.Request.Context(), uint(id)); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, "资源已删除")
+}
+
+// ListResourceOptions 获取角色资源选项（用于角色授权下拉框）
+// GET /api/admin/role/resources
+func (h *ResourceHandler) ListResourceOptions(c *gin.Context) {
+	var condition dto.ConditionVO
+	result, err := h.svc.ListResources(c.Request.Context(), condition, dto.PageVO{PageNum: 1, PageSize: 100})
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
 // UpdateRoleResource 更新角色的资源关联
 // PUT /api/admin/roles/:id/resources
 func (h *ResourceHandler) UpdateRoleResource(c *gin.Context) {

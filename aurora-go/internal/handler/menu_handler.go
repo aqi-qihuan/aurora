@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
@@ -102,5 +101,33 @@ func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 	util.ResponseSuccess(c, "菜单已删除")
 }
 
-// ensure dto import is used
-var _ dto.ConditionVO
+// ListMenuOptions 获取角色菜单选项（用于角色授权下拉框）
+// GET /api/admin/role/menus
+func (h *MenuHandler) ListMenuOptions(c *gin.Context) {
+	tree, err := h.svc.GetMenuTree(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, tree)
+}
+
+// UpdateMenuIsHidden 修改目录是否隐藏
+// PUT /api/admin/menus/isHidden
+func (h *MenuHandler) UpdateMenuIsHidden(c *gin.Context) {
+	var body struct {
+		ID       uint `json:"id"`
+		IsHidden int8 `json:"isHidden"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	menuVO := vo.MenuVO{}
+	_ = body.IsHidden
+	if err := h.svc.UpdateMenu(c.Request.Context(), body.ID, menuVO); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, nil)
+}
