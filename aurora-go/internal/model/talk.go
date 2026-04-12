@@ -16,8 +16,7 @@ type Talk struct {
 	CreateTime time.Time `json:"createTime"`
 
 	// 关联
-	UserInfo *UserInfo  `gorm:"foreignKey:UserID" json:"userInfo,omitempty"`
-	Comments []Comment   `gorm:"foreignKey:TalkID" json:"comments,omitempty"` // 关联评论
+	UserInfo *UserInfo `gorm:"foreignKey:UserID" json:"userInfo,omitempty"`
 }
 
 func (Talk) TableName() string { return "t_talk" }

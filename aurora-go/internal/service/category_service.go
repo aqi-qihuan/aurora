@@ -104,10 +104,52 @@ func (s *CategoryService) GetCategories(ctx context.Context) ([]dto.CategoryDTO,
 			ID:            c.ID,
 			CategoryName:  c.CategoryName,
 			ArticleCount:  0, // t_category 表没有 article_count 字段，需要动态统计
-			CreateTime:     c.CreateTime,
+			CreateTime:    c.CreateTime,
 		}
 	}
 	return list, nil
+}
+
+// ListAdminCategories 后台管理分页查询分类（对标 Java listCategoriesAdmin）
+func (s *CategoryService) ListAdminCategories(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
+	var categories []model.Category
+	var count int64
+
+	baseQuery := s.db.WithContext(ctx).Model(&model.Category{})
+
+	if cond.Keywords != "" {
+		baseQuery = baseQuery.Where("category_name LIKE ?", "%"+cond.Keywords+"%")
+	}
+
+	baseQuery.Count(&count)
+
+	offset := page.GetOffset()
+	err := baseQuery.
+		Order("create_time ASC").
+		Limit(page.PageSize).
+		Offset(offset).
+		Find(&categories).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询分类列表失败: %w", err)
+	}
+
+	list := make([]dto.CategoryDTO, len(categories))
+	for i, c := range categories {
+		list[i] = dto.CategoryDTO{
+			ID:           c.ID,
+			CategoryName: c.CategoryName,
+			ArticleCount: 0,
+			CreateTime:   c.CreateTime,
+		}
+	}
+
+	return &dto.PageResultDTO{
+		List:     list,
+		Count:    count,
+		PageNum:  page.PageNum,
+		PageSize: page.PageSize,
+	}, nil
 }
 
 // GetCategoryOptions 获取分类下拉选项(用于文章编辑器)

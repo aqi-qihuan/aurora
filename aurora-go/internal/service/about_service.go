@@ -74,10 +74,10 @@ func (s *AboutService) GetAboutComments(ctx context.Context) ([]dto.CommentDTO, 
 		list[i] = dto.CommentDTO{
 			ID:         c.ID,
 			UserID:     c.UserID,
-			Content:    c.Content,
+			Content:    c.CommentContent, // 修复: Content -> CommentContent
 			Type:       4,
 			ParentID:   c.ParentID,
-			LikeCount:  0, // t_comment 表没有 like_count 字段，需要从 Redis 获取
+			LikeCount:  0,
 			IsReview:   c.IsReview,
 			CreateTime: c.CreateTime,
 		}

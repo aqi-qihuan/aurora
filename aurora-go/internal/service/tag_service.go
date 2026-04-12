@@ -94,6 +94,43 @@ func (s *TagService) GetTags(ctx context.Context) ([]dto.TagDTO, error) {
 	return list, nil
 }
 
+// ListAdminTags 后台管理分页查询标签
+func (s *TagService) ListAdminTags(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
+	var tags []model.Tag
+	var count int64
+
+	baseQuery := s.db.WithContext(ctx).Model(&model.Tag{})
+
+	if cond.Keywords != "" {
+		baseQuery = baseQuery.Where("tag_name LIKE ?", "%"+cond.Keywords+"%")
+	}
+
+	baseQuery.Count(&count)
+
+	offset := page.GetOffset()
+	err := baseQuery.
+		Order("create_time DESC").
+		Limit(page.PageSize).
+		Offset(offset).
+		Find(&tags).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询标签列表失败: %w", err)
+	}
+
+	list := make([]dto.TagDTO, len(tags))
+	for i, t := range tags {
+		list[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+	}
+
+	return &dto.PageResultDTO{
+		List:     list,
+		Count:    count,
+		PageNum:  page.PageNum,
+		PageSize: page.PageSize,
+	}, nil
+}
+
 // SearchTags 模糊搜索标签 (用于文章编辑器标签选择器)
 func (s *TagService) SearchTags(ctx context.Context, keyword string) ([]dto.TagDTO, error) {
 	var tags []model.Tag

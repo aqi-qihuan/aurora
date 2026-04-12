@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"io"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-json"
+	"golang.org/x/exp/slog"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
@@ -121,48 +124,95 @@ func (h *CommentHandler) ListAdminComments(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UpdateCommentReview 审核评论（通过/拒绝）
-// PUT /api/admin/comments/:id/review
+// UpdateCommentReview 审核评论（通过/拒绝）- 支持批量
+// PUT /api/admin/comments/review
 func (h *CommentHandler) UpdateCommentReview(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的评论ID"))
-		return
-	}
 	var reviewVO struct {
-		IsReview int8 `json:"isReview"`
+		IsReview int8   `json:"isReview"`
+		IDs      []uint `json:"ids"`
 	}
 	if err := c.ShouldBindJSON(&reviewVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("参数错误"))
 		return
 	}
-	if err := h.svc.ReviewComment(c.Request.Context(), uint(id), reviewVO.IsReview); err != nil {
+	if len(reviewVO.IDs) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要审核的评论"))
+		return
+	}
+
+	if err := h.svc.BatchReviewComments(c.Request.Context(), reviewVO.IDs, reviewVO.IsReview); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, nil)
+	util.SuccessWithMessage(c, "审核成功", nil)
 }
 
 // DeleteComment 删除评论
-// DELETE /api/admin/comments/:ids
+// DELETE /api/admin/comments
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
-	idsStr := c.Param("ids")
-	if idsStr == "" {
-		idsStr = c.Query("ids")
+	var ids []uint
+
+	// 1. 直接读取 Body 内容 (解决 Gin ShouldBindJSON 在 DELETE 请求中可能失效的问题)
+	body, err := io.ReadAll(c.Request.Body)
+	if err == nil && len(body) > 0 {
+		// 尝试 1: 解析 { "data": [...] } 或 { "ids": [...] }
+		var wrapper map[string]interface{}
+		if json.Unmarshal(body, &wrapper) == nil {
+			if raw, ok := wrapper["data"]; ok {
+				if arr, ok := raw.([]interface{}); ok {
+					for _, v := range arr {
+						if id, ok := v.(float64); ok {
+							ids = append(ids, uint(id))
+						}
+					}
+				}
+			} else if raw, ok := wrapper["ids"]; ok {
+				if arr, ok := raw.([]interface{}); ok {
+					for _, v := range arr {
+						if id, ok := v.(float64); ok {
+							ids = append(ids, uint(id))
+						}
+					}
+				}
+			}
+		} else {
+			// 尝试 2: 直接解析为数组 [id1, id2, ...]
+			var directIDs []interface{}
+			if json.Unmarshal(body, &directIDs) == nil {
+				for _, v := range directIDs {
+					if id, ok := v.(float64); ok {
+						ids = append(ids, uint(id))
+					}
+				}
+			}
+		}
 	}
-	if idsStr == "" {
+
+	// 2. 兼容 Query 参数 (适配 ?ids=1,2,3)
+	if len(ids) == 0 {
+		idsStr := c.Query("ids")
+		if idsStr != "" {
+			parts := strings.Split(idsStr, ",")
+			for _, p := range parts {
+				id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
+				if err == nil {
+					ids = append(ids, uint(id))
+				}
+			}
+		}
+	}
+
+	if len(ids) == 0 {
+		slog.Warn("删除评论失败: 未获取到ID", "path", c.FullPath(), "body", string(body))
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的评论"))
 		return
 	}
-	parts := strings.Split(idsStr, ",")
-	for _, p := range parts {
-		id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
-		if err != nil {
-			continue
-		}
-		_ = h.svc.DeleteComment(c.Request.Context(), uint(id))
+
+	if err := h.svc.BatchDeleteComments(c.Request.Context(), ids); err != nil {
+		util.ResponseError(c, err)
+		return
 	}
-	util.ResponseSuccess(c, "评论已删除")
+	util.SuccessWithMessage(c, "评论已删除", nil)
 }
 
 // ListTopSixComments 获取前6条评论

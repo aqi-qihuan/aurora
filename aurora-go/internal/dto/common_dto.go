@@ -1,8 +1,9 @@
 package dto
 
-// PageResultDTO 通用分页结果
+// PageResultDTO 通用分页结果（对标 Java PageResult / IPage）
+// 前端期望字段名: { records: [...], count: N, pageNum: 1, pageSize: 10 }
 type PageResultDTO struct {
-	List     interface{} `json:"list"`
+	List     interface{} `json:"records"`  // 数据列表（对标 Java MyBatis-Plus records）
 	Count    int64       `json:"count"`    // 总记录数
 	PageNum  int         `json:"pageNum"`
 	PageSize int         `json:"pageSize"`
@@ -10,15 +11,16 @@ type PageResultDTO struct {
 
 // ConditionVO 通用查询条件
 type ConditionVO struct {
-	Keywords string `form:"keywords"`   // 搜索关键词
-	Status   *int8  `form:"status"`     // 状态筛选
-	Type     *int8  `form:"type"`       // 类型筛选
-	CategoryID *uint `form:"categoryId"`
-	IsDelete *int8  `form:"isDelete"`
-	DateStart string `form:"dateStart"` // 时间范围起始
-	DateEnd   string `form:"dateEnd"`   // 时间范围结束
-	Sort      string `form:"sort"`       // 排序字段
-	Order     string `form:"order"`      // asc/desc
+	Keywords   string `form:"keywords"`      // 搜索关键词
+	Status     *int8  `form:"status"`        // 状态筛选
+	IsReview   *int8  `form:"isReview"`     // 审核状态筛选（前端传 isReview=0/1）
+	Type       *int8  `form:"type"`          // 类型筛选
+	CategoryID *uint  `form:"categoryId"`
+	IsDelete   *int8  `form:"isDelete"`
+	DateStart  string `form:"dateStart"`    // 时间范围起始
+	DateEnd    string `form:"dateEnd"`      // 时间范围结束
+	Sort       string `form:"sort"`          // 排序字段
+	Order      string `form:"order"`         // asc/desc
 }
 
 // PageVO 分页参数

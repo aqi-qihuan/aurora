@@ -382,17 +382,20 @@ type CommentTreeDTO struct {
 }
 
 type CommentAdminDTO struct {
-	ID         uint      `json:"id"`
-	UserID     uint      `json:"userId"`
-	Nickname   string    `json:"nickname,omitempty"`
-	Content    string    `json:"content"`
-	Type       int8      `json:"type"`
-	ParentID   uint      `json:"parentId"`
-	IsReview   int8      `json:"isReview"`
-	IP         string    `json:"ip"`
-	Location   string    `json:"location"`
-	LikeCount  int64     `json:"likeCount"`
-	CreateTime time.Time `json:"createTime"`
+	ID            uint      `json:"id"`
+	UserID        uint      `json:"userId"`
+	Nickname      string    `json:"nickname,omitempty"`
+	Avatar        string    `json:"avatar,omitempty"`          // 评论人头像
+	CommentContent string   `json:"commentContent"`            // 评论内容（对齐前端期望）
+	Type          int8      `json:"type"`
+	TopicID       *uint     `json:"topicId,omitempty"`
+	ArticleTitle  string    `json:"articleTitle,omitempty"`    // 文章/说说标题
+	ReplyUserID   *uint     `json:"replyUserId,omitempty"`
+	ReplyNickname string    `json:"replyNickname,omitempty"`   // 回复人昵称
+	ParentID      uint      `json:"parentId"`
+	IsReview      int8      `json:"isReview"`
+	LikeCount     int64     `json:"likeCount"`
+	CreateTime    time.Time `json:"createTime"`
 }
 
 // ===== RBAC权限 DTO =====

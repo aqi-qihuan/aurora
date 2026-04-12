@@ -67,8 +67,8 @@ func (s *TalkService) DeleteTalk(ctx context.Context, id uint) error {
 			return errors.ErrTalkNotFound
 		}
 
-		// 删除说说下的所有评论
-		tx.Delete(&model.Comment{}, "talk_id = ? AND type = ?", id, 2)
+		// 删除说说下的所有评论（对标Java: topic_id + type=5）
+		tx.Where("topic_id = ? AND type = ?", id, 5).Delete(&model.Comment{})
 
 		if err := tx.Delete(&talk).Error; err != nil {
 			return fmt.Errorf("删除说说失败: %w", err)
@@ -91,7 +91,6 @@ func (s *TalkService) GetTalks(ctx context.Context, page dto.PageVO) (*dto.PageR
 	offset := page.GetOffset()
 	err := baseQuery.
 		Preload("UserInfo").
-		Preload("Comments", "is_review = 1 AND parent_id = 0"). // 只加载顶级评论
 		Order("is_top DESC, create_time DESC").
 		Limit(page.PageSize).
 		Offset(offset).
@@ -116,7 +115,36 @@ func (s *TalkService) GetTalks(ctx context.Context, page dto.PageVO) (*dto.PageR
 			list[i].Nickname = t.UserInfo.Nickname
 			list[i].Avatar = t.UserInfo.Avatar
 		}
-		list[i].CommentCount = len(t.Comments)
+	}
+
+	// 批量查询评论数（一次SQL替代N次循环查询，优化N+1问题）
+	if len(talks) > 0 {
+		talkIDs := make([]uint, len(talks))
+		for i, t := range talks {
+			talkIDs[i] = t.ID
+		}
+
+		var commentCounts []struct {
+			TopicID uint
+			Count   int
+		}
+		s.db.WithContext(ctx).
+			Table("t_comment").
+			Select("topic_id, COUNT(*) as count").
+			Where("topic_id IN ? AND type = 5 AND is_review = 1", talkIDs).
+			Group("topic_id").
+			Find(&commentCounts)
+
+		// 构建 ID -> Count 映射
+		countMap := make(map[uint]int, len(commentCounts))
+		for _, cc := range commentCounts {
+			countMap[cc.TopicID] = cc.Count
+		}
+
+		// 填充评论数
+		for i := range list {
+			list[i].CommentCount = countMap[list[i].ID]
+		}
 	}
 
 	return &dto.PageResultDTO{

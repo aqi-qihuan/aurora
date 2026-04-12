@@ -6,31 +6,35 @@ import (
 	"gorm.io/gorm"
 )
 
-// Comment 评论实体 (对应 t_comment 表)
+// Comment 评论实体 (对标 Java Comment.java)
+// 数据库实际字段: topic_id (统一引用文章/说说/友链/关于的ID), 通过 type 区分类型
 type Comment struct {
-	ID          uint      `gorm:"primarykey" json:"id"`
-	UserID      uint      `gorm:"index" json:"userId"`
-	ArticleID   *uint     `gorm:"index;comment:文章ID,可为空(说说/友链/关于等)" json:"articleId"`
-	TalkID      *uint     `json:"talkId,omitempty"`                      // 说说ID(说说评论时)
-	FriendLinkID *uint    `json:"friendLinkId,omitempty"`                 // 友链ID(友链评论时)
-	AboutID     *uint     `json:"aboutId,omitempty"`                     // 关于页ID(关于评论时)
-	Type        int8      `gorm:"not null;index" json:"type"`             // 1文章 2说说 3友链 4关于 5留言
-	ParentID    uint      `gorm:"default:0;index" json:"parentId"`        // 0=顶级评论
-	ReplyUserID *uint     `json:"replyUserId,omitempty"`                 // 被回复用户ID(回复时)
-	IsReview    int8      `gorm:"default:0;index" json:"isReview"`         // 是否审核通过(0待审核 1已通过)
-	Content     string    `gorm:"size:2000;not null" json:"content"`
-	IP          string    `gorm:"size:64" json:"ip"`
-	Location    string    `gorm:"size:50" json:"location"`
-	CreateTime  time.Time `json:"createTime"`
+	ID             uint      `gorm:"primarykey" json:"id"`
+	UserID         uint      `gorm:"index" json:"userId"`
+	TopicID        *uint     `gorm:"column:topic_id;index" json:"topicId"`          // 对标Java topicId
+	CommentContent string    `gorm:"column:comment_content;type:text;not null" json:"commentContent"` // 对标Java
+	ReplyUserID    *uint     `gorm:"column:reply_user_id" json:"replyUserId"`
+	ParentID       uint      `gorm:"default:0;index" json:"parentId"`
+	Type           int8      `gorm:"not null;index" json:"type"` // 1文章 2留言 3关于我 4友链 5说说
+	IsDelete       int8      `gorm:"default:0" json:"isDelete"`
+	IsReview       int8      `gorm:"default:1;index" json:"isReview"`
+	CreateTime     time.Time `json:"createTime"`
+	UpdateTime     *time.Time `json:"updateTime"`
 
 	// 关联
-	UserInfo   *UserInfo `gorm:"foreignKey:UserID" json:"userInfo,omitempty"`
-	ReplyUser  *UserInfo `gorm:"foreignKey:ReplyUserID" json:"replyUser,omitempty"`
+	UserInfo  *UserInfo `gorm:"foreignKey:UserID" json:"userInfo,omitempty"`
+	ReplyUser *UserInfo `gorm:"foreignKey:ReplyUserID" json:"replyUser,omitempty"`
 }
 
 func (Comment) TableName() string { return "t_comment" }
 
 func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 	c.CreateTime = time.Now()
+	return nil
+}
+
+func (c *Comment) BeforeUpdate(tx *gorm.DB) error {
+	now := time.Now()
+	c.UpdateTime = &now
 	return nil
 }

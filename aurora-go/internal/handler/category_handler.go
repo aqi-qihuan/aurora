@@ -125,8 +125,10 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 func (h *CategoryHandler) ListAdminCategories(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
 
-	result, err := h.svc.GetCategories(c.Request.Context())
+	result, err := h.svc.ListAdminCategories(c.Request.Context(), condition, page)
 	if err != nil {
 		util.ResponseError(c, err)
 		return

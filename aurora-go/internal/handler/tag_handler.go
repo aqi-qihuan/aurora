@@ -96,8 +96,10 @@ func (h *TagHandler) ListTopTenTags(c *gin.Context) {
 func (h *TagHandler) ListAdminTags(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
 
-	result, err := h.svc.GetTags(c.Request.Context())
+	result, err := h.svc.ListAdminTags(c.Request.Context(), condition, page)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
