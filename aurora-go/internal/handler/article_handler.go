@@ -15,11 +15,12 @@ import (
 
 // ArticleHandler 文章处理器（对标 Java ArticleController）
 type ArticleHandler struct {
-	svc *service.ArticleService
+	svc  *service.ArticleService
+	file *service.FileService
 }
 
-func NewArticleHandler(svc *service.ArticleService) *ArticleHandler {
-	return &ArticleHandler{svc: svc}
+func NewArticleHandler(svc *service.ArticleService, file *service.FileService) *ArticleHandler {
+	return &ArticleHandler{svc: svc, file: file}
 }
 
 // ListArticles 获取文章列表（前台公开）
@@ -48,7 +49,7 @@ func (h *ArticleHandler) GetArticleById(c *gin.Context) {
 	}
 
 	articleID := uint(id)
-	
+
 	// 先增加浏览量（异步，不阻塞响应）
 	h.svc.IncrementViewCount(c.Request.Context(), articleID)
 
@@ -117,9 +118,8 @@ func (h *ArticleHandler) GetArchives(c *gin.Context) {
 
 // ==================== 后台管理端点 ====================
 
-// SaveArticle 新增/更新文章
+// SaveArticle 新增/更新文章 (对标Java版: 前端统一POST /admin/articles, 通过articleVO.id区分新增/更新)
 // POST /api/admin/articles
-// PUT /api/admin/articles/:id
 func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 	var articleVO vo.ArticleVO
 	if err := c.ShouldBindJSON(&articleVO); err != nil {
@@ -133,15 +133,9 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 		uid = id
 	}
 
-	idStr := c.Param("id")
-	if idStr != "" {
+	// 通过 articleVO.ID 判断新增还是更新 (前端统一发POST请求)
+	if articleVO.ID > 0 {
 		// 更新
-		id, err := strconv.ParseUint(idStr, 10, 64)
-		if err != nil {
-			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
-			return
-		}
-		articleVO.ID = uint(id)
 		result, err := h.svc.UpdateArticle(c.Request.Context(), articleVO)
 		if err != nil {
 			util.ResponseError(c, err)
@@ -181,35 +175,24 @@ func (h *ArticleHandler) UpdateArticleStatus(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// DeleteArticle 删除文章（逻辑删除）
-// DELETE /api/admin/articles/:ids
+// DeleteArticle 彻底删除文章（物理删除 - 回收站使用）
+// DELETE /api/admin/articles/delete
+// 对标Java: @DeleteMapping("/admin/articles/delete") + articleService.deleteArticles()
+// 注意: 这是物理删除，对标Java版的 deleteBatchIds 实现
 func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
-	idsStr := c.Param("ids")
-	if idsStr == "" {
+	// 从请求体接收ID数组（对标Java @RequestBody List<Integer> articleIds）
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的文章"))
 		return
 	}
-	// 支持批量删除 (逗号分隔)
-	ids := make([]uint, 0)
-	for _, part := range splitIDs(idsStr) {
-		id, err := strconv.ParseUint(part, 10, 64)
-		if err != nil {
-			continue
-		}
-		ids = append(ids, uint(id))
+
+	// 物理删除（对标Java版 deleteArticles - deleteBatchIds）
+	if err := h.svc.DeleteArticlesPermanently(c.Request.Context(), ids); err != nil {
+		util.ResponseError(c, err)
+		return
 	}
-	if len(ids) == 1 {
-		if err := h.svc.DeleteArticle(c.Request.Context(), ids[0]); err != nil {
-			util.ResponseError(c, err)
-			return
-		}
-	} else if len(ids) > 1 {
-		if err := h.svc.BatchDeleteArticles(c.Request.Context(), ids); err != nil {
-			util.ResponseError(c, err)
-			return
-		}
-	}
-	util.ResponseSuccess(c, "文章已删除")
+	util.ResponseSuccess(c, "文章已彻底删除")
 }
 
 // ImportArticle 导入Markdown文件为文章
@@ -364,35 +347,42 @@ func (h *ArticleHandler) UpdateArticleTopAndFeatured(c *gin.Context) {
 
 // UpdateArticleDelete 逻辑删除/恢复文章
 // PUT /api/admin/articles
+// 对标Java: @PutMapping("/admin/articles") + @RequestBody DeleteVO (ids数组 + isDelete)
 func (h *ArticleHandler) UpdateArticleDelete(c *gin.Context) {
 	var body struct {
-		ID      uint `json:"id"`
-		IsDelete int8 `json:"isDelete"`
+		Ids      []uint `json:"ids"`
+		IsDelete int8   `json:"isDelete"`
 	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+	if err := c.ShouldBindJSON(&body); err != nil || len(body.Ids) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要操作的文章"))
 		return
 	}
-	articleVO := vo.ArticleVO{ID: body.ID}
-	_, err := h.svc.UpdateArticle(c.Request.Context(), articleVO)
-	if err != nil {
+	if err := h.svc.UpdateArticleDelete(c.Request.Context(), body.Ids, body.IsDelete); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, nil)
 }
 
-// UploadArticleImage 上传文章图片
+// UploadArticleImage 上传文章图片/封面
 // POST /api/admin/articles/images
+// 对标Java: uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.ARTICLE.getPath())
 func (h *ArticleHandler) UploadArticleImage(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的图片"))
 		return
 	}
-	// TODO: 上传到MinIO/OSS
-	url := "/uploads/articles/" + file.Filename
-	util.ResponseSuccess(c, url)
+
+	// 调用Service上传 (返回完整URL)
+	result, err := h.file.UploadArticleImage(c.Request.Context(), file)
+	if err != nil {
+		util.ResponseError(c, errors.ErrFileUploadFailed.WithMsg(err.Error()))
+		return
+	}
+
+	// 返回完整URL (前端需要完整URL才能加载图片)
+	util.ResponseSuccess(c, result)
 }
 
 // GetAdminArticleById 后台根据ID获取文章详情

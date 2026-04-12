@@ -94,25 +94,20 @@ func (h *CategoryHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteCategory 删除分类（后台）
+// DeleteCategory 批量删除分类（后台）
 // DELETE /api/admin/categories
+// 对标Java: @DeleteMapping("/admin/categories") + @RequestBody List<Integer> categoryIds
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
-	idStr := c.Query("ids")
-	if idStr == "" {
-		// 旧版路径参数
-		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-		if err != nil {
-			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的分类ID"))
-			return
-		}
-		if err := h.svc.DeleteCategory(c.Request.Context(), uint(id)); err != nil {
-			util.ResponseError(c, err)
-			return
-		}
-	} else {
-		// Java 批量删除格式
-		_ = idStr
-		if err := h.svc.DeleteCategory(c.Request.Context(), 0); err != nil {
+	// 从请求体接收ID数组（对标Java @RequestBody List<Integer>）
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的分类"))
+		return
+	}
+
+	// 批量删除
+	for _, id := range ids {
+		if err := h.svc.DeleteCategory(c.Request.Context(), id); err != nil {
 			util.ResponseError(c, err)
 			return
 		}

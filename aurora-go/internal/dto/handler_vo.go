@@ -5,19 +5,21 @@ package dto
 
 // ===== 文章相关 =====
 
-// ArticleVO 文章发布/编辑请求
+// ArticleVO 文章发布/编辑请求（对齐Java版ArticleVO）
 type ArticleVO struct {
-	ID             uint   `json:"id,omitempty"`
-	ArticleTitle   string `json:"articleTitle" binding:"required,max=200"`
-	ArticleContent string `json:"articleContent" binding:"required"`
-	CategoryID     uint   `json:"categoryId" binding:"required"`
-	TagIDs         []uint `json:"tagIds"`
-	Type           int8   `json:"type" binding:"omitempty,oneof=1 2 3"`
-	OriginalURL    string `json:"originalUrl,omitempty"`
-	IsTop          int8   `json:"isTop" binding:"omitempty,oneof=0 1"`
-	IsFeatured     int8   `json:"isFeatured" binding:"omitempty,oneof=0 1"`
-	Status         *int8  `json:"status" binding:"omitempty,oneof=0 1 2 3"`
-	Password       string `json:"password,omitempty"`
+	ID              uint     `json:"id,omitempty"`
+	ArticleTitle    string   `json:"articleTitle" binding:"required,max=200"`
+	ArticleContent  string   `json:"articleContent" binding:"required"`
+	ArticleAbstract string   `json:"articleAbstract,omitempty"`
+	ArticleCover    string   `json:"articleCover,omitempty"`
+	CategoryName    string   `json:"categoryName,omitempty"` // 分类名称（对齐Java）
+	TagNames        []string `json:"tagNames,omitempty"`     // 标签名称列表（对齐Java）
+	Type            int8     `json:"type" binding:"omitempty,oneof=1 2 3"`
+	OriginalURL     string   `json:"originalUrl,omitempty"`
+	IsTop           int8     `json:"isTop" binding:"omitempty,oneof=0 1"`
+	IsFeatured      int8     `json:"isFeatured" binding:"omitempty,oneof=0 1"`
+	Status          *int8    `json:"status" binding:"omitempty,oneof=0 1 2 3"`
+	Password        string   `json:"password,omitempty"`
 }
 
 // ArticleStatusUpdateVO 文章状态更新

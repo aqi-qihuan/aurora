@@ -32,13 +32,23 @@ type UserAdminDTO struct {
 	CreateTime    time.Time `json:"createTime"`
 }
 
+// LoginVO 登录响应DTO (完全对标Java UserInfoDTO)
+// 用于: POST /api/auth/login 成功后的返回
 type LoginVO struct {
-	UserID    uint   `json:"userId"`
-	Token     string `json:"token"`
-	Nickname  string `json:"nickname"`
-	Avatar    string `json:"avatar"`
-	Email     string `json:"email"`
-	IsDisable int8   `json:"isDisable"`
+	ID            uint   `json:"id"`             // 用户认证ID (UserAuth.id, 对标Java UserDetailsDTO.id)
+	UserInfoID    uint   `json:"userInfoId"`     // 用户信息ID (UserInfo.id, 对标Java UserDetailsDTO.userInfoId)
+	Email         string `json:"email"`
+	LoginType     int    `json:"loginType"`      // 登录类型 1邮箱 3QQ (对标Java UserDetailsDTO.loginType)
+	Username      string `json:"username"`        // 用户名/登录名
+	Nickname      string `json:"nickname"`        // 用户昵称
+	Avatar        string `json:"avatar"`          // 头像URL
+	Intro         string `json:"intro"`           // 个人简介
+	Website       string `json:"website"`         // 个人网站
+	IsSubscribe   int8   `json:"isSubscribe"`     // 是否订阅
+	IPAddress     string `json:"ipAddress"`       // 登录IP
+	IPSource      string `json:"ipSource"`        // IP归属地
+	LastLoginTime string `json:"lastLoginTime,omitempty"` // 最后登录时间(ISO8601格式)
+	Token         string `json:"token"`           // JWT令牌
 }
 
 // ===== 分类 DTO =====

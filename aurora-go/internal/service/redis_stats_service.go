@@ -25,36 +25,29 @@ func NewRedisStatsService(rdb *redis.Client) *RedisStatsService {
 
 // IncrementArticleView 增加文章浏览量 (原子操作)
 func (s *RedisStatsService) IncrementArticleView(ctx context.Context, articleID uint) error {
-	key := fmt.Sprintf("%s%d", constant.ArticleViewsCount, articleID)
-	
-	// 1. 增加单篇文章浏览量
-	if err := s.rdb.Incr(ctx, key).Err(); err != nil {
+	// 使用 ZSet 存储文章浏览量（对齐 Java 版实现）
+	// 1. 增加单篇文章浏览量（ZSet 的 score）
+	if err := s.rdb.ZIncrBy(ctx, constant.ArticleViewsRanking, 1, fmt.Sprintf("%d", articleID)).Err(); err != nil {
 		return fmt.Errorf("增加文章浏览量失败: %w", err)
 	}
 	
-	// 2. 设置过期时间（30天自动清理）
-	s.rdb.Expire(ctx, key, 30*24*time.Hour)
-	
-	// 3. 更新总浏览量
+	// 2. 更新总浏览量
 	s.rdb.Incr(ctx, constant.BlogViewsCount)
-	
-	// 4. 更新浏览排行 ZSet
-	s.rdb.ZIncrBy(ctx, constant.ArticleViewsRanking, 1, fmt.Sprintf("%d", articleID))
 	
 	return nil
 }
 
 // GetArticleView 获取文章浏览量
 func (s *RedisStatsService) GetArticleView(ctx context.Context, articleID uint) (uint64, error) {
-	key := fmt.Sprintf("%s%d", constant.ArticleViewsCount, articleID)
-	count, err := s.rdb.Get(ctx, key).Uint64()
+	// 使用 ZSet 获取文章浏览量（对齐 Java 版实现）
+	score, err := s.rdb.ZScore(ctx, constant.ArticleViewsRanking, fmt.Sprintf("%d", articleID)).Result()
 	if err == redis.Nil {
 		return 0, nil // 不存在返回0
 	}
 	if err != nil {
 		return 0, fmt.Errorf("获取文章浏览量失败: %w", err)
 	}
-	return count, nil
+	return uint64(score), nil
 }
 
 // GetTotalViews 获取总浏览量
@@ -80,24 +73,18 @@ func (s *RedisStatsService) GetTopViewedArticles(ctx context.Context, limit int6
 
 // SyncArticleViewsToDB 同步文章浏览量到数据库 (定时任务调用)
 func (s *RedisStatsService) SyncArticleViewsToDB(ctx context.Context, updateDB func(articleID uint, views uint64) error) error {
-	// 获取所有文章的浏览量
-	keys, err := s.rdb.Keys(ctx, constant.ArticleViewsCount+"*").Result()
+	// 获取 ZSet 中所有文章的浏览量（对齐 Java 版实现）
+	items, err := s.rdb.ZRevRangeWithScores(ctx, constant.ArticleViewsRanking, 0, -1).Result()
 	if err != nil {
-		return fmt.Errorf("获取浏览量keys失败: %w", err)
+		return fmt.Errorf("获取浏览量失败: %w", err)
 	}
 	
-	for _, key := range keys {
-		views, err := s.rdb.Get(ctx, key).Uint64()
-		if err != nil {
-			continue
-		}
-		
-		// 提取 articleID
+	for _, item := range items {
 		var articleID uint
-		fmt.Sscanf(key, constant.ArticleViewsCount+"%d", &articleID)
+		fmt.Sscanf(item.Member.(string), "%d", &articleID)
 		
-		if articleID > 0 && views > 0 {
-			if err := updateDB(articleID, views); err != nil {
+		if articleID > 0 && item.Score > 0 {
+			if err := updateDB(articleID, uint64(item.Score)); err != nil {
 				slog.Error("同步文章浏览量到DB失败", "article_id", articleID, "error", err)
 			}
 		}

@@ -49,6 +49,7 @@ elasticsearch:
 
 minio:
   endpoint: "http://134.175.206.158:9000"
+  url: "https://ws.aqi125.cn"          # 外部访问URL (对标Java minio.url, 用于前端加载图片)
   access_key: "aqi125"          # 通过 AURORA_MINIO_ACCESS_KEY 注入
   secret_key: "aqi1015."          # 通过 AURORA_MINIO_SECRET_KEY 注入
   bucket: aurora

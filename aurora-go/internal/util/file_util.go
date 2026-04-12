@@ -1,7 +1,9 @@
 package util
 
 import (
+	"crypto/md5"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -66,6 +68,33 @@ func AnalyzeFile(file *multipart.FileHeader) (*FileMeta, error) {
 	 IsAllowedExt: isAllowedExtension(ext),
 	}
 	return meta, nil
+}
+
+// GetMd5 计算文件输入流的MD5值 (对标 Java FileUtil.getMd5)
+func GetMd5(reader io.Reader) (string, error) {
+	hash := md5.New()
+	buf := make([]byte, 8192)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			hash.Write(buf[:n])
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", fmt.Errorf("计算MD5失败: %w", err)
+		}
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// GetExtName 获取文件扩展名 (对标 Java FileUtil.getExtName)
+func GetExtName(fileName string) string {
+	if fileName == "" {
+		return ""
+	}
+	return filepath.Ext(fileName)
 }
 
 // classifyFileType 根据MIME类型和扩展名分类

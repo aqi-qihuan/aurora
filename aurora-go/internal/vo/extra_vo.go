@@ -9,6 +9,7 @@ type RegisterVO struct {
 	Nickname string `json:"nickname" binding:"required,min=1,max=30"`
 }
 
+// LoginVO 登录请求VO (对标Java LoginVO)
 type LoginVO struct {
 	Username string `json:"username" form:"username" binding:"required"`
 	Password string `json:"password" form:"password" binding:"required"`

@@ -130,13 +130,14 @@ func (c *ESConfig) GetPrimaryURL() string {
 	return ""
 }
 
-// MinIOConfig 对象存储配置
+// MinIOConfig 对象存储配置 (对标 Java MinioProperties)
 type MinIOConfig struct {
 	Endpoint  string `mapstructure:"endpoint"`
 	AccessKey string `mapstructure:"access_key"`
 	SecretKey string `mapstructure:"secret_key"`
 	Bucket    string `mapstructure:"bucket"`
 	UseSSL    bool   `mapstructure:"use_ssl"`
+	URL       string `mapstructure:"url"` // 外部访问URL (如 https://ws.aqi125.cn/)
 }
 
 // JWTConfig JWT认证配置

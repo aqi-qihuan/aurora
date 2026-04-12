@@ -12,17 +12,17 @@ import (
 
 // WebsiteConfigHandler 网站配置处理器（对标 Java WebsiteConfigController）
 type WebsiteConfigHandler struct {
-	svc *service.WebsiteConfigService
+	registry *service.Registry
 }
 
-func NewWebsiteConfigHandler(svc *service.WebsiteConfigService) *WebsiteConfigHandler {
-	return &WebsiteConfigHandler{svc: svc}
+func NewWebsiteConfigHandler(registry *service.Registry) *WebsiteConfigHandler {
+	return &WebsiteConfigHandler{registry: registry}
 }
 
 // GetWebsiteConfig 获取网站前台配置（公开）
 // GET /api/website/config
 func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
-	config, err := h.svc.GetConfig(c.Request.Context())
+	config, err := h.registry.WebsiteConfig.GetConfig(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -38,7 +38,7 @@ func (h *WebsiteConfigHandler) UpdateWebsiteConfig(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	if err := h.svc.UpdateConfig(c.Request.Context(), configVO); err != nil {
+	if err := h.registry.WebsiteConfig.UpdateConfig(c.Request.Context(), configVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
@@ -54,9 +54,8 @@ func (h *WebsiteConfigHandler) UploadConfigImage(c *gin.Context) {
 		return
 	}
 
-	// 使用FileService上传
-	fileSvc := service.NewFileService()
-	result, err := fileSvc.UploadSingle(c.Request.Context(), file)
+	// 使用Registry中的FileService上传
+	result, err := h.registry.File.UploadSingle(c.Request.Context(), file)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -68,7 +67,7 @@ func (h *WebsiteConfigHandler) UploadConfigImage(c *gin.Context) {
 		Type: imgType,
 		URL:  result.URL,
 	}
-	if err := h.svc.UploadConfigImages(c.Request.Context(), imgVO); err != nil {
+	if err := h.registry.WebsiteConfig.UploadConfigImages(c.Request.Context(), imgVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}

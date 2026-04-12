@@ -273,7 +273,18 @@ func executeWriteArticle(ctx context.Context, params map[string]interface{}) (in
 	articleVO := vo.ArticleVO{
 		ArticleTitle:   title,
 		ArticleContent: content,
-		CategoryID:     getUintParam(params, "category_id"),
+		CategoryName:   getStringParam(params, "category_name"),
+	}
+
+	// 处理标签名称列表
+	if tagNames, ok := params["tag_names"].([]interface{}); ok {
+		var names []string
+		for _, n := range tagNames {
+			if s, ok := n.(string); ok {
+				names = append(names, s)
+			}
+		}
+		articleVO.TagNames = names
 	}
 
 	// 更新模式 vs 创建模式

@@ -75,7 +75,7 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.ExceptionLog = NewExceptionLogService(db)
 	r.AuroraInfo = NewAuroraInfoService(db, statsService)
 	r.WebsiteConfig = NewWebsiteConfigService(db)
-	r.File = NewFileService()
+	r.File = NewFileService(db)
 	r.Resource = NewResourceService(db)
 	r.About = NewAboutService(db)
 

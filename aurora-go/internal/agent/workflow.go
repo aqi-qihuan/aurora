@@ -479,7 +479,6 @@ func (e *Engine) registerBuiltinHandlers() {
 
 	e.RegisterHandler("save_article", func(ctx context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
 		topic, _ := wfCtx.Input["topic"].(string)
-		categoryID := getUintFromInput(wfCtx.Input, "category_id")
 
 		var content string
 
@@ -500,7 +499,7 @@ func (e *Engine) registerBuiltinHandlers() {
 		articleVO := vo.ArticleVO{
 			ArticleTitle:   topic,
 			ArticleContent: content,
-			CategoryID:     categoryID,
+			CategoryName:   getStringFromInput(wfCtx.Input, "category_name", "默认分类"),
 		}
 
 		articleSvc := svc.GetArticleService()

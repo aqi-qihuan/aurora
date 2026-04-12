@@ -264,17 +264,30 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 	if s.statsService != nil {
 		topArticles, err := s.statsService.GetTopViewedArticles(ctx, 5)
 		if err == nil && len(topArticles) > 0 {
+			// 批量查询文章标题（避免 N+1 查询）
+			articleIDs := make([]uint, len(topArticles))
+			for i, item := range topArticles {
+				var articleID uint
+				fmt.Sscanf(item.Member.(string), "%d", &articleID)
+				articleIDs[i] = articleID
+			}
+
+			var articles []model.Article
+			s.db.WithContext(ctx).Select("id, article_title").Where("id IN ?", articleIDs).Find(&articles)
+
+			// 构建 ID -> Title 映射
+			titleMap := make(map[uint]string)
+			for _, a := range articles {
+				titleMap[a.ID] = a.ArticleTitle
+			}
+
 			info.ArticleRankDTOs = make([]dto.ArticleRankDTO, len(topArticles))
 			for i, item := range topArticles {
 				var articleID uint
 				fmt.Sscanf(item.Member.(string), "%d", &articleID)
 				
-				// 查询文章标题
-				var article model.Article
-				s.db.WithContext(ctx).Select("id, article_title").First(&article, articleID)
-				
 				info.ArticleRankDTOs[i] = dto.ArticleRankDTO{
-					ArticleTitle: article.ArticleTitle,
+					ArticleTitle: titleMap[articleID],
 					ViewsCount:   int(item.Score),
 				}
 			}

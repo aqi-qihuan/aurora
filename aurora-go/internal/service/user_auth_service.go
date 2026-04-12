@@ -129,13 +129,28 @@ func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO) (*dto.Log
 
 	slog.Info("用户登录成功", "user_id", auth.UserID, "username", login.Username)
 
+	// 构造最后登录时间字符串 (ISO8601格式, 对标Java LocalDateTime序列化)
+	lastLoginTime := ""
+	if auth.LastLoginTime != nil {
+		lastLoginTime = auth.LastLoginTime.Format("2006-01-02T15:04:05")
+	}
+
+	// 完全对标Java版: 返回UserInfoDTO (从UserDetailsDTO拷贝)
 	return &dto.LoginVO{
-		UserID:    auth.UserID,
-		Token:     token,
-		Nickname:  userInfo.Nickname,
-		Avatar:    userInfo.Avatar,
-		Email:     userInfo.Email,
-		IsDisable: userInfo.IsDisable,
+		ID:            auth.ID,
+		UserInfoID:    auth.UserID,
+		Email:         userInfo.Email,
+		LoginType:     int(auth.LoginType),
+		Username:      auth.Username,
+		Nickname:      userInfo.Nickname,
+		Avatar:        userInfo.Avatar,
+		Intro:         userInfo.Intro,
+		Website:       userInfo.Website,
+		IsSubscribe:   userInfo.IsSubscribe,
+		IPAddress:     auth.IPAddress,
+		IPSource:      auth.IPSource,
+		LastLoginTime: lastLoginTime,
+		Token:         token,
 	}, nil
 }
 
@@ -277,11 +292,28 @@ func (s *UserAuthService) QQLoginOrRegister(ctx context.Context, qqInfo vo.QQLog
 		s.db.Preload("UserInfo").First(&userAuth, userAuth.ID)
 		token, _ := util.GenerateRandomString(32) // TODO: P0-6 替换JWT
 		
+		// 构造最后登录时间字符串 (ISO8601格式)
+		lastLoginTime := ""
+		if userAuth.LastLoginTime != nil {
+			lastLoginTime = userAuth.LastLoginTime.Format("2006-01-02T15:04:05")
+		}
+		
+		// 完全对标Java版: 返回完整用户信息
 		return &dto.LoginVO{
-			UserID:   userAuth.UserID,
-			Token:    token,
-			Nickname: userAuth.UserInfo.Nickname,
-			Avatar:   userAuth.UserInfo.Avatar,
+			ID:            userAuth.ID,
+			UserInfoID:    userAuth.UserID,
+			Email:         userAuth.UserInfo.Email,
+			LoginType:     int(userAuth.LoginType),
+			Username:      userAuth.Username,
+			Nickname:      userAuth.UserInfo.Nickname,
+			Avatar:        userAuth.UserInfo.Avatar,
+			Intro:         userAuth.UserInfo.Intro,
+			Website:       userAuth.UserInfo.Website,
+			IsSubscribe:   userAuth.UserInfo.IsSubscribe,
+			IPAddress:     userAuth.IPAddress,
+			IPSource:      userAuth.IPSource,
+			LastLoginTime: lastLoginTime,
+			Token:         token,
 		}, nil
 	}
 
@@ -319,11 +351,29 @@ func (s *UserAuthService) QQLoginOrRegister(ctx context.Context, qqInfo vo.QQLog
 	}
 
 	token, _ := util.GenerateRandomString(32)
+	
+	// 构造最后登录时间字符串 (ISO8601格式)
+	lastLoginTime := ""
+	if userAuth.LastLoginTime != nil {
+		lastLoginTime = userAuth.LastLoginTime.Format("2006-01-02T15:04:05")
+	}
+	
+	// 完全对标Java版: 返回完整用户信息
 	return &dto.LoginVO{
-		UserID:   user.ID,
-		Token:    token,
-		Nickname: user.Nickname,
-		Avatar:   user.Avatar,
+		ID:            userAuth.ID,
+		UserInfoID:    user.ID,
+		Email:         user.Email,
+		LoginType:     int(userAuth.LoginType),
+		Username:      userAuth.Username,
+		Nickname:      user.Nickname,
+		Avatar:        user.Avatar,
+		Intro:         user.Intro,
+		Website:       user.Website,
+		IsSubscribe:   user.IsSubscribe,
+		IPAddress:     userAuth.IPAddress,
+		IPSource:      userAuth.IPSource,
+		LastLoginTime: lastLoginTime,
+		Token:         token,
 	}, nil
 }
 

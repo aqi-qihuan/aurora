@@ -2,7 +2,6 @@ package handler
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -141,21 +140,22 @@ func (h *TagHandler) SaveOrUpdate(c *gin.Context) {
 }
 
 // DeleteTags 批量删除标签
-// DELETE /api/admin/tags?ids=1,2,3
+// DELETE /api/admin/tags
+// 对标Java: @DeleteMapping("/admin/tags") + @RequestBody List<Integer> tagIdList
 func (h *TagHandler) DeleteTags(c *gin.Context) {
-	idsStr := c.Query("ids")
-	if idsStr == "" {
+	// 从请求体接收ID数组（对标Java @RequestBody List<Integer>）
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的标签"))
 		return
 	}
 
-	parts := strings.Split(idsStr, ",")
-	for _, p := range parts {
-		id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
-		if err != nil {
-			continue
+	// 批量删除
+	for _, id := range ids {
+		if err := h.svc.DeleteTag(c.Request.Context(), id); err != nil {
+			util.ResponseError(c, err)
+			return
 		}
-		_ = h.svc.DeleteTag(c.Request.Context(), uint(id))
 	}
 	util.ResponseSuccess(c, "标签已删除")
 }

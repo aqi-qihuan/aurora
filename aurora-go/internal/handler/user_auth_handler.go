@@ -385,15 +385,28 @@ func (h *UserAuthHandler) UpdateUserInfo(c *gin.Context) {
 
 // UpdateUserAvatar 更新用户头像
 // POST /api/users/avatar
+// 对标Java版: 1)上传到对象存储(MinIO/OSS) 2)更新数据库avatar字段 3)返回完整URL
 func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的头像"))
 		return
 	}
-	// TODO: 上传到MinIO
-	url := "/uploads/avatars/" + file.Filename
-	util.ResponseSuccess(c, url)
+
+	// 获取当前用户ID
+	userID, _ := c.Get("userId")
+	uid := uint(0)
+	if id, ok := userID.(uint); ok {
+		uid = id
+	}
+
+	// 使用 FileService 上传头像 (对标Java版 uploadStrategyContext.executeUploadStrategy)
+	avatarURL, err := h.registry.File.UploadAvatar(c.Request.Context(), file, uid)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, avatarURL)
 }
 
 // BindUserEmail 绑定用户邮箱

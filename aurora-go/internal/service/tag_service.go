@@ -87,9 +87,31 @@ func (s *TagService) GetTags(ctx context.Context) ([]dto.TagDTO, error) {
 		return nil, fmt.Errorf("查询标签失败: %w", err)
 	}
 
+	// 批量统计所有标签的文章数量（避免 N+1 查询）
+	type TagCount struct {
+		TagID uint `gorm:"column:tag_id"`
+		Count int  `gorm:"column:count"`
+	}
+	var counts []TagCount
+	s.db.WithContext(ctx).
+		Table("t_article_tag").
+		Select("tag_id, COUNT(*) as count").
+		Group("tag_id").
+		Scan(&counts)
+
+	// 构建 ID -> Count 映射
+	countMap := make(map[uint]int)
+	for _, c := range counts {
+		countMap[c.TagID] = c.Count
+	}
+
 	list := make([]dto.TagDTO, len(tags))
 	for i, t := range tags {
-		list[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+		list[i] = dto.TagDTO{
+			ID:         t.ID,
+			TagName:    t.TagName,
+			CreateTime: t.CreateTime,
+		}
 	}
 	return list, nil
 }
@@ -118,9 +140,32 @@ func (s *TagService) ListAdminTags(ctx context.Context, cond dto.ConditionVO, pa
 		return nil, fmt.Errorf("查询标签列表失败: %w", err)
 	}
 
+	// 批量统计所有标签的文章数量（避免 N+1 查询）
+	type TagCount struct {
+		TagID uint `gorm:"column:tag_id"`
+		Count int  `gorm:"column:count"`
+	}
+	var counts []TagCount
+	s.db.WithContext(ctx).
+		Table("t_article_tag").
+		Select("tag_id, COUNT(*) as count").
+		Group("tag_id").
+		Scan(&counts)
+
+	// 构建 ID -> Count 映射
+	countMap := make(map[uint]int)
+	for _, c := range counts {
+		countMap[c.TagID] = c.Count
+	}
+
 	list := make([]dto.TagDTO, len(tags))
 	for i, t := range tags {
-		list[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+		list[i] = dto.TagDTO{
+			ID:           t.ID,
+			TagName:      t.TagName,
+			ArticleCount: countMap[t.ID], // 从映射中获取
+			CreateTime:   t.CreateTime,
+		}
 	}
 
 	return &dto.PageResultDTO{
@@ -146,7 +191,11 @@ func (s *TagService) SearchTags(ctx context.Context, keyword string) ([]dto.TagD
 
 	list := make([]dto.TagDTO, len(tags))
 	for i, t := range tags {
-		list[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+		list[i] = dto.TagDTO{
+			ID:         t.ID,
+			TagName:    t.TagName,
+			CreateTime: t.CreateTime,
+		}
 	}
 	return list, nil
 }
@@ -219,7 +268,11 @@ func (s *TagService) GetArticleTags(ctx context.Context, articleID uint) ([]dto.
 
 	list := make([]dto.TagDTO, len(tags))
 	for i, t := range tags {
-		list[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+		list[i] = dto.TagDTO{
+			ID:         t.ID,
+			TagName:    t.TagName,
+			CreateTime: t.CreateTime,
+		}
 	}
 	return list, nil
 }

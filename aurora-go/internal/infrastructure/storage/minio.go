@@ -1,4 +1,4 @@
-﻿package storage
+package storage
 
 import (
 	"bytes"
@@ -62,8 +62,12 @@ func InitMinIO(cfg *config.MinIOConfig) error {
 	}
 
 	minIOEndpoint = endpoint
-	// 对外访问URL默认与内部endpoint相同（可通过配置覆盖）
-	externalURL = endpoint
+	// 对外访问URL: 优先使用配置的url, 否则使用内部endpoint
+	if cfg.URL != "" {
+		externalURL = strings.TrimSuffix(cfg.URL, "/")
+	} else {
+		externalURL = endpoint
+	}
 
 	slog.Info("MinIO connected successfully",
 		"endpoint", endpoint,

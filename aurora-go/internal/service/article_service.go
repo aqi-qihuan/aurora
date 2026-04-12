@@ -18,8 +18,8 @@ import (
 // ArticleService 文章业务逻辑层 (对标 Java ArticleServiceImpl)
 // 职责: 文章CRUD / 搜索 / 归档 / 导入导出 / 置顶推荐 / 密码保护 / 缓存策略
 type ArticleService struct {
-	db            *gorm.DB
-	statsService  *RedisStatsService // Redis 统计服务
+	db           *gorm.DB
+	statsService *RedisStatsService // Redis 统计服务
 }
 
 // NewArticleService 创建文章服务实例
@@ -30,20 +30,39 @@ func NewArticleService(db *gorm.DB, statsService *RedisStatsService) *ArticleSer
 	}
 }
 
-// CreateArticle 发布文章 (事务操作: 文章+标签关联)
+// CreateArticle 发布文章 (事务操作: 文章+分类+标签关联, 对齐Java版实现)
 func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.ArticleVO) (*model.Article, error) {
 	var article model.Article
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. 处理分类 (根据名称查找或创建, 对齐Java saveArticleCategory)
+		var categoryID *uint
+		if vo.CategoryName != "" {
+			var category model.Category
+			if err := tx.Where("category_name = ?", vo.CategoryName).First(&category).Error; err != nil {
+				// 分类不存在则创建
+				if stderrors.Is(err, gorm.ErrRecordNotFound) {
+					category = model.Category{CategoryName: vo.CategoryName}
+					if err := tx.Create(&category).Error; err != nil {
+						return fmt.Errorf("创建分类失败: %w", err)
+					}
+				} else {
+					return fmt.Errorf("查询分类失败: %w", err)
+				}
+			}
+			categoryID = &category.ID
+		}
+
 		article = model.Article{
 			UserID:         userID,
-			CategoryID:     &vo.CategoryID,
+			CategoryID:     categoryID,
 			ArticleTitle:   vo.ArticleTitle,
 			ArticleContent: vo.ArticleContent,
+			ArticleCover:   vo.ArticleCover,
 			Type:           1, // 默认原创
 			Status:         1, // 默认公开
 		}
-		
+
 		if vo.Type != 0 {
 			article.Type = vo.Type
 		}
@@ -68,26 +87,56 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 			return fmt.Errorf("创建文章失败: %w", err)
 		}
 
-		// 处理标签关联 (多对多)
-		if len(vo.TagIDs) > 0 {
-			var tags []model.Tag
-			if err := tx.Find(&tags, vo.TagIDs).Error; err != nil {
+		// 2. 处理标签关联 (根据名称查找或创建, 对齐Java saveArticleTag)
+		if len(vo.TagNames) > 0 {
+			// 查询已存在的标签
+			var existTags []model.Tag
+			if err := tx.Where("tag_name IN ?", vo.TagNames).Find(&existTags).Error; err != nil {
 				return fmt.Errorf("查询标签失败: %w", err)
 			}
-			if err := tx.Model(&article).Association("Tags").Replace(tags); err != nil {
-				return fmt.Errorf("关联标签失败: %w", err)
+
+			// 构建已存在标签名称集合
+			existTagNames := make(map[string]bool)
+			var tagIDs []uint
+			for _, t := range existTags {
+				existTagNames[t.TagName] = true
+				tagIDs = append(tagIDs, t.ID)
+			}
+
+			// 创建不存在的标签
+			for _, tagName := range vo.TagNames {
+				if !existTagNames[tagName] {
+					newTag := model.Tag{TagName: tagName}
+					if err := tx.Create(&newTag).Error; err != nil {
+						return fmt.Errorf("创建标签失败: %w", err)
+					}
+					tagIDs = append(tagIDs, newTag.ID)
+				}
+			}
+
+			// 关联标签到文章
+			if len(tagIDs) > 0 {
+				var tags []model.Tag
+				if err := tx.Find(&tags, tagIDs).Error; err != nil {
+					return fmt.Errorf("查询标签失败: %w", err)
+				}
+				if err := tx.Model(&article).Association("Tags").Replace(tags); err != nil {
+					return fmt.Errorf("关联标签失败: %w", err)
+				}
 			}
 		}
 
-		// 更新分类文章计数（使用 Redis）
-		if s.statsService != nil {
-			s.statsService.IncrementCategoryArticleCount(ctx, vo.CategoryID)
+		// 3. 更新分类文章计数（使用 Redis）
+		if categoryID != nil && s.statsService != nil {
+			s.statsService.IncrementCategoryArticleCount(ctx, *categoryID)
 		}
 
 		slog.Info("文章发布成功",
 			"article_id", article.ID,
 			"user_id", userID,
 			"title", article.ArticleTitle,
+			"category", vo.CategoryName,
+			"tags", vo.TagNames,
 		)
 		return nil
 	})
@@ -98,7 +147,7 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 // GetArticleByID 根据ID获取文章详情 (含分类+作者+标签)
 func (s *ArticleService) GetArticleByID(ctx context.Context, id uint) (*dto.ArticleDTO, error) {
 	var article model.Article
-	
+
 	query := s.db.WithContext(ctx).
 		Preload("Tags").
 		Preload("Category").
@@ -204,6 +253,7 @@ func (s *ArticleService) ListAdminArticles(ctx context.Context, cond dto.Conditi
 	offset := page.GetOffset()
 	if err := baseQuery.
 		Preload("Category").
+		Preload("Tags"). // 新增：预加载标签
 		Order("is_top DESC, create_time DESC").
 		Limit(page.PageSize).
 		Offset(offset).
@@ -211,8 +261,19 @@ func (s *ArticleService) ListAdminArticles(ctx context.Context, cond dto.Conditi
 		return nil, fmt.Errorf("查询文章列表失败: %w", err)
 	}
 
+	slog.Debug("后台文章列表查询完成",
+		"total_articles", len(articles),
+		"page", page.PageNum,
+	)
+
 	list := make([]dto.ArticleCardDTO, len(articles))
 	for i, a := range articles {
+		slog.Debug("转换文章卡片",
+			"article_id", a.ID,
+			"title", a.ArticleTitle,
+			"tags_loaded", len(a.Tags),
+			"category_loaded", a.Category != nil,
+		)
 		list[i] = s.toArticleCardDTO(&a)
 	}
 
@@ -224,7 +285,7 @@ func (s *ArticleService) ListAdminArticles(ctx context.Context, cond dto.Conditi
 	}, nil
 }
 
-// UpdateArticle 更新文章 (事务: 更新内容+替换标签+更新计数)
+// UpdateArticle 更新文章 (事务: 更新内容+分类+标签+更新计数, 对齐Java版实现)
 func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*model.Article, error) {
 	var article model.Article
 
@@ -234,11 +295,29 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 			return errors.ErrArticleNotFound
 		}
 
-		// 更新字段
+		// 1. 处理分类 (根据名称查找或创建)
 		oldCategoryID := article.CategoryID
+		var newCategoryID *uint
+		if vo.CategoryName != "" {
+			var category model.Category
+			if err := tx.Where("category_name = ?", vo.CategoryName).First(&category).Error; err != nil {
+				if stderrors.Is(err, gorm.ErrRecordNotFound) {
+					category = model.Category{CategoryName: vo.CategoryName}
+					if err := tx.Create(&category).Error; err != nil {
+						return fmt.Errorf("创建分类失败: %w", err)
+					}
+				} else {
+					return fmt.Errorf("查询分类失败: %w", err)
+				}
+			}
+			newCategoryID = &category.ID
+		}
+
+		// 更新文章字段
 		article.ArticleTitle = vo.ArticleTitle
 		article.ArticleContent = vo.ArticleContent
-		article.CategoryID = &vo.CategoryID
+		article.ArticleCover = vo.ArticleCover
+		article.CategoryID = newCategoryID
 
 		if vo.Type != 0 {
 			article.Type = vo.Type
@@ -263,22 +342,59 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 			return fmt.Errorf("更新文章失败: %w", err)
 		}
 
-		// 替换标签关联
-		if vo.TagIDs != nil {
-			if len(vo.TagIDs) > 0 {
-				var tags []model.Tag
-				tx.Find(&tags, vo.TagIDs)
-				tx.Model(&article).Association("Tags").Replace(tags)
+		// 2. 处理标签关联 (根据名称查找或创建)
+		if vo.TagNames != nil {
+			if len(vo.TagNames) > 0 {
+				// 查询已存在的标签
+				var existTags []model.Tag
+				if err := tx.Where("tag_name IN ?", vo.TagNames).Find(&existTags).Error; err != nil {
+					return fmt.Errorf("查询标签失败: %w", err)
+				}
+
+				existTagNames := make(map[string]bool)
+				var tagIDs []uint
+				for _, t := range existTags {
+					existTagNames[t.TagName] = true
+					tagIDs = append(tagIDs, t.ID)
+				}
+
+				// 创建不存在的标签
+				for _, tagName := range vo.TagNames {
+					if !existTagNames[tagName] {
+						newTag := model.Tag{TagName: tagName}
+						if err := tx.Create(&newTag).Error; err != nil {
+							return fmt.Errorf("创建标签失败: %w", err)
+						}
+						tagIDs = append(tagIDs, newTag.ID)
+					}
+				}
+
+				// 关联标签
+				if len(tagIDs) > 0 {
+					var tags []model.Tag
+					if err := tx.Find(&tags, tagIDs).Error; err != nil {
+						return fmt.Errorf("查询标签失败: %w", err)
+					}
+					tx.Model(&article).Association("Tags").Replace(tags)
+				}
 			} else {
 				tx.Model(&article).Association("Tags").Clear()
 			}
 		}
 
-		// 分类变更时更新计数（使用 Redis）
-		if oldCategoryID != nil && *oldCategoryID != vo.CategoryID {
+		// 3. 分类变更时更新计数（使用 Redis）
+		if oldCategoryID != nil && newCategoryID != nil && *oldCategoryID != *newCategoryID {
 			if s.statsService != nil {
 				s.statsService.DecrementCategoryArticleCount(ctx, *oldCategoryID)
-				s.statsService.IncrementCategoryArticleCount(ctx, vo.CategoryID)
+				s.statsService.IncrementCategoryArticleCount(ctx, *newCategoryID)
+			}
+		} else if oldCategoryID == nil && newCategoryID != nil {
+			if s.statsService != nil {
+				s.statsService.IncrementCategoryArticleCount(ctx, *newCategoryID)
+			}
+		} else if oldCategoryID != nil && newCategoryID == nil {
+			if s.statsService != nil {
+				s.statsService.DecrementCategoryArticleCount(ctx, *oldCategoryID)
 			}
 		}
 
@@ -316,7 +432,7 @@ func (s *ArticleService) DeleteArticle(ctx context.Context, id uint) error {
 	})
 }
 
-// BatchDeleteArticles 批量软删除文章
+// BatchDeleteArticles 批量软删除文章（移入回收站）
 func (s *ArticleService) BatchDeleteArticles(ctx context.Context, ids []uint) error {
 	result := s.db.WithContext(ctx).
 		Model(&model.Article{}).
@@ -326,8 +442,62 @@ func (s *ArticleService) BatchDeleteArticles(ctx context.Context, ids []uint) er
 	if result.Error != nil {
 		return fmt.Errorf("批量删除文章失败: %w", result.Error)
 	}
-	
-	slog.Info("批量删除文章完成", "count", result.RowsAffected, "ids", ids)
+
+	slog.Info("批量软删除文章完成", "count", result.RowsAffected, "ids", ids)
+	return nil
+}
+
+// DeleteArticlesPermanently 彻底删除文章（物理删除 - 回收站使用）
+// 对标Java: articleMapper.deleteBatchIds(articleIds)
+// 注意: 需要先删除关联的t_article_tag记录
+func (s *ArticleService) DeleteArticlesPermanently(ctx context.Context, ids []uint) error {
+	if len(ids) == 0 {
+		return errors.ErrInvalidParams.WithMsg("请选择要删除的文章")
+	}
+
+	// 开启事务（对标Java @Transactional）
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. 先删除标签关联表 t_article_tag（对标Java articleTagMapper.delete）
+		if err := tx.Exec("DELETE FROM t_article_tag WHERE article_id IN ?", ids).Error; err != nil {
+			return fmt.Errorf("删除标签关联失败: %w", err)
+		}
+
+		// 2. 物理删除文章（对标Java articleMapper.deleteBatchIds）
+		result := tx.Unscoped().Where("id IN ?", ids).Delete(&model.Article{})
+		if result.Error != nil {
+			return fmt.Errorf("物理删除文章失败: %w", result.Error)
+		}
+
+		slog.Info("文章彻底删除成功", "count", result.RowsAffected, "ids", ids)
+		return nil
+	})
+}
+
+// UpdateArticleDelete 批量逻辑删除/恢复文章 (对标Java版 updateArticleDelete)
+// 对标Java: List<Article> articles = deleteVO.getIds().stream()
+//                 .map(id -> Article.builder().id(id).isDelete(deleteVO.getIsDelete()).build())
+//                 .collect(Collectors.toList());
+//            this.updateBatchById(articles);
+func (s *ArticleService) UpdateArticleDelete(ctx context.Context, ids []uint, isDelete int8) error {
+	if len(ids) == 0 {
+		return errors.ErrInvalidParams.WithMsg("请选择要操作的文章")
+	}
+
+	// 批量更新is_delete字段 (对标Java updateBatchById)
+	result := s.db.WithContext(ctx).
+		Model(&model.Article{}).
+		Where("id IN ?", ids).
+		Update("is_delete", isDelete)
+
+	if result.Error != nil {
+		return fmt.Errorf("更新文章状态失败: %w", result.Error)
+	}
+
+	action := "恢复"
+	if isDelete == 1 {
+		action = "删除"
+	}
+	slog.Info("文章批量"+action+"成功", "count", result.RowsAffected, "is_delete", isDelete, "ids", ids)
 	return nil
 }
 
@@ -368,8 +538,8 @@ func (s *ArticleService) VerifyPassword(ctx context.Context, id uint, password s
 
 // GetArchives 获取文章归档 (按年月分组)
 type ArchiveDTO struct {
-	YearMonth string            `json:"yearMonth"` // "2024-01"
-	Count     int64             `json:"count"`
+	YearMonth string               `json:"yearMonth"` // "2024-01"
+	Count     int64                `json:"count"`
 	Articles  []dto.ArticleCardDTO `json:"articles"`
 }
 
@@ -409,7 +579,7 @@ func (s *ArticleService) SearchArticles(ctx context.Context, keywords string, pa
 	var count int64
 
 	searchPattern := "%" + keywords + "%"
-	
+
 	baseQuery := s.db.WithContext(ctx).
 		Model(&model.Article{}).
 		Where("is_delete = 0 AND status = 1").
@@ -523,14 +693,25 @@ func (s *ArticleService) toArticleDTO(a *model.Article) *dto.ArticleDTO {
 func (s *ArticleService) toArticleCardDTO(a *model.Article) dto.ArticleCardDTO {
 	tags := make([]dto.TagDTO, len(a.Tags))
 	for i, t := range a.Tags {
-		tags[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+		tags[i] = dto.TagDTO{
+			ID:         t.ID,
+			TagName:    t.TagName,
+			CreateTime: t.CreateTime,
+		}
 	}
 
 	// 从 Redis 获取浏览量
 	var viewCount uint64
 	if s.statsService != nil {
 		ctx := context.Background()
-		viewCount, _ = s.statsService.GetArticleView(ctx, a.ID)
+		var err error
+		viewCount, err = s.statsService.GetArticleView(ctx, a.ID)
+		if err != nil {
+			slog.Warn("获取文章浏览量失败", "article_id", a.ID, "error", err)
+		}
+		slog.Info("文章浏览量查询结果", "article_id", a.ID, "view_count", viewCount, "title", a.ArticleTitle)
+	} else {
+		slog.Warn("statsService 为 nil，无法获取浏览量", "article_id", a.ID)
 	}
 
 	card := dto.ArticleCardDTO{
@@ -539,9 +720,11 @@ func (s *ArticleService) toArticleCardDTO(a *model.Article) dto.ArticleCardDTO {
 		ArticleCover: a.ArticleCover,
 		IsTop:        a.IsTop,
 		IsFeatured:   a.IsFeatured,
+		IsDelete:     a.IsDelete,
 		Status:       a.Status,
+		Type:         a.Type,
 		ViewCount:    viewCount,
-		Tags:         tags,
+		TagDTOs:      tags,
 		CreateTime:   a.CreateTime,
 	}
 
@@ -551,6 +734,14 @@ func (s *ArticleService) toArticleCardDTO(a *model.Article) dto.ArticleCardDTO {
 	if a.UserInfo != nil {
 		card.Nickname = a.UserInfo.Nickname
 	}
+
+	slog.Debug("文章卡片转换",
+		"article_id", a.ID,
+		"tags_count", len(tags),
+		"view_count", viewCount,
+		"category_name", card.CategoryName,
+	)
+
 	return card
 }
 
@@ -566,7 +757,7 @@ func (s *ArticleService) ImportArticles(ctx context.Context, userID uint, conten
 		lines := strings.SplitN(content, "\n", 2)
 		title := filename
 		body := content
-		
+
 		if len(lines) >= 2 {
 			title = strings.TrimPrefix(lines[0], "# ")
 			title = strings.TrimSpace(title)
@@ -576,7 +767,7 @@ func (s *ArticleService) ImportArticles(ctx context.Context, userID uint, conten
 		vo := vo.ArticleVO{
 			ArticleTitle:   title,
 			ArticleContent: body,
-			CategoryID:     1, // 默认分类
+			CategoryName:   "默认分类",
 			Status:         int8Ptr(0), // 草稿状态
 		}
 

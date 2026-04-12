@@ -98,13 +98,32 @@ func (s *CategoryService) GetCategories(ctx context.Context) ([]dto.CategoryDTO,
 		return nil, fmt.Errorf("查询分类失败: %w", err)
 	}
 
+	// 批量统计所有分类的文章数量（避免 N+1 查询）
+	type CategoryCount struct {
+		CategoryID uint `gorm:"column:category_id"`
+		Count      int  `gorm:"column:count"`
+	}
+	var counts []CategoryCount
+	s.db.WithContext(ctx).
+		Table("t_article").
+		Select("category_id, COUNT(*) as count").
+		Where("is_delete = 0").
+		Group("category_id").
+		Scan(&counts)
+
+	// 构建 ID -> Count 映射
+	countMap := make(map[uint]int)
+	for _, c := range counts {
+		countMap[c.CategoryID] = c.Count
+	}
+
 	list := make([]dto.CategoryDTO, len(categories))
 	for i, c := range categories {
 		list[i] = dto.CategoryDTO{
-			ID:            c.ID,
-			CategoryName:  c.CategoryName,
-			ArticleCount:  0, // t_category 表没有 article_count 字段，需要动态统计
-			CreateTime:    c.CreateTime,
+			ID:           c.ID,
+			CategoryName: c.CategoryName,
+			ArticleCount: countMap[c.ID], // 从映射中获取
+			CreateTime:   c.CreateTime,
 		}
 	}
 	return list, nil
@@ -134,12 +153,31 @@ func (s *CategoryService) ListAdminCategories(ctx context.Context, cond dto.Cond
 		return nil, fmt.Errorf("查询分类列表失败: %w", err)
 	}
 
+	// 批量统计所有分类的文章数量（避免 N+1 查询）
+	type CategoryCount struct {
+		CategoryID uint `gorm:"column:category_id"`
+		Count      int  `gorm:"column:count"`
+	}
+	var counts []CategoryCount
+	s.db.WithContext(ctx).
+		Table("t_article").
+		Select("category_id, COUNT(*) as count").
+		Where("is_delete = 0").
+		Group("category_id").
+		Scan(&counts)
+
+	// 构建 ID -> Count 映射
+	countMap := make(map[uint]int)
+	for _, c := range counts {
+		countMap[c.CategoryID] = c.Count
+	}
+
 	list := make([]dto.CategoryDTO, len(categories))
 	for i, c := range categories {
 		list[i] = dto.CategoryDTO{
 			ID:           c.ID,
 			CategoryName: c.CategoryName,
-			ArticleCount: 0,
+			ArticleCount: countMap[c.ID], // 从映射中获取
 			CreateTime:   c.CreateTime,
 		}
 	}

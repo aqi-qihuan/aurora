@@ -37,7 +37,7 @@ type Router struct {
 // 所有Handler通过Registry获取Service实例, 确保单例共享
 func NewRouter(registry *service.Registry) *Router {
 	return &Router{
-		ArticleHandler:       NewArticleHandler(registry.Article),
+		ArticleHandler:       NewArticleHandler(registry.Article, registry.File),
 		UserAuthHandler:      NewUserAuthHandler(registry),
 		CommentHandler:       NewCommentHandler(registry.Comment),
 		CategoryHandler:      NewCategoryHandler(registry.Category),
@@ -53,7 +53,7 @@ func NewRouter(registry *service.Registry) *Router {
 		OperationLogHandler:  NewOperationLogHandler(registry.OperationLog),
 		ExceptionLogHandler:  NewExceptionLogHandler(registry.ExceptionLog),
 		AuroraInfoHandler:    NewAuroraInfoHandler(registry.AuroraInfo),
-		WebsiteConfigHandler: NewWebsiteConfigHandler(registry.WebsiteConfig),
+		WebsiteConfigHandler: NewWebsiteConfigHandler(registry),
 		FileHandler:          NewFileHandler(registry.File),
 		ResourceHandler:      NewResourceHandler(registry.Resource),
 		AboutHandler:         NewAboutHandler(registry.About),
@@ -175,7 +175,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.POST("/articles", r.ArticleHandler.SaveArticle)
 	rg.PUT("/articles/topAndFeatured", r.ArticleHandler.UpdateArticleTopAndFeatured)
 	rg.PUT("/articles", r.ArticleHandler.UpdateArticleDelete)
-	rg.DELETE("/articles/delete", r.ArticleHandler.DeleteArticle)
+	rg.DELETE("/articles/delete", r.ArticleHandler.DeleteArticle)  // 彻底删除（物理删除）
 	rg.POST("/articles/images", r.ArticleHandler.UploadArticleImage)
 	rg.GET("/articles/:id", r.ArticleHandler.GetAdminArticleById)
 	rg.POST("/articles/import", r.ArticleHandler.ImportArticle)

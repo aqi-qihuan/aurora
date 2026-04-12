@@ -13,7 +13,7 @@ type ArticleDTO struct {
 	IsFeatured     int8       `json:"isFeatured"`
 	Status         int8       `json:"status"`
 	Type           int8       `json:"type"`
-	ViewCount      uint64     `json:"viewCount"`
+	ViewCount      uint64     `json:"viewsCount"`
 	LikeCount      int64      `json:"likeCount"`
 	CategoryID     uint       `json:"categoryId"`
 	CategoryName   string     `json:"categoryName,omitempty"`
@@ -30,11 +30,13 @@ type ArticleCardDTO struct {
 	ArticleCover string   `json:"articleCover"`
 	IsTop        int8     `json:"isTop"`
 	IsFeatured   int8     `json:"isFeatured"`
+	IsDelete     int8     `json:"isDelete"` // 新增：前端操作列依赖此字段
 	Status       int8     `json:"status"`
-	ViewCount    uint64   `json:"viewCount"`
+	Type         int8     `json:"type"`
+	ViewCount    uint64   `json:"viewsCount"`
 	CategoryName string   `json:"categoryName,omitempty"`
 	Nickname     string   `json:"nickname,omitempty"`
-	Tags         []TagDTO `json:"tags,omitempty"`
+	TagDTOs      []TagDTO `json:"tagDTOs,omitempty"` // 修改：对齐 Java 字段名
 	CreateTime   time.Time `json:"createTime"`
 }
 
@@ -49,6 +51,8 @@ type ArticleSearchDTO struct {
 
 // TagDTO 标签DTO
 type TagDTO struct {
-	ID       uint   `json:"id"`
-	TagName  string `json:"tagName"`
+	ID           uint      `json:"id"`
+	TagName      string    `json:"tagName"`
+	ArticleCount int       `json:"articleCount,omitempty"` // 新增：文章数量
+	CreateTime   time.Time `json:"createTime,omitempty"`
 }

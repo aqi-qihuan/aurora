@@ -63,6 +63,10 @@ func main() {
 	r.Use(middleware.CORS())
 	// r.Use(middleware.RateLimiter(rdb, slog.Default())) // P0-6 限流需Redis客户端
 
+	// 4.1 静态文件服务 (上传的图片等资源)
+	r.Static("/uploads", "./uploads")
+	slog.Info("Static file server enabled: /uploads -> ./uploads")
+
 	// 5. 健康检查端点（无需认证）- 对标 Spring Actuator /health
 	r.GET("/health", func(c *gin.Context) {
 		status := infrastructure.HealthCheck()

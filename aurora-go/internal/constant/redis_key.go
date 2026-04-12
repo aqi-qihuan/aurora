@@ -3,7 +3,7 @@ package constant
 // RedisKey Redis Key 常量定义 (对齐Java版 RedisConstant)
 const (
 	// ===== 文章相关 =====
-	ArticleViewsCount    = "article_views_count:"  // 单篇文章浏览量 (String)
+	ArticleViewsRanking  = "article_views_count"    // 文章浏览排行 (ZSet, 对齐Java版 ARTICLE_VIEWS_COUNT)
 	ArticleAccess        = "article_access:"         // 密码文章访问权限 (Set)
 
 	// ===== 博客统计 =====
@@ -11,7 +11,6 @@ const (
 	UniqueVisitor        = "unique_visitor"           // 每日独立访客 (Set, 对标Java UNIQUE_VISITOR)
 	VisitorArea          = "visitor_area"             // 访客地域分布 (Hash, 对标Java VISITOR_AREA)
 	UserArea             = "user_area"                // 用户地域分布 (String JSON, 对标Java USER_AREA)
-	ArticleViewsRanking  = "article_views_count"      // 文章浏览排行 (ZSet, 对标Java ARTICLE_VIEWS_COUNT)
 
 	// ===== 用户会话 =====
 	LoginUser            = "login:user:"                // 登录用户Session (Hash)
