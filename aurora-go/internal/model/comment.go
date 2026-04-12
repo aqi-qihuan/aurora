@@ -21,7 +21,6 @@ type Comment struct {
 	Content     string    `gorm:"size:2000;not null" json:"content"`
 	IP          string    `gorm:"size:64" json:"ip"`
 	Location    string    `gorm:"size:50" json:"location"`
-	LikeCount   int64     `gorm:"default:0" json:"likeCount"`
 	CreateTime  time.Time `json:"createTime"`
 
 	// 关联

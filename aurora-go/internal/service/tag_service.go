@@ -75,12 +75,12 @@ func (s *TagService) DeleteTag(ctx context.Context, id uint) error {
 	})
 }
 
-// GetTags 获取所有标签列表 (含文章计数)
+// GetTags 获取所有标签列表
 func (s *TagService) GetTags(ctx context.Context) ([]dto.TagDTO, error) {
 	var tags []model.Tag
 
 	err := s.db.WithContext(ctx).
-		Order("article_count DESC, create_time DESC").
+		Order("create_time DESC").
 		Find(&tags).Error
 
 	if err != nil {
@@ -129,7 +129,7 @@ func (s *TagService) GetTagByID(ctx context.Context, id uint) (*dto.TagDetailDTO
 	result := &dto.TagDetailDTO{
 		ID:           tag.ID,
 		TagName:      tag.TagName,
-		ArticleCount: tag.ArticleCount,
+		ArticleCount: 0, // t_tag 表没有 article_count 字段，需要动态统计
 	}
 	return result, nil
 }

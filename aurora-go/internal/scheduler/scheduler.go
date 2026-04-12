@@ -1,4 +1,4 @@
-﻿// Package scheduler 基于 robfig/cron v3 实现定时任务调度系统
+// Package scheduler 基于 robfig/cron v3 实现定时任务调度系统
 // 对标 Java Quartz 框架 (AuroraQuartz.java + ScheduleUtil + JobInvokeUtil)
 //
 // 架构对比:
@@ -174,11 +174,16 @@ func (s *Scheduler) executeJob(ctx context.Context, jobName, invokeTarget string
 
 // recordJobLog 记录调度日志到数据库 (对标Java JobLogMapper.insert)
 func (s *Scheduler) recordJobLog(jobName string, status int8, duration int64, errorMsg string) {
+	now := time.Now()
+	startTime := now.Add(-time.Duration(duration) * time.Millisecond)
+
 	log := model.JobLog{
-		JobName:  jobName,
-		Status:   status,
-		Duration: &duration,
-		ErrorMsg: errorMsg,
+		JobName:       jobName,
+		Status:        status,
+		StartTime:     &startTime,
+		EndTime:       &now,
+		ExceptionInfo: errorMsg,
+		JobMessage:    "定时任务执行完成",
 	}
 
 	if err := s.db.Create(&log).Error; err != nil {

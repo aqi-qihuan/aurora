@@ -49,19 +49,22 @@ type Registry struct {
 func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog.Logger) *Registry {
 	logger.Info("初始化Service注册中心...")
 
+	// 创建 Redis 统计服务（所有 Service 共享）
+	statsService := NewRedisStatsService(rdb)
+
 	r := &Registry{
 		DB:  db,
 		RDB: rdb,
 	}
 
-	// ===== 基础服务 (仅依赖DB) =====
-	r.Article = NewArticleService(db)
+	// ===== 基础服务 (依赖DB+Redis) =====
+	r.Article = NewArticleService(db, statsService)
 	r.UserAuth = NewUserAuthService(db)
-	r.Comment = NewCommentService(db)
+	r.Comment = NewCommentService(db, statsService)
 	r.Category = NewCategoryService(db)
 	r.Tag = NewTagService(db)
 	r.FriendLink = NewFriendLinkService(db)
-	r.Talk = NewTalkService(db)
+	r.Talk = NewTalkService(db, statsService)
 	r.Photo = NewPhotoService(db)
 	r.PhotoAlbum = NewPhotoAlbumService(db)
 	r.Role = NewRoleService(db)
@@ -70,7 +73,7 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.JobLog = NewJobLogService(db)
 	r.OperationLog = NewOperationLogService(db)
 	r.ExceptionLog = NewExceptionLogService(db)
-	r.AuroraInfo = NewAuroraInfoService(db)
+	r.AuroraInfo = NewAuroraInfoService(db, statsService)
 	r.WebsiteConfig = NewWebsiteConfigService(db)
 	r.File = NewFileService()
 	r.Resource = NewResourceService(db)

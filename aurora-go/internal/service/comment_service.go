@@ -15,11 +15,15 @@ import (
 
 // CommentService 评论业务逻辑 (对标 Java CommentServiceImpl)
 type CommentService struct {
-	db *gorm.DB
+	db           *gorm.DB
+	statsService *RedisStatsService // Redis 统计服务
 }
 
-func NewCommentService(db *gorm.DB) *CommentService {
-	return &CommentService{db: db}
+func NewCommentService(db *gorm.DB, statsService *RedisStatsService) *CommentService {
+	return &CommentService{
+		db:           db,
+		statsService: statsService,
+	}
 }
 
 // CreateComment 发表评论 (含IP归属地解析 + 敏感词过滤 + MQ通知)
@@ -369,7 +373,7 @@ func (s *CommentService) toCommentDTO(c *model.Comment) dto.CommentDTO {
 		Content:    c.Content,
 		Type:       c.Type,
 		ParentID:   c.ParentID,
-		LikeCount:  c.LikeCount,
+		LikeCount:  s.getCommentLikeCount(c.ID),
 		IsReview:   c.IsReview,
 		CreateTime: c.CreateTime,
 		Location:   c.Location,
@@ -401,7 +405,7 @@ func (s *CommentService) toCommentAdminDTO(c *model.Comment) dto.CommentAdminDTO
 		IsReview:   c.IsReview,
 		IP:         c.IP,
 		Location:   c.Location,
-		LikeCount:  c.LikeCount,
+		LikeCount:  s.getCommentLikeCount(c.ID),
 		CreateTime: c.CreateTime,
 	}
 	if c.UserInfo != nil {
@@ -442,4 +446,13 @@ func commentTypeStr(t int8) string {
 	case 4: return "关于"
 	default: return "其他"
 	}
+}
+
+// getCommentLikeCount 获取评论点赞数（从 Redis）
+func (s *CommentService) getCommentLikeCount(commentID uint) int64 {
+	if s.statsService == nil {
+		return 0
+	}
+	count, _ := s.statsService.GetCommentLikeCount(context.Background(), commentID)
+	return count
 }

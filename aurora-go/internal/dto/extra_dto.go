@@ -46,10 +46,7 @@ type LoginVO struct {
 type CategoryDTO struct {
 	ID            uint      `json:"id"`
 	CategoryName  string    `json:"categoryName"`
-	Alias         string    `json:"alias"`
-	Description    string    `json:"description"`
-	ArticleCount  int       `json:"articleCount"`
-	Sort          int       `json:"sort"`
+	ArticleCount  int       `json:"articleCount"` // t_category 表没有此字段，需动态统计
 	CreateTime     time.Time `json:"createTime,omitempty"`
 }
 
@@ -157,13 +154,11 @@ type MenuDTO struct {
 	Path        string    `json:"path"`
 	Component   string    `json:"component"`
 	Icon        string    `json:"icon"`
-	Sort        int       `json:"sort"`
-	Type        int8      `json:"type"`
-	Permission  string    `json:"permission"`
-	Hidden      int8      `json:"hidden"`
-	OrderNum    *int      `json:"orderNum"`
+	OrderNum    int       `json:"orderNum"`  // 排序号（数据库对应 order_num 字段）
+	IsHidden    int8      `json:"isHidden"`  // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
 	ParentID    *uint     `json:"parentId"`
 	CreateTime   time.Time `json:"createTime"`
+	UpdateTime  *time.Time `json:"updateTime,omitempty"`
 }
 
 type MenuTreeDTO struct {
@@ -172,13 +167,12 @@ type MenuTreeDTO struct {
 	Path        string        `json:"path"`
 	Component   string        `json:"component"`
 	Icon        string        `json:"icon"`
-	Type        int8          `json:"type"`
-	Permission  string        `json:"permission"`
-	Hidden      int8          `json:"hidden"`
-	OrderNum    *int          `json:"orderNum"`
-	Sort        int           `json:"sort"`
+	IsHidden    int8          `json:"isHidden"`  // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
+	OrderNum    int           `json:"orderNum"`  // 排序号（数据库对应 order_num 字段）
 	ParentID    *uint         `json:"parentId"`
 	Children    []MenuTreeDTO `json:"children"`
+	CreateTime  time.Time     `json:"createTime,omitempty"`
+	UpdateTime  *time.Time    `json:"updateTime,omitempty"`
 }
 
 // ===== 定时任务 DTO =====
@@ -197,14 +191,17 @@ type JobDTO struct {
 }
 
 type JobLogDTO struct {
-	ID        uint      `json:"id"`
-	JobID     uint      `json:"jobId"`
-	JobName   string    `json:"jobName"`
-	JobGroup  string    `json:"jobGroup,omitempty"`
-	Status    int8      `json:"status"`
-	Duration  *int64    `json:"duration,omitempty"`
-	ErrorMsg  string    `json:"errorMsg,omitempty"`
-	CreateTime time.Time `json:"createTime"`
+	ID            uint       `json:"id"`
+	JobID         uint       `json:"jobId"`
+	JobName       string     `json:"jobName"`
+	JobGroup      string     `json:"jobGroup,omitempty"`
+	InvokeTarget  string     `json:"invokeTarget"`
+	JobMessage    string     `json:"jobMessage,omitempty"`
+	Status        int8       `json:"status"`
+	ExceptionInfo string     `json:"exceptionInfo,omitempty"`
+	StartTime     *time.Time `json:"startTime,omitempty"`
+	EndTime       *time.Time `json:"endTime,omitempty"`
+	CreateTime    time.Time  `json:"createTime"`
 }
 
 type JobDetailDTO struct {
@@ -266,6 +263,38 @@ type ExceptionLogDTO struct {
 	Stacktrace string    `json:"stacktrace"`
 	Status     int8      `json:"status"`
 	CreateTime  time.Time `json:"createTime"`
+}
+
+// ===== 后台首页聚合 DTO (对标 Java AuroraAdminInfoDTO) =====
+
+type AuroraAdminInfoDTO struct {
+	ViewsCount          int                    `json:"viewsCount"`
+	MessageCount        int                    `json:"messageCount"`
+	UserCount           int                    `json:"userCount"`
+	ArticleCount        int                    `json:"articleCount"`
+	CategoryDTOs        []CategoryDTO          `json:"categoryDTOs,omitempty"`
+	TagDTOs             []TagDTO               `json:"tagDTOs,omitempty"`
+	ArticleStatistics   []ArticleStatisticsDTO `json:"articleStatisticsDTOs,omitempty"`
+	UniqueViewDTOs      []UniqueViewDTO        `json:"uniqueViewDTOs,omitempty"`
+	ArticleRankDTOs     []ArticleRankDTO       `json:"articleRankDTOs,omitempty"`
+}
+
+// ArticleStatisticsDTO 文章统计 (对标 Java ArticleStatisticsDTO)
+type ArticleStatisticsDTO struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+// UniqueViewDTO 独立访客统计 (对标 Java UniqueViewDTO)
+type UniqueViewDTO struct {
+	Day       string `json:"day"`
+	ViewsCount int   `json:"viewsCount"`
+}
+
+// ArticleRankDTO 文章排行 (对标 Java ArticleRankDTO)
+type ArticleRankDTO struct {
+	ArticleTitle string `json:"articleTitle"`
+	ViewsCount   int    `json:"viewsCount"`
 }
 
 // ===== 首页聚合 DTO =====

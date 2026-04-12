@@ -18,7 +18,7 @@ mysql:
   host: 134.175.206.158
   port: 3306
   user: root
-  password: ""            # 通过 AURORA_MYSQL_PASSWORD 注入
+  password: "aqi1015"            # 通过 AURORA_MYSQL_PASSWORD 注入
   dbname: aurora
   max_open_conns: 20
   max_idle_conns: 5
@@ -27,15 +27,15 @@ mysql:
 redis:
   host: 134.175.206.158
   port: 6379
-  password: ""            # 通过 AURORA_REDIS_PASSWORD 注入
+  password: "aqi1015"            # 通过 AURORA_REDIS_PASSWORD 注入
   db: 1
   pool_size: 100
 
 rabbitmq:
   host: 134.175.206.158
   port: 5672
-  user: guest             # 通过 AURORA_RABBITMQ_USER 覆盖
-  password: ""            # 通过 AURORA_RABBITMQ_PASSWORD 注入
+  user: myroot             # 通过 AURORA_RABBITMQ_USER 覆盖
+  password: "myaqi1015"            # 通过 AURORA_RABBITMQ_PASSWORD 注入
   vhost: /
   prefetch_count: 10
 
@@ -43,14 +43,14 @@ elasticsearch:
   urls:
     - "http://134.175.206.158:9200"
   index_name: article
-  username: ""            # 通过 AURORA_ELASTICSEARCH_USERNAME 注入
-  password: ""            # 通过 AURORA_ELASTICSEARCH_PASSWORD 注入
+  username: "user_admin"            # 通过 AURORA_ELASTICSEARCH_USERNAME 注入
+  password: "user_aqi125.cn"            # 通过 AURORA_ELASTICSEARCH_PASSWORD 注入
   sniff_enabled: false
 
 minio:
   endpoint: "http://134.175.206.158:9000"
-  access_key: ""          # 通过 AURORA_MINIO_ACCESS_KEY 注入
-  secret_key: ""          # 通过 AURORA_MINIO_SECRET_KEY 注入
+  access_key: "aqi125"          # 通过 AURORA_MINIO_ACCESS_KEY 注入
+  secret_key: "aqi1015."          # 通过 AURORA_MINIO_SECRET_KEY 注入
   bucket: aurora
   use_ssl: false
 
@@ -63,7 +63,7 @@ upload:
   mode: minio
 
 jwt:
-  secret: ""              # 通过 AURORA_JWT_SECRET 注入
+  secret: "YXVyb3JhLXNlY3JldC1rZXktZm9yLXNwcmluZy1ib290LTMtMi0xMg=="              # 通过 AURORA_JWT_SECRET 注入
   expire_time: 168
   issuer: aurora-go
 
@@ -81,8 +81,8 @@ email:
   enabled: false          # 通过 AURORA_EMAIL_ENABLED 覆盖
   host: smtp.qq.com
   port: 465
-  username: ""            # 通过 AURORA_EMAIL_USERNAME 注入
-  password: ""            # 通过 AURORA_EMAIL_PASSWORD 注入
+  username: "a4i.icu@qq.com"            # 通过 AURORA_EMAIL_USERNAME 注入
+  password: "xydwwqkthweuecdf"            # 通过 AURORA_EMAIL_PASSWORD 注入
   from_name: Aurora Blog
   is_ssl: true
   verify_code_expire: 5

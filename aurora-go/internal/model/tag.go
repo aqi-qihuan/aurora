@@ -7,12 +7,12 @@ import (
 )
 
 // Tag 标签实体 (对应 t_tag 表)
+// 注意: 数据库表只有 id, tag_name, create_time, update_time
 type Tag struct {
-	ID           uint      `gorm:"primarykey" json:"id"`
-	TagName       string    `gorm:"size:20;not null;uniqueIndex" json:"tagName"`
-	ArticleCount int       `gorm:"default:0" json:"articleCount"`
-	CreateTime   time.Time `json:"createTime"`
-	UpdateTime   time.Time `json:"updateTime"`
+	ID         uint      `gorm:"primarykey" json:"id"`
+	TagName    string    `gorm:"size:20;not null" json:"tagName"`
+	CreateTime time.Time `json:"createTime"`
+	UpdateTime time.Time `json:"updateTime"`
 }
 
 func (Tag) TableName() string { return "t_tag" }

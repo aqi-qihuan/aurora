@@ -29,18 +29,31 @@ type Job struct {
 func (Job) TableName() string { return "t_job" }
 
 // JobLog 调度日志实体 (对应 t_job_log 表)
+// 数据库实际字段: id, job_id, job_name, job_group, invoke_target, job_message, status, exception_info, create_time, start_time, end_time
 type JobLog struct {
-	ID          uint      `gorm:"primarykey" json:"id"`
-	JobID       uint      `gorm:"index" json:"jobId"`
-	JobName     string    `gorm:"size:100" json:"jobName"`
-	JobGroup    string    `gorm:"size:50" json:"jobGroup"`              // 任务分组(用于日志筛选)
-	Status      int8      `gorm:"index" json:"status"`                   // 0成功 1失败 2执行中
-	Duration    *int64    `json:"duration,omitempty"`                    // 执行耗时(ms)
-	ErrorMsg    string    `gorm:"type:text" json:"errorMsg"`             // 错误信息
-	CreateTime  time.Time `json:"createTime"`
+	ID            uint       `gorm:"primarykey" json:"id"`
+	JobID         uint       `gorm:"index;column:job_id" json:"jobId"`
+	JobName       string     `gorm:"size:64;column:job_name" json:"jobName"`
+	JobGroup      string     `gorm:"size:64;column:job_group" json:"jobGroup"`
+	InvokeTarget  string     `gorm:"size:500;column:invoke_target" json:"invokeTarget"`
+	JobMessage    string     `gorm:"size:500;column:job_message" json:"jobMessage"`
+	Status        int8       `gorm:"index" json:"status"`                    // 0正常 1失败
+	ExceptionInfo string     `gorm:"type:text;column:exception_info" json:"exceptionInfo"`
+	StartTime     *time.Time `gorm:"column:start_time" json:"startTime,omitempty"`
+	EndTime       *time.Time `gorm:"column:end_time" json:"endTime,omitempty"`
+	CreateTime    time.Time  `gorm:"column:create_time" json:"createTime"`
 }
 
 func (JobLog) TableName() string { return "t_job_log" }
+
+// Duration 计算执行耗时(毫秒)
+func (jl *JobLog) Duration() *int64 {
+	if jl.StartTime != nil && jl.EndTime != nil {
+		duration := jl.EndTime.Sub(*jl.StartTime).Milliseconds()
+		return &duration
+	}
+	return nil
+}
 
 func (j *Job) BeforeCreate(tx *gorm.DB) error { now := time.Now(); j.CreateTime = now; j.UpdateTime = now; return nil }
 func (j *Job) BeforeUpdate(tx *gorm.DB) error { j.UpdateTime = time.Now(); return nil }

@@ -10,18 +10,21 @@ import (
 )
 
 // ResultVO 统一API响应结构（对齐Java版ResultVO）
+// Java版本返回格式: { flag: true/false, data: ..., message: ... }
+// Go版本需要对齐这个格式，同时添加 code 字段适配前端拦截器
 type ResultVO struct {
 	Code    int         `json:"code"`
-	Message string      `json:"message"`
+	Flag    bool        `json:"flag"`
 	Data    interface{} `json:"data,omitempty"`
+	Message string      `json:"message,omitempty"`
 }
 
 // Success 成功响应
 func Success(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, ResultVO{
-		Code:    200,
-		Message: "操作成功",
-		Data:    data,
+		Code: 200,
+		Flag: true,
+		Data: data,
 	})
 }
 
@@ -29,15 +32,18 @@ func Success(c *gin.Context, data interface{}) {
 func SuccessWithMessage(c *gin.Context, msg string, data interface{}) {
 	c.JSON(http.StatusOK, ResultVO{
 		Code:    200,
-		Message: msg,
+		Flag:    true,
 		Data:    data,
+		Message: msg,
 	})
 }
 
 // Fail 错误响应
 func Fail(c *gin.Context, code int, message string) {
+	// 确保始终返回JSON格式,即使连接已中断也要设置正确的Content-Type
+	c.Header("Content-Type", "application/json; charset=utf-8")
 	c.JSON(http.StatusOK, ResultVO{
-		Code:    code,
+		Flag:    false,
 		Message: message,
 	})
 }
@@ -73,6 +79,9 @@ func ResponseSuccess(c *gin.Context, data interface{}) {
 //   ResponseError(c, appError)        - 传入 *AppError
 //   ResponseError(c, err)             - 传入普通 error
 func ResponseError(c *gin.Context, args ...interface{}) {
+	// 确保Content-Type为JSON
+	c.Header("Content-Type", "application/json; charset=utf-8")
+	
 	switch len(args) {
 	case 1:
 		// 单参数: *AppError 或 error

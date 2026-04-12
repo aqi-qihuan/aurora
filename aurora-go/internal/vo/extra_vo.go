@@ -10,8 +10,8 @@ type RegisterVO struct {
 }
 
 type LoginVO struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" form:"username" binding:"required"`
+	Password string `json:"password" form:"password" binding:"required"`
 }
 
 type UpdateUserVO struct {
@@ -36,9 +36,6 @@ type QQLoginVO struct {
 
 type CategoryVO struct {
 	CategoryName string `json:"categoryName" binding:"required,max=20"`
-	Alias        string `json:"alias,omitempty" binding:"omitempty,max=50"`
-	Description  string `json:"description,omitempty" binding:"omitempty,max=500"`
-	Sort         int    `json:"sort"`
 }
 
 // ===== 标签 VO =====
@@ -85,16 +82,13 @@ type RoleVO struct {
 // ===== 菜单 VO =====
 
 type MenuVO struct {
-	Name       string `json:"name" binding:"required,max=50"`
-	Path       string `json:"path" binding:"required,max=255"`
-	Component  string `json:"component,omitempty" binding:"omitempty,max=255"`
-	Icon       string `json:"icon,omitempty" binding:"omitempty,max=100"`
-	Sort       int    `json:"sort"`
-	Type       int8   `json:"type" binding:"required,oneof=0 1 2"` // 0目录 1菜单 2按钮
-	Permission string `json:"permission,omitempty" binding:"omitempty,max=100"`
+	Name       string `json:"name" binding:"required,max=20"`
+	Path       string `json:"path" binding:"required,max=50"`
+	Component  string `json:"component" binding:"required,max=50"`
+	Icon       string `json:"icon" binding:"required,max=50"`
+	OrderNum   int    `json:"orderNum" binding:"required"`  // 排序号（数据库对应 order_num 字段）
 	ParentID   uint   `json:"parentId,omitempty"`
-	Hidden     *int8  `json:"hidden,omitempty"`
-	OrderNum   *int   `json:"orderNum,omitempty"`
+	IsHidden   *int8  `json:"isHidden,omitempty"`  // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
 }
 
 // ===== 评论 VO =====

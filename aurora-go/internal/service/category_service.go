@@ -24,9 +24,6 @@ func NewCategoryService(db *gorm.DB) *CategoryService {
 func (s *CategoryService) CreateCategory(ctx context.Context, vo vo.CategoryVO) (*model.Category, error) {
 	category := model.Category{
 		CategoryName: vo.CategoryName,
-		Alias:        vo.Alias,
-		Description:  vo.Description,
-		Sort:         vo.Sort,
 	}
 
 	if err := s.db.WithContext(ctx).Create(&category).Error; err != nil {
@@ -48,9 +45,6 @@ func (s *CategoryService) UpdateCategory(ctx context.Context, id uint, vo vo.Cat
 
 	updates := map[string]interface{}{
 		"category_name": vo.CategoryName,
-		"alias":        vo.Alias,
-		"description":   vo.Description,
-		"sort":         vo.Sort,
 	}
 
 	result := s.db.WithContext(ctx).Model(&category).Updates(updates)
@@ -92,12 +86,12 @@ func (s *CategoryService) DeleteCategory(ctx context.Context, id uint) error {
 	})
 }
 
-// GetCategories 获取所有分类列表 (含文章计数)
+// GetCategories 获取所有分类列表
 func (s *CategoryService) GetCategories(ctx context.Context) ([]dto.CategoryDTO, error) {
 	var categories []model.Category
 
 	err := s.db.WithContext(ctx).
-		Order("sort ASC, create_time ASC").
+		Order("create_time ASC").
 		Find(&categories).Error
 
 	if err != nil {
@@ -109,10 +103,7 @@ func (s *CategoryService) GetCategories(ctx context.Context) ([]dto.CategoryDTO,
 		list[i] = dto.CategoryDTO{
 			ID:            c.ID,
 			CategoryName:  c.CategoryName,
-			Alias:         c.Alias,
-			Description:    c.Description,
-			ArticleCount:  c.ArticleCount,
-			Sort:          c.Sort,
+			ArticleCount:  0, // t_category 表没有 article_count 字段，需要动态统计
 			CreateTime:     c.CreateTime,
 		}
 	}
@@ -125,7 +116,7 @@ func (s *CategoryService) GetCategoryOptions(ctx context.Context) ([]dto.OptionD
 
 	err := s.db.WithContext(ctx).
 		Select("id, category_name").
-		Order("sort ASC").
+		Order("create_time ASC").
 		Find(&categories).Error
 
 	if err != nil {
@@ -154,9 +145,6 @@ func (s *CategoryService) GetCategoryByID(ctx context.Context, id uint) (*dto.Ca
 	return &dto.CategoryDTO{
 		ID:            category.ID,
 		CategoryName:  category.CategoryName,
-		Alias:         category.Alias,
-		Description:    category.Description,
-		ArticleCount:  category.ArticleCount,
-		Sort:          category.Sort,
+		ArticleCount:  0, // t_category 表没有 article_count 字段，需要动态统计
 	}, nil
 }

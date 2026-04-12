@@ -18,12 +18,16 @@ import (
 // ArticleService 文章业务逻辑层 (对标 Java ArticleServiceImpl)
 // 职责: 文章CRUD / 搜索 / 归档 / 导入导出 / 置顶推荐 / 密码保护 / 缓存策略
 type ArticleService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	statsService  *RedisStatsService // Redis 统计服务
 }
 
 // NewArticleService 创建文章服务实例
-func NewArticleService(db *gorm.DB) *ArticleService {
-	return &ArticleService{db: db}
+func NewArticleService(db *gorm.DB, statsService *RedisStatsService) *ArticleService {
+	return &ArticleService{
+		db:           db,
+		statsService: statsService,
+	}
 }
 
 // CreateArticle 发布文章 (事务操作: 文章+标签关联)
@@ -33,7 +37,7 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		article = model.Article{
 			UserID:         userID,
-			CategoryID:     vo.CategoryID,
+			CategoryID:     &vo.CategoryID,
 			ArticleTitle:   vo.ArticleTitle,
 			ArticleContent: vo.ArticleContent,
 			Type:           1, // 默认原创
@@ -75,9 +79,10 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 			}
 		}
 
-		// 更新分类文章计数
-		tx.Model(&model.Category{}).Where("id = ?", vo.CategoryID).
-			UpdateColumn("article_count", gorm.Expr("article_count + 1"))
+		// 更新分类文章计数（使用 Redis）
+		if s.statsService != nil {
+			s.statsService.IncrementCategoryArticleCount(ctx, vo.CategoryID)
+		}
 
 		slog.Info("文章发布成功",
 			"article_id", article.ID,
@@ -233,7 +238,7 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 		oldCategoryID := article.CategoryID
 		article.ArticleTitle = vo.ArticleTitle
 		article.ArticleContent = vo.ArticleContent
-		article.CategoryID = vo.CategoryID
+		article.CategoryID = &vo.CategoryID
 
 		if vo.Type != 0 {
 			article.Type = vo.Type
@@ -269,12 +274,12 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 			}
 		}
 
-		// 分类变更时更新计数
-		if oldCategoryID != vo.CategoryID {
-			tx.Model(&model.Category{}).Where("id = ?", oldCategoryID).
-				UpdateColumn("article_count", gorm.Expr("GREATEST(article_count - 1, 0)"))
-			tx.Model(&model.Category{}).Where("id = ?", vo.CategoryID).
-				UpdateColumn("article_count", gorm.Expr("article_count + 1"))
+		// 分类变更时更新计数（使用 Redis）
+		if oldCategoryID != nil && *oldCategoryID != vo.CategoryID {
+			if s.statsService != nil {
+				s.statsService.DecrementCategoryArticleCount(ctx, *oldCategoryID)
+				s.statsService.IncrementCategoryArticleCount(ctx, vo.CategoryID)
+			}
 		}
 
 		slog.Info("文章更新成功", "article_id", article.ID, "title", article.ArticleTitle)
@@ -301,9 +306,10 @@ func (s *ArticleService) DeleteArticle(ctx context.Context, id uint) error {
 		// 清除标签关联
 		tx.Model(&article).Association("Tags").Clear()
 
-		// 减少分类计数
-		tx.Model(&model.Category{}).Where("id = ?", article.CategoryID).
-			UpdateColumn("article_count", gorm.Expr("GREATEST(article_count - 1, 0)"))
+		// 减少分类计数（使用 Redis）
+		if article.CategoryID != nil && s.statsService != nil {
+			s.statsService.DecrementCategoryArticleCount(ctx, *article.CategoryID)
+		}
 
 		slog.Info("文章已软删除", "article_id", id)
 		return nil
@@ -458,13 +464,16 @@ func (s *ArticleService) GetTopArticles(ctx context.Context, limit int) ([]dto.A
 	return list, nil
 }
 
-// IncrementViewCount 增加浏览量 (Redis缓存 + 异步刷写DB)
+// IncrementViewCount 增加浏览量 (使用 Redis)
 func (s *ArticleService) IncrementViewCount(ctx context.Context, articleID uint) {
-	// TODO: P0-7 实现Redis ZSet浏览量排行后, 改为 Redis.Incr + 定时批量写入DB
-	s.db.WithContext(ctx).
-		Model(&model.Article{}).
-		Where("id = ?", articleID).
-		UpdateColumn("view_count", gorm.Expr("view_count + 1"))
+	if s.statsService != nil {
+		// 异步执行，不阻塞主流程
+		go func() {
+			if err := s.statsService.IncrementArticleView(context.Background(), articleID); err != nil {
+				slog.Error("增加文章浏览量失败", "article_id", articleID, "error", err)
+			}
+		}()
+	}
 }
 
 // ===== DTO转换方法 =====
@@ -473,6 +482,15 @@ func (s *ArticleService) toArticleDTO(a *model.Article) *dto.ArticleDTO {
 	tags := make([]dto.TagDTO, len(a.Tags))
 	for i, t := range a.Tags {
 		tags[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
+	}
+
+	// 从 Redis 获取统计信息
+	var viewCount uint64
+	var likeCount int64
+	if s.statsService != nil {
+		ctx := context.Background()
+		viewCount, _ = s.statsService.GetArticleView(ctx, a.ID)
+		likeCount, _ = s.statsService.GetArticleLikeCount(ctx, a.ID)
 	}
 
 	dto := &dto.ArticleDTO{
@@ -485,9 +503,9 @@ func (s *ArticleService) toArticleDTO(a *model.Article) *dto.ArticleDTO {
 		IsFeatured:     a.IsFeatured,
 		Status:         a.Status,
 		Type:           a.Type,
-		ViewCount:      a.ViewCount,
-		LikeCount:      a.LikeCount,
-		CategoryID:     a.CategoryID,
+		ViewCount:      viewCount,
+		LikeCount:      likeCount,
+		CategoryID:     getCategoryID(a.CategoryID),
 		Tags:           tags,
 		CreateTime:     a.CreateTime,
 	}
@@ -508,6 +526,13 @@ func (s *ArticleService) toArticleCardDTO(a *model.Article) dto.ArticleCardDTO {
 		tags[i] = dto.TagDTO{ID: t.ID, TagName: t.TagName}
 	}
 
+	// 从 Redis 获取浏览量
+	var viewCount uint64
+	if s.statsService != nil {
+		ctx := context.Background()
+		viewCount, _ = s.statsService.GetArticleView(ctx, a.ID)
+	}
+
 	card := dto.ArticleCardDTO{
 		ID:           a.ID,
 		ArticleTitle: a.ArticleTitle,
@@ -515,7 +540,7 @@ func (s *ArticleService) toArticleCardDTO(a *model.Article) dto.ArticleCardDTO {
 		IsTop:        a.IsTop,
 		IsFeatured:   a.IsFeatured,
 		Status:       a.Status,
-		ViewCount:    a.ViewCount,
+		ViewCount:    viewCount,
 		Tags:         tags,
 		CreateTime:   a.CreateTime,
 	}
@@ -565,3 +590,11 @@ func (s *ArticleService) ImportArticles(ctx context.Context, userID uint, conten
 }
 
 func int8Ptr(v int8) *int8 { return &v }
+
+// getCategoryID 安全获取分类ID（处理指针类型）
+func getCategoryID(categoryID *uint) uint {
+	if categoryID == nil {
+		return 0
+	}
+	return *categoryID
+}

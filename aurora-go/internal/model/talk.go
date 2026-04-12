@@ -13,7 +13,6 @@ type Talk struct {
 	Content    string    `gorm:"type:longtext;not null" json:"content"`
 	IsTop      int8      `gorm:"default:0" json:"isTop"`
 	Status     int8      `gorm:"default:1" json:"status"`       // 1公开 2私密
-	LikeCount  int64     `gorm:"default:0" json:"likeCount"`
 	CreateTime time.Time `json:"createTime"`
 
 	// 关联

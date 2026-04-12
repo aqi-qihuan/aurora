@@ -10,11 +10,6 @@ import (
 type Category struct {
 	ID           uint       `gorm:"primarykey" json:"id"`
 	CategoryName string     `gorm:"size:20;not null;uniqueIndex" json:"categoryName"`
-	Alias        string     `gorm:"size:50" json:"alias"`                    // URL别名
-	Description  string     `gorm:"size:500" json:"description"`              // 描述
-	ParentID     uint       `gorm:"index" json:"parentId"`                   // 父分类ID, 0=顶级
-	Sort         int        `gorm:"default:0" json:"sort"`                    // 排序
-	ArticleCount int        `gorm:"default:0" json:"articleCount"`
 	CreateTime   time.Time  `json:"createTime"`
 	UpdateTime   time.Time  `json:"updateTime"`
 

@@ -1,4 +1,4 @@
-﻿package scheduler
+package scheduler
 
 import (
 	"context"
@@ -30,8 +30,8 @@ func NewClearCacheJob(rdb *redis.Client) *ClearCacheJob {
 func (j *ClearCacheJob) Run(ctx context.Context) error {
 	// Step 1: 删除独立访客 Set (对标Java redisService.del(UNIQUE_VISITOR))
 	result1, err := j.rdb.Del(ctx,
-		constant.UniqueVisitorPrefix,
-		constant.VisitorAreaPrefix,
+		constant.UniqueVisitor,
+		constant.VisitorArea,
 	).Result()
 	if err != nil {
 		return fmt.Errorf("failed to clear cache keys: %w", err)
@@ -39,7 +39,7 @@ func (j *ClearCacheJob) Run(ctx context.Context) error {
 
 	slog.Info("Redis缓存清理成功",
 		"deleted_keys", result1,
-		"keys", []string{constant.UniqueVisitorPrefix, constant.VisitorAreaPrefix},
+		"keys", []string{constant.UniqueVisitor, constant.VisitorArea},
 	)
 	return nil
 }

@@ -26,7 +26,7 @@ func JWTAuth() gin.HandlerFunc {
 		authHeader := c.GetHeader(constant.TokenHeader)
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
+				"flag":    false,
 				"message": "未登录或Token已过期",
 			})
 			return
@@ -35,7 +35,7 @@ func JWTAuth() gin.HandlerFunc {
 		tokenString := service.ExtractToken(authHeader)
 		if tokenString == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
+				"flag":    false,
 				"message": "认证格式错误，请使用 Bearer <token>",
 			})
 			return
@@ -43,6 +43,9 @@ func JWTAuth() gin.HandlerFunc {
 
 		// 将token存入context，后续handler可使用
 		c.Set("token", tokenString)
+		
+		// 临时方案：如果Token是32位随机字符串，从Session中获取用户ID
+		// TODO: P0-6 替换为完整的JWT解析逻辑
 		c.Next()
 	}
 }

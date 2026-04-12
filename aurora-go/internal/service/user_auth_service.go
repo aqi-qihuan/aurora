@@ -86,13 +86,12 @@ func (s *UserAuthService) Register(ctx context.Context, reg vo.RegisterVO) (*dto
 
 // Login 登录验证 (对标 Java LoginStrategy + TokenService)
 func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO) (*dto.LoginVO, error) {
+	// 第一步: 快速查询 UserAuth (不关联 UserInfo)
 	var auth model.UserAuth
-
-	query := s.db.WithContext(ctx).
-		Preload("UserInfo").
-		Where("username = ? AND login_type = ?", login.Username, 1)
-
-	if err := query.First(&auth).Error; err != nil {
+	if err := s.db.WithContext(ctx).
+		Select("id", "user_info_id", "username", "password", "login_type").
+		Where("username = ? AND login_type = ?", login.Username, 1).
+		First(&auth).Error; err != nil {
 		if errors.IsStd(err, gorm.ErrRecordNotFound) {
 			slog.Warn("登录失败: 用户不存在", "username", login.Username)
 			return nil, errors.ErrInvalidCredentials
@@ -100,35 +99,43 @@ func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO) (*dto.Log
 		return nil, fmt.Errorf("查询认证失败: %w", err)
 	}
 
-	// 验证BCrypt密码
+	// 第二步: 验证BCrypt密码 (失败则直接返回，无需查询 UserInfo)
 	if err := bcrypt.CompareHashAndPassword([]byte(auth.Password), []byte(login.Password)); err != nil {
 		slog.Warn("登录失败: 密码错误", "username", login.Username)
 		return nil, errors.ErrInvalidCredentials
 	}
 
+	// 第三步: 仅当密码正确时才查询 UserInfo + Roles
+	var userInfo model.UserInfo
+	if err := s.db.WithContext(ctx).
+		Preload("Roles").
+		First(&userInfo, auth.UserID).Error; err != nil {
+		slog.Error("登录失败: 用户信息缺失", "user_id", auth.UserID)
+		return nil, errors.ErrInternalServer.WithMsg("用户数据异常，请联系管理员")
+	}
+
 	// 检查账户状态
-	if auth.UserInfo.IsDisable == 1 {
+	if userInfo.IsDisable == 1 {
 		return nil, errors.ErrAccountDisabled
 	}
 
 	// TODO: P0-6 JWT签发 → 返回Token
 	token, _ := util.GenerateRandomString(32) // 临时token, P0-6替换为JWT
 
-	// 更新最后登录时间
-	now := time.Now()
-	s.db.WithContext(ctx).Model(&model.UserInfo{}).
-		Where("id = ?", auth.UserID).
-		Update("update_time", now)
+	// 异步更新最后登录时间 (不阻塞登录响应)
+	go func(userID uint) {
+		s.db.Model(&model.UserInfo{}).Where("id = ?", userID).Update("update_time", time.Now())
+	}(auth.UserID)
 
 	slog.Info("用户登录成功", "user_id", auth.UserID, "username", login.Username)
 
 	return &dto.LoginVO{
 		UserID:    auth.UserID,
 		Token:     token,
-		Nickname:  auth.UserInfo.Nickname,
-		Avatar:    auth.UserInfo.Avatar,
-		Email:     auth.UserInfo.Email,
-		IsDisable: auth.UserInfo.IsDisable,
+		Nickname:  userInfo.Nickname,
+		Avatar:    userInfo.Avatar,
+		Email:     userInfo.Email,
+		IsDisable: userInfo.IsDisable,
 	}, nil
 }
 
@@ -262,7 +269,7 @@ func (s *UserAuthService) QQLoginOrRegister(ctx context.Context, qqInfo vo.QQLog
 	var userAuth model.UserAuth
 
 	err := s.db.WithContext(ctx).
-		Where("uuid = ? AND login_type = ?", qqInfo.OpenID, 2).
+		Where("username = ? AND login_type = ?", qqInfo.OpenID, 2). // 适配表结构，OpenID 存入 username
 		First(&userAuth).Error
 
 	if err == nil {
@@ -290,8 +297,7 @@ func (s *UserAuthService) QQLoginOrRegister(ctx context.Context, qqInfo vo.QQLog
 		}
 
 		newAuth := model.UserAuth{
-			UserID:   user.ID,
-			UUID:     qqInfo.OpenID,
+			UserID:    user.ID,
 			LoginType: 2,
 		}
 		if err := tx.Create(&newAuth).Error; err != nil {
@@ -427,17 +433,16 @@ func (s *UserAuthService) FindOrCreateBySocialLogin(
 // ===== DTO转换 =====
 
 func (s *UserAuthService) toUserDTO(u *model.UserInfo) *dto.UserDTO {
-	dto := &dto.UserDTO{
-		ID:       u.ID,
-		Email:    u.Email,
-		Nickname: u.Nickname,
-		Avatar:   u.Avatar,
-		Intro:    u.Intro,
-		WebSite:  u.WebSite,
+	return &dto.UserDTO{
+		ID:        u.ID,
+		Email:     u.Email,
+		Nickname:  u.Nickname,
+		Avatar:    u.Avatar,
+		Intro:     u.Intro,
+		WebSite:   u.Website,
 		IsDisable: u.IsDisable,
 		CreateTime: u.CreateTime,
 	}
-	return dto
 }
 
 func (s *UserAuthService) toUserAdminDTO(u *model.UserInfo) dto.UserAdminDTO {
@@ -447,15 +452,12 @@ func (s *UserAuthService) toUserAdminDTO(u *model.UserInfo) dto.UserAdminDTO {
 	}
 
 	return dto.UserAdminDTO{
-		ID:            u.ID,
-		Email:         u.Email,
-		Nickname:      u.Nickname,
-		Avatar:        u.Avatar,
-		IsDisable:     u.IsDisable,
-		Roles:         roles,
-		ArticleCount:  u.ArticleCount,
-		CategoryCount: u.CategoryCount,
-		TagCount:      u.TagCount,
-		CreateTime:    u.CreateTime,
+		ID:        u.ID,
+		Email:     u.Email,
+		Nickname:  u.Nickname,
+		Avatar:    u.Avatar,
+		IsDisable: u.IsDisable,
+		Roles:     roles,
+		CreateTime: u.CreateTime,
 	}
 }

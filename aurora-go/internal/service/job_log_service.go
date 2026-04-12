@@ -55,14 +55,17 @@ func (s *JobLogService) ListJobLogs(ctx context.Context, cond dto.ConditionVO, p
 	list := make([]dto.JobLogDTO, len(logs))
 	for i, l := range logs {
 		list[i] = dto.JobLogDTO{
-			ID:        l.ID,
-			JobID:     l.JobID,
-			JobName:   l.JobName,
-			JobGroup:  l.JobGroup,
-			Status:    l.Status,
-			Duration:  l.Duration,
-			ErrorMsg:  l.ErrorMsg,
-			CreateTime: l.CreateTime,
+			ID:            l.ID,
+			JobID:         l.JobID,
+			JobName:       l.JobName,
+			JobGroup:      l.JobGroup,
+			InvokeTarget:  l.InvokeTarget,
+			JobMessage:    l.JobMessage,
+			Status:        l.Status,
+			ExceptionInfo: l.ExceptionInfo,
+			StartTime:     l.StartTime,
+			EndTime:       l.EndTime,
+			CreateTime:    l.CreateTime,
 		}
 	}
 

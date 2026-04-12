@@ -1,10 +1,11 @@
-﻿package scheduler
+package scheduler
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 
@@ -51,8 +52,17 @@ func (j *UserAreaJob) Run(ctx context.Context) error {
 
 	// Step 2: 提取省份并分组计数 (对标Java Stream.map→groupingBy→counting)
 	areaMap := make(map[string]int64)
+	
+	// 调试：先输出第一条原始数据，确认数据库格式
+	if len(userAuths) > 0 {
+		firstIP := userAuths[0].IPSource
+		parts := strings.Split(firstIP, "|")
+		slog.Info("[DEBUG] 数据库IPSource格式", "raw", firstIP, "parts_count", len(parts), "parts", parts)
+	}
+	
 	for _, ua := range userAuths {
 		province := util.GetProvince(ua.IPSource)
+		
 		if province == "" || province == "未知" {
 			province = "未知"
 		}
@@ -74,7 +84,8 @@ func (j *UserAreaJob) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to marshal user area list: %w", err)
 	}
 
-	if err := j.rdb.Set(ctx, constant.UserAreaPrefix, jsonBytes, 0).Err(); err != nil {
+	// 重要：将 []byte 转换为 string，避免 Redis 双重序列化
+	if err := j.rdb.Set(ctx, constant.UserArea, string(jsonBytes), 0).Err(); err != nil {
 		return fmt.Errorf("failed to save user area to Redis: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package handler
 import (
 	"strconv"
 
+	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/errors"
@@ -45,7 +46,17 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 			uid = uint(id)
 		}
 	}
-	tree, err := h.svc.GetUserMenus(c.Request.Context(), uid)
+
+	// 临时方案：如果无法获取用户ID（使用临时Token而非JWT），则返回所有可见菜单
+	var tree []dto.MenuTreeDTO
+	var err error
+	if uid > 0 {
+		tree, err = h.svc.GetUserMenus(c.Request.Context(), uid)
+	} else {
+		// 返回所有未隐藏的菜单
+		tree, err = h.svc.GetMenuTree(c.Request.Context())
+	}
+
 	if err != nil {
 		util.ResponseError(c, err)
 		return

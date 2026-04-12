@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
@@ -154,11 +155,16 @@ func (s *JobService) RunJobNow(ctx context.Context, id uint) (*model.JobLog, err
 		return nil, errors.ErrJobNotFound
 	}
 
+	now := time.Now()
 	log := model.JobLog{
-		JobID:   job.ID,
-		JobName: job.JobName,
-		JobGroup: job.JobGroup,
-		Status:  2, // 执行中
+		JobID:        job.ID,
+		JobName:      job.JobName,
+		JobGroup:     job.JobGroup,
+		InvokeTarget: job.InvokeTarget,
+		Status:       0, // 正常
+		StartTime:    &now,
+		EndTime:      &now,
+		JobMessage:   "手动触发执行",
 	}
 
 	slog.Info("手动触发任务执行", "id", id, "name", job.JobName)

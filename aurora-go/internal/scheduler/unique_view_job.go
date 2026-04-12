@@ -1,4 +1,4 @@
-﻿package scheduler
+package scheduler
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func NewUniqueViewJob(db *gorm.DB, rdb *redis.Client) *UniqueViewJob {
 // Run 执行统计任务 (实现 JobHandler 接口)
 func (j *UniqueViewJob) Run(ctx context.Context) error {
 	// Step 1: 从Redis Set获取独立访客数量 (对标Java redisService.sSize(UNIQUE_VISITOR))
-	count, err := j.rdb.SCard(ctx, constant.UniqueVisitorPrefix).Result()
+	count, err := j.rdb.SCard(ctx, constant.UniqueVisitor).Result()
 	if err != nil && err != redis.Nil {
 		return fmt.Errorf("failed to get unique visitor count: %w", err)
 	}

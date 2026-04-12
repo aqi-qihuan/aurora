@@ -46,7 +46,14 @@ func (h *ArticleHandler) GetArticleById(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
-	result, err := h.svc.GetArticleByID(c.Request.Context(), uint(id))
+
+	articleID := uint(id)
+	
+	// 先增加浏览量（异步，不阻塞响应）
+	h.svc.IncrementViewCount(c.Request.Context(), articleID)
+
+	// 获取文章详情
+	result, err := h.svc.GetArticleByID(c.Request.Context(), articleID)
 	if err != nil {
 		util.ResponseError(c, err)
 		return

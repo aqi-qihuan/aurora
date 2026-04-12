@@ -10,22 +10,19 @@ import (
 type Article struct {
 	ID             uint           `gorm:"primarykey" json:"id"`
 	UserID         uint           `gorm:"index;not null" json:"userId"`
-	CategoryID     uint           `gorm:"index" json:"categoryId"`
+	CategoryID     *uint          `gorm:"index" json:"categoryId"`
 	ArticleCover   string         `gorm:"size:1024" json:"articleCover"`
-	ArticleTitle   string         `gorm:"size:200;not null;index" json:"articleTitle"`
-	ArticleContent string         `gorm:"type:longtext" json:"articleContent"`
-	ArticleHTML    string         `gorm:"type:longtext" json:"articleHtml"` // 渲染后的HTML
+	ArticleTitle   string         `gorm:"size:50;not null;index" json:"articleTitle"`
+	ArticleContent string         `gorm:"type:longtext;not null" json:"articleContent"`
 	IsTop          int8           `gorm:"default:0;index" json:"isTop"`       // 0否 1是
 	IsFeatured     int8           `gorm:"default:0;index" json:"isFeatured"`   // 是否推荐
 	IsDelete       int8           `gorm:"default:0;index" json:"isDelete"`     // 软删除标记
-	Status         int8           `gorm:"default:1;index" json:"status"`      // 0草稿 1公开 2密码 3加密
+	Status         int8           `gorm:"default:1;index" json:"status"`      // 1公开 2私密 3草稿
 	Type           int8           `gorm:"default:1" json:"type"`              // 1原创 2转载 3翻译
-	Password       string         `gorm:"size:64" json:"password"`            // 密码保护文章的密码
-	OriginalURL    string         `gorm:"size:500" json:"originalUrl"`        // 原文地址(转载)
-	ViewCount      uint64         `gorm:"default:0" json:"viewCount"`         // 浏览量(缓存)
-	LikeCount      int64          `gorm:"default:0" json:"likeCount"`
+	Password       string         `gorm:"size:255" json:"password"`            // 访问密码
+	OriginalURL    string         `gorm:"size:255" json:"originalUrl"`        // 原文链接
 	CreateTime     time.Time      `json:"createTime"`
-	UpdateTime     time.Time      `json:"updateTime"`
+	UpdateTime     *time.Time     `json:"updateTime,omitempty"`
 
 	// 关联 (不存入数据库)
 	Tags       []Tag       `gorm:"many2many:t_article_tag;" json:"tags,omitempty"`
@@ -41,13 +38,13 @@ func (Article) TableName() string {
 func (a *Article) BeforeCreate(tx *gorm.DB) error {
 	now := time.Now()
 	a.CreateTime = now
-	a.UpdateTime = now
 	return nil
 }
 
 // BeforeUpdate GORM钩子: 更新时自动刷新时间
 func (a *Article) BeforeUpdate(tx *gorm.DB) error {
-	a.UpdateTime = time.Now()
+	now := time.Now()
+	a.UpdateTime = &now
 	return nil
 }
 

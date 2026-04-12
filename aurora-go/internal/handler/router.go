@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -163,6 +163,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	// --- 用户管理（UserAuthController + UserInfoController） ---
 	rg.GET("/users", r.UserAuthHandler.ListUsers)
 	rg.GET("/users/area", r.UserAuthHandler.ListUserAreas)
+	rg.POST("/users/area/trigger", r.UserAuthHandler.TriggerUserAreaStats) // 手动触发统计（测试用）
 	rg.PUT("/users/password", r.UserAuthHandler.UpdateAdminPassword)
 	rg.PUT("/users/role", r.UserAuthHandler.UpdateUserRole)
 	rg.PUT("/users/disable", r.UserAuthHandler.UpdateUserDisable)

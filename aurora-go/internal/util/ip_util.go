@@ -58,12 +58,33 @@ func GetCity(region string) string {
 }
 
 // GetProvince 从 IPRegion 中提取省份
+// 对标 Java IpUtil.getIpProvince()
+// ipSource 格式: 国家|区域|省份|城市|运营商 (ip2region 原始输出)
+// Java 的 getIpSource() 会先去掉 "|0" 和 "0|"，所以格式可能变为:
+//   - 中国|四川|成都市|电信 (区域=省名)
+//   - 中国|0|四川|南阳市|电信 (区域=0, 省份=省名)
+//   - 中国|南阳市|电信 (无省份信息，区域=城市名)
 func GetProvince(region string) string {
-	parts := strings.Split(region, "|")
-	if len(parts) >= 3 && parts[2] != "0" && parts[2] != "" {
-		province := strings.TrimSuffix(parts[2], "省")
-		return province
+	if region == "" {
+		return "未知"
 	}
+	parts := strings.Split(region, "|")
+	
+	// 策略1: 如果索引1以"省"结尾，取之（对标 Java strings[1].endsWith("省")）
+	if len(parts) > 1 && parts[1] != "" && parts[1] != "0" && strings.HasSuffix(parts[1], "省") {
+		return strings.TrimSuffix(parts[1], "省")
+	}
+	
+	// 策略2: 检查索引2（省份字段），排除以"市"结尾的
+	if len(parts) > 2 && parts[2] != "" && parts[2] != "0" && !strings.HasSuffix(parts[2], "市") {
+		return strings.TrimSuffix(parts[2], "省")
+	}
+	
+	// 策略3: 回退到索引1（区域），但排除城市名和国家名
+	if len(parts) > 1 && parts[1] != "" && parts[1] != "0" && !strings.HasSuffix(parts[1], "市") && parts[1] != "中国" {
+		return parts[1]
+	}
+	
 	return "未知"
 }
 

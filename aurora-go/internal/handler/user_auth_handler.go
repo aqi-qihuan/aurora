@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"encoding/json"
+	"log/slog"
 	"strconv"
 
+	"github.com/aurora-go/aurora/internal/constant"
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/scheduler"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
@@ -41,12 +45,19 @@ func (h *UserAuthHandler) Register(c *gin.Context) {
 // POST /api/auth/login
 func (h *UserAuthHandler) Login(c *gin.Context) {
 	var loginVO vo.LoginVO
-	if err := c.ShouldBindJSON(&loginVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+
+	// 使用ShouldBind自动检测Content-Type,支持JSON和表单两种格式
+	if err := c.ShouldBind(&loginVO); err != nil {
+		slog.Warn("登录请求参数解析失败",
+			"error", err.Error(),
+			"content_type", c.GetHeader("Content-Type"))
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("用户名或密码不能为空"))
 		return
 	}
+
 	result, err := h.registry.UserAuth.Login(c.Request.Context(), loginVO)
 	if err != nil {
+		slog.Warn("登录失败", "username", loginVO.Username, "error", err.Error())
 		util.ResponseError(c, err)
 		return
 	}
@@ -175,11 +186,119 @@ func (h *UserAuthHandler) ListUsers(c *gin.Context) {
 
 // ListUserAreas 获取用户区域分布
 // GET /api/admin/users/area
+// 对标 Java UserAuthServiceImpl.listUserAreas()
 func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
-	// 返回用户区域分布数据
-	util.ResponseSuccess(c, []interface{}{})
+	
+	rdb := h.registry.RDB
+	if rdb == nil {
+		util.ResponseSuccess(c, []interface{}{})
+		return
+	}
+	
+	ctx := c.Request.Context()
+	
+	// 根据 type 参数选择不同的数据源 (对标Java switch getUserAreaType(conditionVO.getType()))
+	// type=1: 用户 - 从 user_area (String JSON) 读取
+	// type=2: 游客 - 从 visitor_area (Hash) 读取
+	var result []map[string]interface{}
+	
+	// 处理指针类型，默认为 1（用户）
+	areaType := int8(1)
+	if condition.Type != nil {
+		areaType = *condition.Type
+	}
+	
+	switch areaType {
+	case 1: // 用户
+		data, err := rdb.Get(ctx, constant.UserArea).Bytes()
+		if err != nil {
+			if err.Error() != "redis: nil" {
+				slog.Warn("获取用户地域分布失败", "error", err.Error())
+			} else {
+				slog.Info("Redis中user_area不存在，可能定时任务未运行")
+			}
+			util.ResponseSuccess(c, []interface{}{})
+			return
+		}
+		
+		slog.Info("Redis中user_area原始数据", "data", string(data))
+		
+		// 解析 JSON 数组
+		var areaList []struct {
+			Name  string `json:"name"`
+			Value int64  `json:"value"`
+		}
+		if err := json.Unmarshal(data, &areaList); err != nil {
+			slog.Warn("解析用户地域分布失败", "error", err.Error(), "raw_data", string(data))
+			util.ResponseSuccess(c, []interface{}{})
+			return
+		}
+		
+		slog.Info("解析用户地域分布成功", "count", len(areaList))
+		
+		// 转换为前端需要的格式: {province: "北京", count: 5}
+		result = make([]map[string]interface{}, len(areaList))
+		for i, item := range areaList {
+			result[i] = map[string]interface{}{
+				"province": item.Name,
+				"count":    item.Value,
+			}
+		}
+		
+	case 2: // 游客
+		// 从 Hash 读取所有字段 (对标Java redisService.hGetAll(VISITOR_AREA))
+		visitorArea, err := rdb.HGetAll(ctx, constant.VisitorArea).Result()
+		if err != nil {
+			slog.Warn("获取访客地域分布失败", "error", err.Error())
+			util.ResponseSuccess(c, []interface{}{})
+			return
+		}
+		
+		// 转换为前端需要的格式
+		result = make([]map[string]interface{}, 0, len(visitorArea))
+		for province, countStr := range visitorArea {
+			var count int64
+			// 使用 strconv 替代 Sscanf，更安全
+			if parsedCount, parseErr := strconv.ParseInt(countStr, 10, 64); parseErr == nil {
+				count = parsedCount
+			} else {
+				slog.Warn("解析访客数量失败", "province", province, "value", countStr)
+				continue
+			}
+			result = append(result, map[string]interface{}{
+				"province": province,
+				"count":    count,
+			})
+		}
+		
+	default:
+		util.ResponseSuccess(c, []interface{}{})
+		return
+	}
+	
+	util.ResponseSuccess(c, result)
+}
+
+// TriggerUserAreaStats 手动触发用户地域统计（用于测试）
+// POST /api/admin/users/area/trigger
+func (h *UserAuthHandler) TriggerUserAreaStats(c *gin.Context) {
+	if h.registry.RDB == nil || h.registry.DB == nil {
+		util.ResponseError(c, errors.ErrInternalServer.WithMsg("Redis或数据库未初始化"))
+		return
+	}
+	
+	ctx := c.Request.Context()
+	job := scheduler.NewUserAreaJob(h.registry.DB, h.registry.RDB)
+	
+	if err := job.Run(ctx); err != nil {
+		slog.Error("手动触发用户地域统计失败", "error", err.Error())
+		util.ResponseError(c, errors.ErrInternalServer.WithMsg(err.Error()))
+		return
+	}
+	
+	util.ResponseSuccess(c, "用户地域统计已更新")
 }
 
 // UpdateAdminPassword 修改管理员密码
@@ -292,7 +411,7 @@ func (h *UserAuthHandler) BindUserEmail(c *gin.Context) {
 // PUT /api/users/subscribe
 func (h *UserAuthHandler) UpdateUserSubscribe(c *gin.Context) {
 	var body struct {
-		UserID     uint `json:"userId"`
+		UserID      uint `json:"userId"`
 		IsSubscribe int8 `json:"isSubscribe"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {

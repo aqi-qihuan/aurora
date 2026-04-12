@@ -3,15 +3,15 @@ package constant
 // RedisKey Redis Key 常量定义 (对齐Java版 RedisConstant)
 const (
 	// ===== 文章相关 =====
-	ArticleViewsCount    = "article:views:count:"   // 单篇文章浏览量 (String)
-	ArticleAccess        = "article:access:"         // 密码文章访问权限 (Set)
+	ArticleViewsCount    = "article_views_count:"  // 单篇文章浏览量 (String)
+	ArticleAccess        = "article_access:"         // 密码文章访问权限 (Set)
 
-// ===== 博客统计 =====
-BlogTotalViews       = "blog:total_views"          // 总浏览量 (String)
-UniqueVisitorPrefix  = "unique_visitor"             // 每日独立访客 (Set, key含日期)
-VisitorAreaPrefix    = "visitor_area"               // 访客地域分布 (Set/Hash)
-UserAreaPrefix       = "user_area"                  // 用户地域分布 (Hash, JSON序列化)
-ArticleViewsRanking = "article:views:ranking"      // 文章浏览排行 (ZSet, score=views)
+	// ===== 博客统计 =====
+	BlogViewsCount       = "blog_views_count"         // 总浏览量 (String, 对标Java BLOG_VIEWS_COUNT)
+	UniqueVisitor        = "unique_visitor"           // 每日独立访客 (Set, 对标Java UNIQUE_VISITOR)
+	VisitorArea          = "visitor_area"             // 访客地域分布 (Hash, 对标Java VISITOR_AREA)
+	UserArea             = "user_area"                // 用户地域分布 (String JSON, 对标Java USER_AREA)
+	ArticleViewsRanking  = "article_views_count"      // 文章浏览排行 (ZSet, 对标Java ARTICLE_VIEWS_COUNT)
 
 	// ===== 用户会话 =====
 	LoginUser            = "login:user:"                // 登录用户Session (Hash)
@@ -23,9 +23,9 @@ ArticleViewsRanking = "article:views:ranking"      // 文章浏览排行 (ZSet, 
 	ArticleArchiveCache  = "article:archive:"             // 文章归档缓存 (Hash, TTL=1h)
 
 	// ===== 站点数据 =====
-	SiteViewCount        = "site:view_count"             // 站点总访问量
-	TodayViewCount       = "today:view_count"            // 今日访问量
-	UniqueViewToday      = "unique_view:today"            // 今日独立访客数
+	SiteViewCount        = "site_view_count"          // 站点总访问量
+	TodayViewCount       = "today_view_count"         // 今日访问量
+	UniqueViewToday      = "unique_view_today"        // 今日独立访客数
 )
 
 // RabbitMQ 常量
