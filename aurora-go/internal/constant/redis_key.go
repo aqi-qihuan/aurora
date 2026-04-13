@@ -13,7 +13,7 @@ const (
 	UserArea             = "user_area"                // 用户地域分布 (String JSON, 对标Java USER_AREA)
 
 	// ===== 用户会话 =====
-	LoginUser            = "login:user:"                // 登录用户Session (Hash)
+	LoginUser            = "login_user"                 // 登录用户Session (Hash, 对标Java LOGIN_USER)
 	UserAuthCode         = "user:auth_code:"            // 验证码 (String, TTL=5min)
 	RegisterCodePrefix   = "register:code:"             // 注册验证码
 

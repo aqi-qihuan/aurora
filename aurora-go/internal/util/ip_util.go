@@ -3,32 +3,65 @@ package util
 import (
 	"net"
 	"strings"
+
+	"github.com/lionsoul2014/ip2region/binding/golang/xdb"
 )
 
-// GetClientIP 从请求上下文中提取真实客户端 IP
+// GetClientIP 从Gin Context中提取真实客户端 IP
 // 支持: X-Forwarded-For / X-Real-Ip / RemoteAddr
-func GetClientIP(remoteAddr, xForwardedFor, xRealIP string) string {
-	if xForwardedFor != "" {
-		parts := strings.Split(xForwardedFor, ",")
-		if len(parts) > 0 && parts[0] != "" {
-			return strings.TrimSpace(parts[0])
+func GetClientIP(c interface{}) string {
+	// 使用类型断言获取gin.Context
+	type GinContext interface {
+		GetHeader(key string) string
+		RemoteIP() net.IP
+	}
+	
+	if ctx, ok := c.(GinContext); ok {
+		// 优先从X-Forwarded-For获取
+		if xff := ctx.GetHeader("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			if len(parts) > 0 && parts[0] != "" {
+				return strings.TrimSpace(parts[0])
+			}
+		}
+		
+		// 其次从X-Real-Ip获取
+		if xri := ctx.GetHeader("X-Real-Ip"); xri != "" {
+			return strings.TrimSpace(xri)
+		}
+		
+		// 最后从RemoteIP获取
+		if remoteIP := ctx.RemoteIP(); remoteIP != nil {
+			return remoteIP.String()
 		}
 	}
-	if xRealIP != "" {
-		return xRealIP
-	}
-	if remoteAddr != "" {
-		host, _, err := net.SplitHostPort(remoteAddr)
-		if err == nil {
-			return host
-		}
-		return remoteAddr
-	}
+	
 	return "127.0.0.1"
 }
 
-// GetIPRegion 获取IP归属地信息（简化版，不依赖ip2region库）
-// 返回格式: 国家|区域|省份|城市|ISP
+// ip2region 全局查询器 (v3版本使用 .xdb 格式)
+var xdbSearcher *xdb.Searcher
+
+// InitIP2Region 初始化 ip2region 查询器 (应用启动时调用)
+func InitIP2Region(dbFile string) error {
+	// 加载 .xdb 文件到内存
+	data, err := xdb.LoadContentFromFile(dbFile)
+	if err != nil {
+		return err
+	}
+	
+	// 创建基于内存的查询器 (速度快，适合生产环境)
+	// v3版本需要指定IP版本（IPv4）
+	xdbSearcher, err = xdb.NewWithBuffer(xdb.IPv4, data)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
+
+// GetIPRegion 获取IP归属地信息 (集成 ip2region)
+// 返回格式: 国家|区域|省份|城市|ISP (对标Java版)
 func GetIPRegion(ip string) string {
 	ip = strings.TrimPrefix(ip, "::ffff:")
 	if ip == "127.0.0.1" || ip == "localhost" || ip == "::1" {
@@ -37,7 +70,16 @@ func GetIPRegion(ip string) string {
 	if ip == "0.0.0.0" || strings.HasPrefix(ip, "192.168.") || strings.HasPrefix(ip, "10.") || strings.HasPrefix(ip, "172.") {
 		return "内网IP"
 	}
-	return "未知" // TODO: 集成ip2region后实现真实查询
+	
+	// 使用 ip2region 查询
+	if xdbSearcher != nil {
+		region, err := xdbSearcher.Search(ip)
+		if err == nil && region != "" {
+			return region
+		}
+	}
+	
+	return "未知"
 }
 
 // GetCity 从 IPRegion 字符串中提取城市名
@@ -108,4 +150,75 @@ func IsPrivateIP(ip string) bool {
 	return ip == "127.0.0.1" || ip == "localhost" || ip == "::1" ||
 		ip == "0.0.0.0" || strings.HasPrefix(ip, "192.168.") ||
 		strings.HasPrefix(ip, "10.") || strings.HasPrefix(ip, "172.")
+}
+
+// ParseBrowser 从 User-Agent 字符串中解析浏览器名称（对标Java UserAgentUtils）
+func ParseBrowser(userAgent string) string {
+	if userAgent == "" {
+		return "未知"
+	}
+	
+	ua := strings.ToLower(userAgent)
+	
+	// 检测顺序很重要，避免误判
+	if strings.Contains(ua, "edg/") || strings.Contains(ua, "edge/") {
+		return "Edge"
+	} else if strings.Contains(ua, "chrome/") && !strings.Contains(ua, "chromium/") {
+		return "Chrome"
+	} else if strings.Contains(ua, "firefox/") {
+		return "Firefox"
+	} else if strings.Contains(ua, "safari/") && !strings.Contains(ua, "chrome/") {
+		return "Safari"
+	} else if strings.Contains(ua, "opera/") || strings.Contains(ua, "opr/") {
+		return "Opera"
+	} else if strings.Contains(ua, "msie ") || strings.Contains(ua, "trident/") {
+		return "IE"
+	}
+	
+	return "其他"
+}
+
+// ParseOS 从 User-Agent 字符串中解析操作系统（对标Java UserAgentUtils）
+func ParseOS(userAgent string) string {
+	if userAgent == "" {
+		return "未知"
+	}
+	
+	ua := strings.ToLower(userAgent)
+	
+	// Windows 系列
+	if strings.Contains(ua, "windows nt 10.0") {
+		return "Windows 10"
+	} else if strings.Contains(ua, "windows nt 6.3") {
+		return "Windows 8.1"
+	} else if strings.Contains(ua, "windows nt 6.2") {
+		return "Windows 8"
+	} else if strings.Contains(ua, "windows nt 6.1") {
+		return "Windows 7"
+	} else if strings.Contains(ua, "windows nt 6.0") {
+		return "Windows Vista"
+	} else if strings.Contains(ua, "windows nt 5.1") || strings.Contains(ua, "windows xp") {
+		return "Windows XP"
+	} else if strings.Contains(ua, "windows") {
+		return "Windows"
+	}
+	
+	// macOS / Mac OS X
+	if strings.Contains(ua, "mac os x") {
+		return "macOS"
+	}
+	
+	// Linux 系列
+	if strings.Contains(ua, "linux") && strings.Contains(ua, "android") {
+		return "Android"
+	} else if strings.Contains(ua, "linux") {
+		return "Linux"
+	}
+	
+	// iOS / iPadOS
+	if strings.Contains(ua, "iphone") || strings.Contains(ua, "ipad") || strings.Contains(ua, "ipod") {
+		return "iOS"
+	}
+	
+	return "其他"
 }

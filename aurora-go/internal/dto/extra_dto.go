@@ -20,16 +20,37 @@ type UserDTO struct {
 }
 
 type UserAdminDTO struct {
-	ID            uint     `json:"id"`
-	Email         string   `json:"email"`
-	Nickname      string   `json:"nickname"`
-	Avatar        string   `json:"avatar"`
-	IsDisable     int8     `json:"isDisable"`
-	Roles         []string `json:"roles"`
-	ArticleCount  int      `json:"articleCount"`
-	CategoryCount int      `json:"categoryCount"`
-	TagCount      int      `json:"tagCount"`
-	CreateTime    time.Time `json:"createTime"`
+	ID            uint           `json:"id"`
+	UserInfoId    uint           `json:"userInfoId"`               // 对标Java: user_info_id
+	Avatar        string         `json:"avatar"`
+	Nickname      string         `json:"nickname"`
+	Roles         []UserRoleDTO  `json:"roles"`                     // 角色列表 (对标Java: List<UserRoleDTO>)
+	LoginType     int8           `json:"loginType"`                 // 登录类型 1邮箱 2QQ 3Gitee 4Github 5微博
+	IpAddress     string         `json:"ipAddress"`                 // 登录IP地址
+	IpSource      string         `json:"ipSource"`                  // IP归属地
+	CreateTime    *time.Time     `json:"createTime,omitempty"`      // 注册时间 (可为空)
+	LastLoginTime *time.Time     `json:"lastLoginTime,omitempty"`   // 最后登录时间（可为空）
+	IsDisable     int8           `json:"isDisable"`                 // 禁用状态 0正常 1禁用
+	Status        *int8          `json:"status,omitempty"`          // 用户状态
+}
+
+// UserRoleDTO 用户角色DTO（对标Java UserRoleDTO）
+type UserRoleDTO struct {
+	ID       uint   `json:"id"`
+	RoleName string `json:"roleName"`
+}
+
+// UserOnlineDTO 在线用户DTO（对标Java UserOnlineDTO）
+// 数据源：Redis login_user Hash（存储UserDetailsDTO）
+type UserOnlineDTO struct {
+	UserInfoId    uint       `json:"userInfoId"`    // 用户信息ID
+	Nickname      string     `json:"nickname"`       // 昵称
+	Avatar        string     `json:"avatar"`         // 头像
+	IpAddress     string     `json:"ipAddress"`      // 登录IP
+	IpSource      string     `json:"ipSource"`       // IP归属地
+	Browser       string     `json:"browser"`        // 浏览器
+	Os            string     `json:"os"`             // 操作系统
+	LastLoginTime *time.Time `json:"lastLoginTime"`  // 最后登录时间
 }
 
 // LoginVO 登录响应DTO (完全对标Java UserInfoDTO)

@@ -23,6 +23,7 @@ type Config struct {
 	Search    SearchConfig    `mapstructure:"search"`        // 搜索模式配置 (对标Java search.mode)
 	Upload    UploadConfig    `mapstructure:"upload"`        // 上传模式配置 (对标Java upload.mode)
 	QQ        QQConfig        `mapstructure:"qq"`         // QQ OAuth登录配置
+	IP2Region IP2RegionConfig `mapstructure:"ip2region"` // IP归属地数据库配置
 	Agent     AgentConfig     `mapstructure:"agent"`       // 可选Agent配置
 }
 
@@ -224,4 +225,10 @@ type QQConfig struct {
 	AppID         string `mapstructure:"app_id"`          // QQ应用AppID
 	CheckTokenURL string `mapstructure:"check_token_url"`  // Token校验URL
 	UserInfoURL   string `mapstructure:"user_info_url"`    // 用户信息获取URL
+}
+
+// IP2RegionConfig IP归属地数据库配置
+type IP2RegionConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`   // 是否启用IP归属地查询
+	DBFile   string `mapstructure:"db_file"`   // .xdb数据库文件路径
 }

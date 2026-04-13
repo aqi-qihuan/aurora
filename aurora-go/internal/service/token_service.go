@@ -60,7 +60,7 @@ func (s *TokenService) createTokenBySubject(subject string) (string, error) {
 }
 
 // RefreshToken 将用户详情写入Redis Hash (对标Java refreshToken)
-// Redis结构: login_user:{userId} → JSON序列化的UserDetailsDTO
+// Redis结构: login_user → Hash, field=userId, value=UserDetailsDTO JSON
 func (s *TokenService) RefreshToken(userDetails *dto.UserDetailsDTO) {
 	ctx := context.Background()
 	userDetails.ExpireTime = time.Now().Add(constant.TokenExpireTime * time.Second)
@@ -72,9 +72,15 @@ func (s *TokenService) RefreshToken(userDetails *dto.UserDetailsDTO) {
 		return
 	}
 
-	key := constant.LoginUser + userId
-	if err := s.rdb.Set(ctx, key, data, constant.TokenExpireTime*time.Second).Err(); err != nil {
-		s.logger.Error("写入Redis Session失败", "key", key, "error", err)
+	// 使用HSet存储到Hash (对标Java redisService.hSet(LOGIN_USER, userId, userDetails, EXPIRE_TIME))
+	if err := s.rdb.HSet(ctx, constant.LoginUser, userId, data).Err(); err != nil {
+		s.logger.Error("写入Redis Session失败", "key", constant.LoginUser, "field", userId, "error", err)
+		return
+	}
+
+	// 设置整个Hash的过期时间
+	if err := s.rdb.Expire(ctx, constant.LoginUser, constant.TokenExpireTime*time.Second).Err(); err != nil {
+		s.logger.Warn("设置Redis过期时间失败", "error", err)
 	}
 }
 
@@ -124,10 +130,9 @@ func (s *TokenService) GetUserDetailDTO(tokenString string) (*dto.UserDetailsDTO
 		return nil, fmt.Errorf("无效的user_id claim")
 	}
 
-	// 从Redis获取完整用户信息
+	// 从Redis Hash获取完整用户信息 (对标Java redisService.hGet(LOGIN_USER, userId))
 	ctx := context.Background()
-	key := constant.LoginUser + userIdStr
-	data, err := s.rdb.Get(ctx, key).Bytes()
+	data, err := s.rdb.HGet(ctx, constant.LoginUser, userIdStr).Bytes()
 	if err == redis.Nil {
 		return nil, nil // Session不存在(已过期或被删除)
 	}
@@ -146,8 +151,9 @@ func (s *TokenService) GetUserDetailDTO(tokenString string) (*dto.UserDetailsDTO
 // DeleteLoginUser 删除用户的登录Session (登出时调用) (对标Java delLoginUser)
 func (s *TokenService) DeleteLoginUser(userID uint) error {
 	ctx := context.Background()
-	key := constant.LoginUser + fmt.Sprintf("%d", userID)
-	return s.rdb.Del(ctx, key).Err()
+	userIdStr := fmt.Sprintf("%d", userID)
+	// 从Hash中删除指定field (对标Java redisService.hDel(LOGIN_USER, String.valueOf(userId)))
+	return s.rdb.HDel(ctx, constant.LoginUser, userIdStr).Err()
 }
 
 // ValidateToken 验证Token是否有效（用于需要手动验证的场景）

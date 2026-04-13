@@ -73,6 +73,10 @@ qq:
   check_token_url: "https://graph.qq.com/oauth2.0/me?access_token={access_token}"
   user_info_url: "https://graph.qq.com/user/get_user_info?openid={openid}&access_token={access_token}&oauth_consumer_key={oauth_consumer_key}"
 
+ip2region:
+  enabled: true
+  db_file: "ip2region.xdb"   # 相对路径（相对于项目根目录），会自动拼接 scripts/ip/ 前缀
+
 log:
   level: info
   format: json

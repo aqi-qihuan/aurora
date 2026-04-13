@@ -59,7 +59,7 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 
 	// ===== 基础服务 (依赖DB+Redis) =====
 	r.Article = NewArticleService(db, statsService)
-	r.UserAuth = NewUserAuthService(db)
+	r.UserAuth = NewUserAuthService(db, rdb)
 	r.Comment = NewCommentService(db, statsService)
 	r.Category = NewCategoryService(db)
 	r.Tag = NewTagService(db)

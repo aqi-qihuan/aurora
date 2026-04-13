@@ -27,7 +27,6 @@ func (s *RoleService) CreateRole(ctx context.Context, vo vo.RoleVO) (*model.Role
 		RoleName:    vo.RoleName,
 		RoleLabel:   vo.RoleLabel,
 		Description:  vo.Description,
-		Sort:        vo.Sort,
 		IsDisable:   0, // 默认启用
 	}
 
@@ -59,7 +58,6 @@ func (s *RoleService) UpdateRole(ctx context.Context, id uint, vo vo.RoleVO) err
 		"role_name":    vo.RoleName,
 		"role_label":   vo.RoleLabel,
 		"description":   vo.Description,
-		"sort":         vo.Sort,
 	}
 	if err := s.db.WithContext(ctx).Model(&role).Updates(updates).Error; err != nil {
 		if errors.IsStd(err, gorm.ErrDuplicatedKey) {
@@ -118,9 +116,9 @@ func (s *RoleService) DeleteRole(ctx context.Context, id uint) error {
 func (s *RoleService) ListRoles(ctx context.Context) ([]dto.RoleDTO, error) {
 	var roles []model.Role
 
+	// 不使用sort排序（数据库表中无此字段）
 	err := s.db.WithContext(ctx).
 		Preload("Menus").
-		Order("sort ASC").
 		Find(&roles).Error
 
 	if err != nil {
@@ -151,9 +149,10 @@ func (s *RoleService) ListRoles(ctx context.Context) ([]dto.RoleDTO, error) {
 func (s *RoleService) GetRoleByID(ctx context.Context, id uint) (*dto.RoleDetailDTO, error) {
 	var role model.Role
 
+	// t_menu表有sort字段，但t_role表没有，所以只能对Menus排序
 	err := s.db.WithContext(ctx).
 		Preload("Menus", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort ASC")
+			return db.Order("order_num ASC") // 使用order_num而不是sort
 		}).
 		First(&role, id).Error
 

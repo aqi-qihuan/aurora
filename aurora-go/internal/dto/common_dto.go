@@ -21,6 +21,7 @@ type ConditionVO struct {
 	DateEnd    string `form:"dateEnd"`      // 时间范围结束
 	Sort       string `form:"sort"`          // 排序字段
 	Order      string `form:"order"`         // asc/desc
+	LoginType  *int8  `form:"loginType"`     // 登录类型筛选 (用户列表用)
 }
 
 // PageVO 分页参数

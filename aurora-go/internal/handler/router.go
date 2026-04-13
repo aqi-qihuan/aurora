@@ -181,6 +181,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.PUT("/users/disable", r.UserAuthHandler.UpdateUserDisable)
 	rg.GET("/users/online", r.UserAuthHandler.ListOnlineUsers)
 	rg.DELETE("/users/:id/online", r.UserAuthHandler.RemoveOnlineUser)
+	rg.GET("/users/role", r.RoleHandler.ListRoles) // 获取角色列表（用于编辑用户时选择角色）
 
 	// --- 文章管理（ArticleController） ---
 	rg.GET("/articles", r.ArticleHandler.ListAdminArticles)

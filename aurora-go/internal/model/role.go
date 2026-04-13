@@ -14,7 +14,6 @@ type Role struct {
 	Description  string    `gorm:"size:200" json:"description"`        // 角色描述
 	IsDisable   int8      `gorm:"default:0" json:"isDisable"`
 	IsDefault   int8      `gorm:"default:0" json:"isDefault"`         // 是否默认角色
-	Sort        int       `gorm:"default:0" json:"sort"`
 	CreateTime  time.Time `json:"createTime"`
 
 	// 关联

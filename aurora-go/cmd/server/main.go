@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/aurora-go/aurora/internal/agent"
@@ -15,6 +16,7 @@ import (
 	"github.com/aurora-go/aurora/internal/infrastructure/logger"
 	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/service"
+	"github.com/aurora-go/aurora/internal/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,6 +53,22 @@ func main() {
 
 	// 2. 初始化所有基础设施（按顺序: Logger → DB → Redis → MQ → ES → MinIO → Email）
 	infrastructure.Bootstrap(cfg)
+
+	// 2.1 初始化 IP2Region (IP归属地查询)
+	if cfg.IP2Region.Enabled {
+		dbFile := cfg.IP2Region.DBFile
+		// 支持相对路径和绝对路径
+		if !filepath.IsAbs(dbFile) {
+			dbFile = filepath.Join("scripts", "ip", dbFile)
+		}
+		if err := util.InitIP2Region(dbFile); err != nil {
+			slog.Warn("ip2region初始化失败, 将使用默认IP归属地", "db_file", dbFile, "error", err)
+		} else {
+			slog.Info("ip2region IP归属地查询已启用", "db_file", dbFile)
+		}
+	} else {
+		slog.Info("ip2region IP归属地查询已禁用")
+	}
 
 	// 3. 设置 Gin 模式
 	gin.SetMode(gin.ReleaseMode) // 生产模式（Gin默认已处理debug/release）

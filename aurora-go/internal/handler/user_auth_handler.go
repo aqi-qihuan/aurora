@@ -2,8 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/aurora-go/aurora/internal/constant"
 	"github.com/gin-gonic/gin"
@@ -64,16 +66,40 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 
 	// 使用TokenService生成JWT Token（替换临时随机字符串）
 	if h.registry.TokenSvc != nil {
-		// 构造UserDetailsDTO用于生成Token
+		// 从请求头解析 User-Agent 获取浏览器和操作系统信息
+		userAgent := c.GetHeader("User-Agent")
+		browser := util.ParseBrowser(userAgent)
+		os := util.ParseOS(userAgent)
+		
+		// 获取客户端IP
+		clientIP := util.GetClientIP(c)
+		
+		// 计算IP归属地（对标Java IpUtil.getIpSource(ipAddress)）
+		// 注意：不是用数据库中存的IPSource，而是根据当前登录IP实时计算
+		ipSource := util.GetIPRegion(clientIP)
+		
+		// 构造完整的UserDetailsDTO（对标Java版）
+		// 关键：ID字段必须使用UserAuth.id（登录认证ID），不是UserInfo.id
+		// Java版TokenServiceImpl.createToken()中userId = userDetailsDTO.getId() = UserAuth.id
+		// 下线时delLoginUser(userId)也是用UserAuth.id删除，必须一致
 		userDetail := &dto.UserDetailsDTO{
-			ID:         result.UserInfoID,
-			UserInfoID: result.UserInfoID,
-			Email:      result.Email,
-			Nickname:   result.Nickname,
-			Avatar:     result.Avatar,
-			LoginType:  result.LoginType, // int类型，不是int8
-			IsDisable:  0, // 默认不禁用
-			Roles:      []string{"admin"}, // TODO: 从数据库查询实际角色
+			ID:            result.ID,          // UserAuth.id (登录认证ID, 不是UserInfo.id)
+			UserInfoID:    result.UserInfoID,  // UserInfo.id
+			Email:         result.Email,
+			LoginType:     result.LoginType, // int类型
+			Username:      result.Username,
+			Nickname:      result.Nickname,
+			Avatar:        result.Avatar,
+			Intro:         result.Intro,
+			Website:       result.Website,
+			IsSubscribe:   result.IsSubscribe,
+			IPAddress:     clientIP,
+			IPSource:      ipSource,  // 使用实时计算的IP归属地，不是数据库中的旧值
+			IsDisable:     0, // 默认不禁用
+			Browser:       browser,
+			OS:            os,
+			LastLoginTime: time.Now(), // 记录登录时间
+			Roles:         []string{"admin"}, // TODO: 从数据库查询实际角色
 		}
 		
 		tokenString, err := h.registry.TokenSvc.CreateToken(userDetail)
@@ -85,7 +111,7 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		
 		// 更新返回结果中的Token
 		result.Token = tokenString
-		slog.Debug("JWT Token生成成功", "user_id", result.UserInfoID)
+		slog.Debug("JWT Token生成成功", "user_id", result.UserInfoID, "browser", browser, "os", os, "ip", clientIP)
 	}
 
 	util.ResponseSuccess(c, result)
@@ -348,17 +374,46 @@ func (h *UserAuthHandler) UpdateAdminPassword(c *gin.Context) {
 	util.ResponseSuccess(c, "密码修改成功")
 }
 
-// UpdateUserRole 修改用户角色
+// UpdateUserRole 修改用户角色和昵称（完全对标Java UserInfoController.updateUserRole）
 // PUT /api/admin/users/role
+// Java逻辑：1)更新UserInfo.nickname  2)删除旧角色  3)批量插入新角色
 func (h *UserAuthHandler) UpdateUserRole(c *gin.Context) {
 	var body struct {
-		UserID uint `json:"userId"`
-		RoleID uint `json:"roleId"`
+		UserInfoID uint   `json:"userInfoId" binding:"required"` // 用户信息ID（不是UserAuth.id）
+		Nickname   string `json:"nickname" binding:"required"`   // 昵称
+		RoleIDs    []uint `json:"roleIds" binding:"required"`    // 角色ID列表
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
+
+	if len(body.RoleIDs) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("用户角色不能为空"))
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Step 1: 更新用户昵称
+	if body.Nickname != "" {
+		if err := h.registry.UserAuth.UpdateUserInfo(ctx, body.UserInfoID, vo.UpdateUserVO{
+			Nickname: &body.Nickname,
+		}); err != nil {
+			slog.Error("更新用户昵称失败", "error", err.Error(), "userInfoId", body.UserInfoID)
+			util.ResponseError(c, err)
+			return
+		}
+	}
+
+	// Step 2: 更新用户角色（删除旧角色 + 插入新角色）
+	if err := h.registry.Role.AssignRoleToUser(ctx, body.UserInfoID, body.RoleIDs); err != nil {
+		slog.Error("更新用户角色失败", "error", err.Error(), "userInfoId", body.UserInfoID, "roleIds", body.RoleIDs)
+		util.ResponseError(c, err)
+		return
+	}
+
+	slog.Info("用户角色更新成功", "userInfoId", body.UserInfoID, "nickname", body.Nickname, "roleIds", body.RoleIDs)
 	util.ResponseSuccess(c, "角色修改成功")
 }
 
@@ -383,13 +438,31 @@ func (h *UserAuthHandler) ListOnlineUsers(c *gin.Context) {
 	c.ShouldBindQuery(&condition)
 	pageNum, pageSize := util.PageQuery(c)
 	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
-	_ = page
-	util.ResponseSuccess(c, []interface{}{})
+
+	result, err := h.registry.UserAuth.ListOnlineUsers(c.Request.Context(), condition, page)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
 }
 
 // RemoveOnlineUser 下线指定用户
 // DELETE /api/admin/users/:id/online
 func (h *UserAuthHandler) RemoveOnlineUser(c *gin.Context) {
+	userInfoIdStr := c.Param("id")
+	if userInfoIdStr == "" {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("用户ID不能为空"))
+		return
+	}
+
+	var userInfoId uint
+	fmt.Sscanf(userInfoIdStr, "%d", &userInfoId)
+
+	if err := h.registry.UserAuth.RemoveOnlineUser(c.Request.Context(), userInfoId); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, "用户已下线")
 }
 

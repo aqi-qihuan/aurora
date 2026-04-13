@@ -2,26 +2,62 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
+	"strings"
 	"time"
 
+	"github.com/aurora-go/aurora/internal/constant"
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 // UserAuthService 用户认证业务逻辑 (对标 Java UserAuthServiceImpl + UserServiceImpl)
 type UserAuthService struct {
-	db *gorm.DB
+	db  *gorm.DB
+	rdb *redis.Client
 }
 
-func NewUserAuthService(db *gorm.DB) *UserAuthService {
-	return &UserAuthService{db: db}
+func NewUserAuthService(db *gorm.DB, rdb *redis.Client) *UserAuthService {
+	return &UserAuthService{db: db, rdb: rdb}
+}
+
+// cleanIPAddress 清理 IP 地址中的特殊字符
+// 处理：换行符、空格、尾部数字（如 "95.40.12.12 0" → "95.40.12.12"）
+func cleanIPAddress(ip string) string {
+	if ip == "" {
+		return ""
+	}
+	
+	// 1. 先按空格分割，取第一部分（处理 "95.40.12.12 0" 或 "110.184.180. \n10" 等情况）
+	// Fields会自动处理多个空格、制表符等空白字符
+	parts := strings.Fields(ip)
+	if len(parts) > 0 {
+		ip = parts[0]
+	}
+	
+	// 2. 移除换行符、回车符和制表符（处理 "110.184.180.\n10" 这种情况）
+	ip = strings.ReplaceAll(ip, "\n", "")
+	ip = strings.ReplaceAll(ip, "\r", "")
+	ip = strings.ReplaceAll(ip, "\t", "")
+	
+	// 3. 如果包含逗号，取第一部分（处理 X-Forwarded-For 格式）
+	if idx := strings.Index(ip, ","); idx > 0 {
+		ip = ip[:idx]
+	}
+	
+	// 4. 最后移除首尾空格
+	ip = strings.TrimSpace(ip)
+	
+	return ip
 }
 
 // Register 注册用户 (事务: UserInfo + UserAuth)
@@ -156,9 +192,13 @@ func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO) (*dto.Log
 
 // Logout 登出 (清除Redis Session)
 func (s *UserAuthService) Logout(ctx context.Context, userID uint) error {
-	// TODO: P0-6 清除Redis Session Key
-	// redis.Del(constant.LoginUser + strconv.FormatUint(uint64(userID), 10))
-	
+	// 删除 Redis Session (对标Java tokenService.delLoginUser)
+	if s.rdb != nil {
+		if err := s.rdb.HDel(ctx, constant.LoginUser, fmt.Sprintf("%d", userID)).Err(); err != nil {
+			slog.Warn("清除Redis Session失败", "userId", userID, "error", err.Error())
+		}
+	}
+
 	slog.Info("用户登出", "user_id", userID)
 	return nil
 }
@@ -183,6 +223,16 @@ func (s *UserAuthService) GetUserInfoByID(ctx context.Context, id uint) (*dto.Us
 
 // UpdateUserInfo 更新用户信息
 func (s *UserAuthService) UpdateUserInfo(ctx context.Context, id uint, vo vo.UpdateUserVO) error {
+	// Step 1: 先检查用户是否存在
+	var userInfo model.UserInfo
+	if err := s.db.WithContext(ctx).First(&userInfo, id).Error; err != nil {
+		if errors.IsStd(err, gorm.ErrRecordNotFound) {
+			return errors.ErrUserNotFound
+		}
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// Step 2: 构建更新字段
 	updates := make(map[string]interface{})
 	
 	if vo.Nickname != nil && *vo.Nickname != "" {
@@ -192,12 +242,18 @@ func (s *UserAuthService) UpdateUserInfo(ctx context.Context, id uint, vo vo.Upd
 		updates["intro"] = *vo.Intro
 	}
 	if vo.WebSite != nil && *vo.WebSite != "" {
-		updates["web_site"] = *vo.WebSite
+		updates["website"] = *vo.WebSite
 	}
 	if vo.Avatar != nil && *vo.Avatar != "" {
 		updates["avatar"] = *vo.Avatar
 	}
 
+	// 如果没有需要更新的字段，直接返回
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// Step 3: 执行更新
 	result := s.db.WithContext(ctx).
 		Model(&model.UserInfo{}).
 		Where("id = ?", id).
@@ -206,11 +262,8 @@ func (s *UserAuthService) UpdateUserInfo(ctx context.Context, id uint, vo vo.Upd
 	if result.Error != nil {
 		return fmt.Errorf("更新用户信息失败: %w", result.Error)
 	}
-	if result.RowsAffected == 0 {
-		return errors.ErrUserNotFound
-	}
 
-	slog.Info("用户信息更新", "user_id", id)
+	slog.Info("用户信息更新成功", "user_id", id, "updated_fields", updates, "rows_affected", result.RowsAffected)
 	return nil
 }
 
@@ -241,34 +294,150 @@ func (s *UserAuthService) ChangePassword(ctx context.Context, id uint, vo vo.Pas
 	return nil
 }
 
-// ListUsers 后台分页查询用户列表
+// ListUsers 后台分页查询用户列表（完全对标Java UserAuthMapper.listUsers）
+// SQL逻辑：从 t_user_info 筛选 → LEFT JOIN t_user_auth + t_user_role + t_role
+// 支持 loginType 和 keywords 条件过滤
 func (s *UserAuthService) ListUsers(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
-	var users []model.UserInfo
-	var count int64
+	type UserRow struct {
+		ID            uint
+		UserInfoId    uint
+		Avatar        string
+		Nickname      string
+		LoginType     int8
+		IpAddress     string
+		IpSource      string
+		CreateTime    time.Time
+		LastLoginTime *time.Time
+		IsDisable     int8
+		RoleId        uint
+		RoleName      string
+	}
 
-	baseQuery := s.db.WithContext(ctx).Model(&model.UserInfo{})
+	// 构建子查询：从 t_user_info 中根据条件筛选
+	baseQuery := s.db.WithContext(ctx).Table("t_user_info ui").
+		Select("ui.id, ui.avatar, ui.nickname, ui.is_disable")
 
+	// 条件过滤：loginType
+	if cond.LoginType != nil && *cond.LoginType > 0 {
+		baseQuery = baseQuery.Where("ui.id IN (SELECT user_info_id FROM t_user_auth WHERE login_type = ?)", *cond.LoginType)
+	}
+
+	// 条件过滤：keywords（昵称模糊搜索）
 	if cond.Keywords != "" {
-		baseQuery = baseQuery.Where("nickname LIKE ? OR email LIKE ?", "%"+cond.Keywords+"%", "%"+cond.Keywords+"%")
+		baseQuery = baseQuery.Where("ui.nickname LIKE ?", "%"+cond.Keywords+"%")
 	}
 
-	if err := baseQuery.Count(&count).Error; err != nil {
-		return nil, fmt.Errorf("统计用户数失败: %w", err)
-	}
-
+	// 分页
 	offset := page.GetOffset()
-	if err := baseQuery.
-		Preload("Roles").
-		Order("create_time DESC").
-		Limit(page.PageSize).
-		Offset(offset).
-		Find(&users).Error; err != nil {
+	baseQuery = baseQuery.Limit(page.PageSize).Offset(offset)
+
+	// 外层查询：LEFT JOIN 获取 user_auth 和 role 信息
+	type ResultRow struct {
+		ID            uint
+		UserInfoId    uint
+		Avatar        string
+		Nickname      string
+		LoginType     int8
+		IpAddress     string
+		IpSource      string
+		CreateTime    time.Time
+		LastLoginTime *time.Time
+		IsDisable     int8
+		RoleId        *uint
+		RoleName      *string
+	}
+
+	var rows []ResultRow
+	err := s.db.WithContext(ctx).
+		Table("(?) ui", baseQuery).
+		Select(`
+			ua.id,
+			ui.id as user_info_id,
+			ui.avatar,
+			ui.nickname,
+			ua.login_type,
+			ua.ip_address,
+			ua.ip_source,
+			ua.create_time,
+			ua.last_login_time,
+			ui.is_disable,
+			r.id as role_id,
+			r.role_name
+		`).
+		Joins("LEFT JOIN t_user_auth ua ON ua.user_info_id = ui.id").
+		Joins("LEFT JOIN t_user_role ur ON ui.id = ur.user_id").
+		Joins("LEFT JOIN t_role r ON ur.role_id = r.id").
+		Find(&rows).Error
+
+	if err != nil {
 		return nil, fmt.Errorf("查询用户列表失败: %w", err)
 	}
 
-	list := make([]dto.UserAdminDTO, len(users))
-	for i, u := range users {
-		list[i] = s.toUserAdminDTO(&u)
+	// 统计总数（对标Java countUser）
+	var count int64
+	countQuery := s.db.WithContext(ctx).Table("t_user_auth ua").
+		Joins("LEFT JOIN t_user_info ui ON ua.user_info_id = ui.id")
+
+	if cond.Keywords != "" {
+		countQuery = countQuery.Where("ui.nickname LIKE ?", "%"+cond.Keywords+"%")
+	}
+	if cond.LoginType != nil && *cond.LoginType > 0 {
+		countQuery = countQuery.Where("ua.login_type = ?", *cond.LoginType)
+	}
+	countQuery.Count(&count)
+
+	if count == 0 {
+		return &dto.PageResultDTO{
+			List:     []dto.UserAdminDTO{},
+			Count:    0,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
+	}
+
+	// 将结果按 userInfoId 聚合，收集角色信息
+	userMap := make(map[uint]*dto.UserAdminDTO)
+	var order []uint // 保持顺序
+
+	for _, row := range rows {
+		if _, exists := userMap[row.UserInfoId]; !exists {
+			// 处理 CreateTime 零值问题
+			var createTime *time.Time
+			if !row.CreateTime.IsZero() {
+				createTime = &row.CreateTime
+			}
+			
+			// 清理 IP 地址中的换行符、空格和尾部数字
+			ipAddress := cleanIPAddress(row.IpAddress)
+			ipSource := cleanIPAddress(row.IpSource)
+			
+			userMap[row.UserInfoId] = &dto.UserAdminDTO{
+				ID:            row.ID,
+				UserInfoId:    row.UserInfoId,
+				Avatar:        row.Avatar,
+				Nickname:      row.Nickname,
+				LoginType:     row.LoginType,
+				IpAddress:     ipAddress,
+				IpSource:      ipSource,
+				CreateTime:    createTime,
+				LastLoginTime: row.LastLoginTime,
+				IsDisable:     row.IsDisable,
+				Roles:         []dto.UserRoleDTO{},
+			}
+			order = append(order, row.UserInfoId)
+		}
+		if row.RoleName != nil && *row.RoleName != "" {
+			userMap[row.UserInfoId].Roles = append(userMap[row.UserInfoId].Roles, dto.UserRoleDTO{
+				ID:       *row.RoleId,
+				RoleName: *row.RoleName,
+			})
+		}
+	}
+
+	// 构建有序列表
+	list := make([]dto.UserAdminDTO, 0, len(order))
+	for _, uid := range order {
+		list = append(list, *userMap[uid])
 	}
 
 	return &dto.PageResultDTO{
@@ -484,30 +653,141 @@ func (s *UserAuthService) FindOrCreateBySocialLogin(
 
 func (s *UserAuthService) toUserDTO(u *model.UserInfo) *dto.UserDTO {
 	return &dto.UserDTO{
-		ID:        u.ID,
-		Email:     u.Email,
-		Nickname:  u.Nickname,
-		Avatar:    u.Avatar,
-		Intro:     u.Intro,
-		WebSite:   u.Website,
-		IsDisable: u.IsDisable,
+		ID:         u.ID,
+		Email:      u.Email,
+		Nickname:   u.Nickname,
+		Avatar:     u.Avatar,
+		Intro:      u.Intro,
+		WebSite:    u.Website,
+		IsDisable:  u.IsDisable,
 		CreateTime: u.CreateTime,
 	}
 }
 
-func (s *UserAuthService) toUserAdminDTO(u *model.UserInfo) dto.UserAdminDTO {
-	roles := make([]string, len(u.Roles))
-	for i, r := range u.Roles {
-		roles[i] = r.RoleName
+// ListOnlineUsers 查看在线用户列表（对标Java UserInfoServiceImpl.listOnlineUsers）
+// 数据源：Redis Hash login_user（存储 UserDetailsDTO）
+func (s *UserAuthService) ListOnlineUsers(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
+	if s.rdb == nil {
+		return &dto.PageResultDTO{
+			List:     []dto.UserOnlineDTO{},
+			Count:    0,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
 	}
 
-	return dto.UserAdminDTO{
-		ID:        u.ID,
-		Email:     u.Email,
-		Nickname:  u.Nickname,
-		Avatar:    u.Avatar,
-		IsDisable: u.IsDisable,
-		Roles:     roles,
-		CreateTime: u.CreateTime,
+	// 从 Redis Hash 获取所有在线用户 (对标Java redisService.hGetAll(LOGIN_USER))
+	userMaps, err := s.rdb.HGetAll(ctx, constant.LoginUser).Result()
+	if err != nil {
+		slog.Warn("获取在线用户失败", "error", err.Error())
+		return &dto.PageResultDTO{
+			List:     []dto.UserOnlineDTO{},
+			Count:    0,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
 	}
+
+	// 解析 UserDetailsDTO
+	var userDetailsList []*dto.UserDetailsDTO
+	for _, dataStr := range userMaps {
+		if dataStr == "" {
+			continue
+		}
+		var user dto.UserDetailsDTO
+		if err := json.Unmarshal([]byte(dataStr), &user); err != nil {
+			slog.Warn("解析用户Session失败", "error", err.Error())
+			continue
+		}
+		userDetailsList = append(userDetailsList, &user)
+	}
+
+	// 转换为 UserOnlineDTO (对标Java BeanCopyUtil.copyList)
+	var onlineUsers []dto.UserOnlineDTO
+	for _, user := range userDetailsList {
+		onlineUsers = append(onlineUsers, dto.UserOnlineDTO{
+			UserInfoId:    user.UserInfoID,
+			Nickname:      user.Nickname,
+			Avatar:        user.Avatar,
+			IpAddress:     user.IPAddress,
+			IpSource:      user.IPSource,
+			Browser:       user.Browser,
+			Os:            user.OS,
+			LastLoginTime: &user.LastLoginTime,
+		})
+	}
+
+	// 过滤：keywords (对标Java StringUtils.isBlank(conditionVO.getKeywords()) || item.getNickname().contains(...))
+	if cond.Keywords != "" {
+		filtered := make([]dto.UserOnlineDTO, 0)
+		for _, user := range onlineUsers {
+			if strings.Contains(user.Nickname, cond.Keywords) {
+				filtered = append(filtered, user)
+			}
+		}
+		onlineUsers = filtered
+	}
+
+	// 排序：按 lastLoginTime 倒序 (对标Java sorted(Comparator.comparing(UserOnlineDTO::getLastLoginTime).reversed()))
+	sort.Slice(onlineUsers, func(i, j int) bool {
+		if onlineUsers[i].LastLoginTime == nil && onlineUsers[j].LastLoginTime == nil {
+			return false
+		}
+		if onlineUsers[i].LastLoginTime == nil {
+			return false
+		}
+		if onlineUsers[j].LastLoginTime == nil {
+			return true
+		}
+		return onlineUsers[i].LastLoginTime.After(*onlineUsers[j].LastLoginTime)
+	})
+
+	// 手动分页 (对标Java subList)
+	totalCount := len(onlineUsers)
+	fromIndex := page.GetOffset()
+	toIndex := fromIndex + page.PageSize
+	if toIndex > totalCount {
+		toIndex = totalCount
+	}
+
+	var pagedList []dto.UserOnlineDTO
+	if fromIndex < totalCount {
+		pagedList = onlineUsers[fromIndex:toIndex]
+	} else {
+		pagedList = []dto.UserOnlineDTO{}
+	}
+
+	return &dto.PageResultDTO{
+		List:     pagedList,
+		Count:    int64(totalCount),
+		PageNum:  page.PageNum,
+		PageSize: page.PageSize,
+	}, nil
+}
+
+// RemoveOnlineUser 下线指定用户（对标Java UserInfoServiceImpl.removeOnlineUser）
+// 流程：1. 根据 userInfoId 查询 userId  2. 删除 Redis Session
+func (s *UserAuthService) RemoveOnlineUser(ctx context.Context, userInfoId uint) error {
+	// Step 1: 根据 userInfoId 查询 userId (对标Java userAuthMapper.selectOne)
+	var auth model.UserAuth
+	if err := s.db.WithContext(ctx).
+		Select("id").
+		Where("user_info_id = ?", userInfoId).
+		First(&auth).Error; err != nil {
+		if errors.IsStd(err, gorm.ErrRecordNotFound) {
+			return errors.ErrUserNotFound
+		}
+		return fmt.Errorf("查询用户认证信息失败: %w", err)
+	}
+
+	// Step 2: 删除 Redis Session (对标Java tokenService.delLoginUser(userId))
+	if s.rdb != nil {
+		if err := s.rdb.HDel(ctx, constant.LoginUser, fmt.Sprintf("%d", auth.ID)).Err(); err != nil {
+			slog.Warn("删除Redis Session失败", "userId", auth.ID, "error", err.Error())
+			// 不返回错误，继续执行
+		}
+	}
+
+	slog.Info("用户已下线", "userInfoId", userInfoId, "userId", auth.ID)
+	return nil
 }
