@@ -134,14 +134,33 @@ type PhotoDTO struct {
 	URL string `json:"url"`
 }
 
+// PhotoAdminDTO 后台管理照片DTO（对标Java PhotoAdminDTO）
+type PhotoAdminDTO struct {
+	ID        uint   `json:"id"`
+	AlbumID   uint   `json:"albumId"`
+	PhotoName string `json:"photoName"`
+	PhotoDesc string `json:"photoDesc,omitempty"`
+	PhotoSrc  string `json:"photoSrc"`
+	IsDelete  int8   `json:"isDelete"`
+}
+
+// PhotoAlbumInfoDTO 前台相册信息DTO（对标Java PhotoDTO）
+type PhotoAlbumInfoDTO struct {
+	PhotoAlbumCover string   `json:"photoAlbumCover"` // 相册封面
+	PhotoAlbumName  string   `json:"photoAlbumName"`  // 相册名称
+	Photos          []string `json:"photos"`           // 照片URL列表
+}
+
 type AlbumDTO struct {
-	ID          uint      `json:"id"`
-	AlbumName   string    `json:"albumName"`
-	AlbumCover  string    `json:"albumCover"`
-	Info        string    `json:"info"`
-	PhotoCount  int       `json:"photoCount"`
-	IsPrivate   bool      `json:"isPrivate"`
-	CreateTime   time.Time `json:"createTime"`
+	ID         uint      `json:"id"`
+	AlbumName  string    `json:"albumName"`
+	AlbumDesc  string    `json:"albumDesc,omitempty"`  // 对齐Java PhotoAlbumDTO.albumDesc
+	AlbumCover string    `json:"albumCover"`
+	Status     int8      `json:"status,omitempty"`     // 1公开 2私密（前端用此字段统计）
+	PhotoCount int       `json:"photoCount"`
+	Info       string    `json:"info,omitempty"`       // 兼容旧版（前台用）
+	IsPrivate  bool      `json:"isPrivate,omitempty"`
+	CreateTime time.Time `json:"createTime,omitempty"`
 }
 
 // ===== 角色/菜单 DTO =====

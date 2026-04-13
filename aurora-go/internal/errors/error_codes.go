@@ -88,6 +88,7 @@ var (
 	// 相册/照片相关 (860-869)
 	ErrAlbumNotFound = New(860, "相册不存在")
 	ErrPhotoNotFound = New(861, "照片不存在")
+	ErrAlbumNameExists = New(862, "相册名已存在")
 
 	// 资源相关 (870-879)
 	ErrResourceNotFound = New(870, "资源不存在")

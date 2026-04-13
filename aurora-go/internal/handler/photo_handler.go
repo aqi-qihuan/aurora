@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -8,77 +9,96 @@ import (
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/service"
+	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/aurora-go/aurora/internal/util"
 )
 
 // PhotoHandler 相册照片处理器（对标 Java PhotoController）
 type PhotoHandler struct {
-	svc *service.PhotoService
+	svc       *service.PhotoService
+	uploadSvc *strategy.UploadService
 }
 
-func NewPhotoHandler(svc *service.PhotoService) *PhotoHandler {
-	return &PhotoHandler{svc: svc}
+func NewPhotoHandler(svc *service.PhotoService, uploadSvc *strategy.UploadService) *PhotoHandler {
+	return &PhotoHandler{svc: svc, uploadSvc: uploadSvc}
 }
 
-// ListPhotos 获取相册下的照片列表
-// GET /api/albums/:id/photos
-func (h *PhotoHandler) ListPhotos(c *gin.Context) {
-	albumId, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
-		return
-	}
-	list, err := h.svc.GetPhotosByAlbum(c.Request.Context(), uint(albumId))
+// ListPhotos 获取相册下的照片列表（后台管理用，分页）
+// GET /api/admin/photos
+func (h *PhotoHandler) ListAdminPhotos(c *gin.Context) {
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	result, err := h.svc.ListAdminPhotos(c.Request.Context(), condition, page)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, list)
+	util.ResponseSuccess(c, result)
 }
 
-// UploadPhoto 上传照片到指定相册（支持批量）
-// POST /api/admin/albums/:id/photos
-func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
-	albumId, err := strconv.ParseUint(c.Param("id"), 10, 64)
+// ListPhotosByAlbumId 根据相册id查看照片列表（前台）
+// GET /api/albums/:albumId/photos
+func (h *PhotoHandler) ListPhotosByAlbumId(c *gin.Context) {
+	albumId, err := strconv.ParseUint(c.Param("albumId"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
 		return
 	}
-	form, err := c.MultipartForm()
+	result, err := h.svc.ListPhotosByAlbumId(c.Request.Context(), uint(albumId))
 	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("文件上传失败"))
+		util.ResponseError(c, err)
 		return
 	}
-	files := form.File["files"]
-	if len(files) == 0 {
+	util.ResponseSuccess(c, result)
+}
+
+// UploadPhoto 上传照片（对标Java PhotoController.savePhotoAlbumCover）
+// POST /api/admin/photos/upload
+func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的照片"))
 		return
 	}
 
-	// TODO: P0-9 上传到MinIO后获取URL列表
-	// 暂时使用模拟URL
-	urls := make([]string, len(files))
-	for i := range files {
-		urls[i] = "/uploads/" + files[i].Filename
+	// 打开文件获取输入流
+	src, err := file.Open()
+	if err != nil {
+		util.ResponseError(c, errors.ErrFileUploadFailed.WithMsg("打开文件失败"))
+		return
+	}
+	defer src.Close()
+
+	// 读取文件内容
+	data, err := io.ReadAll(src)
+	if err != nil {
+		util.ResponseError(c, errors.ErrFileUploadFailed.WithMsg("读取文件失败"))
+		return
 	}
 
-	photos, err := h.svc.UploadPhotos(c.Request.Context(), uint(albumId), urls)
+	// 调用上传服务（MD5去重 + MinIO上传）
+	url, err := h.uploadSvc.UploadPhoto(c.Request.Context(), data, file.Filename)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, photos)
+
+	// 返回访问URL
+	util.ResponseSuccess(c, url)
 }
 
-// DeletePhoto 删除照片
-// DELETE /api/admin/photos/:id
-func (h *PhotoHandler) DeletePhoto(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的照片ID"))
+// DeletePhotos 批量删除照片
+// DELETE /api/admin/photos
+func (h *PhotoHandler) DeletePhotos(c *gin.Context) {
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的照片"))
 		return
 	}
-	if err := h.svc.DeletePhoto(c.Request.Context(), uint(id)); err != nil {
+	if err := h.svc.DeletePhotos(c.Request.Context(), ids); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
@@ -87,31 +107,27 @@ func (h *PhotoHandler) DeletePhoto(c *gin.Context) {
 
 // ListAdminPhotos 后台照片管理列表
 // GET /api/admin/photos
-func (h *PhotoHandler) ListAdminPhotos(c *gin.Context) {
-	var condition dto.ConditionVO
-	c.ShouldBindQuery(&condition)
-	pageNum, pageSize := util.PageQuery(c)
-	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
-
-	// 复用前台列表
-	result, err := h.svc.GetPhotosByAlbum(c.Request.Context(), 0)
-	if err != nil {
-		util.ResponseError(c, err)
-		return
-	}
-	_ = page
-	util.ResponseSuccess(c, result)
-}
 
 // SavePhotos 保存照片
 // POST /api/admin/photos
 func (h *PhotoHandler) SavePhotos(c *gin.Context) {
 	var body struct {
-		AlbumID uint     `json:"albumId"`
-		PhotoURLs []string `json:"photoUrls"`
+		AlbumIDStr string   `json:"albumId" binding:"required"`
+		PhotoURLs  []string `json:"photoUrls" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+
+	albumId, err := strconv.ParseUint(body.AlbumIDStr, 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID格式"))
+		return
+	}
+
+	if err := h.svc.SavePhotos(c.Request.Context(), uint(albumId), body.PhotoURLs); err != nil {
+		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "照片保存成功")
@@ -121,11 +137,15 @@ func (h *PhotoHandler) SavePhotos(c *gin.Context) {
 // PUT /api/admin/photos
 func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 	var body struct {
-		ID   uint   `json:"id"`
-		Name string `json:"name"`
+		ID       uint   `json:"id" binding:"required"`
+		PhotoName string `json:"photoName"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+	if err := h.svc.UpdatePhoto(c.Request.Context(), body.ID, body.PhotoName); err != nil {
+		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "照片信息已更新")
@@ -135,11 +155,33 @@ func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 // PUT /api/admin/photos/album
 func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
 	var body struct {
-		AlbumID  uint   `json:"albumId"`
-		PhotoIDs []uint `json:"photoIds"`
+		AlbumIDRaw interface{} `json:"albumId" binding:"required"`
+		PhotoIDs   []uint      `json:"photoIds" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+
+	// 兼容前端传数字或字符串类型
+	var albumId uint64
+	switch v := body.AlbumIDRaw.(type) {
+	case string:
+		var err error
+		albumId, err = strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID格式"))
+			return
+		}
+	case float64:
+		albumId = uint64(v)
+	default:
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID类型"))
+		return
+	}
+
+	if err := h.svc.UpdatePhotosAlbum(c.Request.Context(), uint(albumId), body.PhotoIDs); err != nil {
+		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "照片已移动")
@@ -149,11 +191,22 @@ func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
 // PUT /api/admin/photos/delete
 func (h *PhotoHandler) UpdatePhotoDelete(c *gin.Context) {
 	var body struct {
-		ID       uint `json:"id"`
-		IsDelete int8 `json:"isDelete"`
+		IDs      []uint `json:"ids" binding:"required"`
+		IsDelete *int8  `json:"isDelete"` // 改为指针，去掉 required 校验，兼容前端传 0 的情况
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+		return
+	}
+
+	// 默认值为 1（删除），恢复时前端传 0
+	isDelete := int8(1)
+	if body.IsDelete != nil {
+		isDelete = *body.IsDelete
+	}
+
+	if err := h.svc.UpdatePhotoDelete(c.Request.Context(), body.IDs, isDelete); err != nil {
+		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "照片状态已更新")

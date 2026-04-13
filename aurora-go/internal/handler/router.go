@@ -49,8 +49,8 @@ func NewRouter(registry *service.Registry, tokenSvc *service.TokenService, logge
 		TagHandler:           NewTagHandler(registry.Tag),
 		FriendLinkHandler:    NewFriendLinkHandler(registry.FriendLink),
 		TalkHandler:          NewTalkHandler(registry.Talk, registry.File),
-		PhotoHandler:         NewPhotoHandler(registry.Photo),
-		PhotoAlbumHandler:    NewPhotoAlbumHandler(registry.PhotoAlbum),
+		PhotoHandler:         NewPhotoHandler(registry.Photo, registry.UploadSvc),
+		PhotoAlbumHandler:    NewPhotoAlbumHandler(registry.PhotoAlbum, registry.UploadSvc),
 		RoleHandler:          NewRoleHandler(registry.Role),
 		MenuHandler:          NewMenuHandler(registry.Menu),
 		JobHandler:           NewJobHandler(registry.Job),
@@ -140,7 +140,7 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 
 	// --- 相册（PhotoAlbumController + PhotoController 前台） ---
 	rg.GET("/photos/albums", r.PhotoAlbumHandler.ListAlbums)
-	rg.GET("/albums/:id/photos", r.PhotoHandler.ListPhotos)
+	rg.GET("/albums/:albumId/photos", r.PhotoHandler.ListPhotosByAlbumId)
 
 	// --- 关于页（AuroraInfoController） ---
 	rg.GET("/about", r.AboutHandler.GetAbout)
@@ -240,7 +240,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.PUT("/photos", r.PhotoHandler.UpdatePhoto)
 	rg.PUT("/photos/album", r.PhotoHandler.MovePhotosAlbum)
 	rg.PUT("/photos/delete", r.PhotoHandler.UpdatePhotoDelete)
-	rg.DELETE("/photos", r.PhotoHandler.DeletePhoto)
+	rg.DELETE("/photos", r.PhotoHandler.DeletePhotos)
 
 	// --- 角色管理（RoleController） ---
 	rg.GET("/roles", r.RoleHandler.ListRoles)

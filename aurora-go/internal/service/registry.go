@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/aurora-go/aurora/internal/config"
+	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -42,6 +43,7 @@ type Registry struct {
 	// 安全/认证服务 (P0-6新增)
 	TokenSvc    *TokenService       // JWT Token管理(含Redis Session)
 	QQOAuthSvc  *QQOAuthService     // QQ OAuth登录
+	UploadSvc   *strategy.UploadService // 文件上传服务(MinIO，对标Java MinioUploadStrategyImpl)
 }
 
 // NewRegistry 创建服务注册中心 (所有Service共享同一个DB+Redis连接池)
@@ -83,8 +85,19 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.TokenSvc = NewTokenService(cfg.JWT, rdb, logger)
 	r.QQOAuthSvc = NewQQOAuthService(cfg.QQ, r.UserAuth, r.TokenSvc, logger)
 
-	total := 24 // 24个Service实例 (+2安全服务)
-	logger.Info("Service注册中心初始化完成", "services", total, "has_redis", rdb != nil)
+	// ===== 文件上传服务 (MinIO，对标Java MinioUploadStrategyImpl) =====
+	uploadCfg := cfg.MinIO
+	if uploadCfg.Endpoint != "" && uploadCfg.AccessKey != "" {
+		var err error
+		r.UploadSvc, err = strategy.NewUploadService(uploadCfg)
+		if err != nil {
+			logger.Warn("MinIO上传服务初始化失败，文件上传功能将不可用", "error", err)
+			// 不阻断启动，MinIO为可选依赖
+		}
+	}
+
+	total := 24 // 24个Service实例 (+2安全服务+1上传服务)
+	logger.Info("Service注册中心初始化完成", "services", total, "has_redis", rdb != nil, "has_minio", r.UploadSvc != nil)
 	return r
 }
 

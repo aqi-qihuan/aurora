@@ -57,9 +57,10 @@ type FriendLinkVO struct {
 // ===== 相册 VO =====
 
 type PhotoAlbumVO struct {
-	AlbumName  string `json:"albumName" binding:"required,max=50"`
+	ID         uint   `json:"id"`                                  // 更新时必填，创建时为空
+	AlbumName  string `json:"albumName" binding:"required,max=20"`
 	AlbumCover string `json:"albumCover,omitempty" binding:"omitempty,max=1024"`
-	Info       string `json:"info,omitempty" binding:"omitempty,max=500"`
+	Info       string `json:"albumDesc,omitempty" binding:"omitempty,max=50"`  // Java用albumDesc，Go前端传albumDesc
 	Status     int8   `json:"status" binding:"omitempty,oneof=1 2"` // 1公开 2私密
 }
 

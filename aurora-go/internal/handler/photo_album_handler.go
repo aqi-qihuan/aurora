@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -8,17 +9,19 @@ import (
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/service"
+	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
 )
 
 // PhotoAlbumHandler 相册管理处理器（对标 Java AlbumController）
 type PhotoAlbumHandler struct {
-	svc *service.PhotoAlbumService
+	svc       *service.PhotoAlbumService
+	uploadSvc *strategy.UploadService
 }
 
-func NewPhotoAlbumHandler(svc *service.PhotoAlbumService) *PhotoAlbumHandler {
-	return &PhotoAlbumHandler{svc: svc}
+func NewPhotoAlbumHandler(svc *service.PhotoAlbumService, uploadSvc *strategy.UploadService) *PhotoAlbumHandler {
+	return &PhotoAlbumHandler{svc: svc, uploadSvc: uploadSvc}
 }
 
 // ListAlbums 获取相册列表（前台，公开相册）
@@ -33,31 +36,23 @@ func (h *PhotoAlbumHandler) ListAlbums(c *gin.Context) {
 }
 
 // GetAlbumById 获取相册详情
-// GET /api/albums/:id
+// GET /api/admin/photos/albums/:id/info
 func (h *PhotoAlbumHandler) GetAlbumById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
 		return
 	}
-	// 后台使用分页查询获取详情，前台直接获取公开相册
-	var condition dto.ConditionVO
-	c.ShouldBindQuery(&condition)
-	pageNum, pageSize := util.PageQuery(c)
-	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
-
-	result, err := h.svc.GetAdminAlbums(c.Request.Context(), condition, page)
+	result, err := h.svc.GetAlbumById(c.Request.Context(), uint(id))
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	_ = id
 	util.ResponseSuccess(c, result)
 }
 
 // SaveOrUpdate 保存/更新相册（后台）
-// POST /api/admin/albums (新增)
-// PUT /api/admin/albums/:id (更新)
+// POST /api/admin/photos/albums
 func (h *PhotoAlbumHandler) SaveOrUpdate(c *gin.Context) {
 	var albumVO vo.PhotoAlbumVO
 	if err := c.ShouldBindJSON(&albumVO); err != nil {
@@ -65,27 +60,12 @@ func (h *PhotoAlbumHandler) SaveOrUpdate(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	if idStr != "" {
-		id, err := strconv.ParseUint(idStr, 10, 64)
-		if err != nil {
-			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID"))
-			return
-		}
-		if err := h.svc.UpdateAlbum(c.Request.Context(), uint(id), albumVO); err != nil {
-			util.ResponseError(c, err)
-			return
-		}
-		util.ResponseSuccess(c, nil)
-		return
-	}
-
-	result, err := h.svc.CreateAlbum(c.Request.Context(), albumVO)
-	if err != nil {
+	// 对标Java saveOrUpdatePhotoAlbum，根据ID判断新增/更新
+	if err := h.svc.SaveOrUpdateAlbum(c.Request.Context(), albumVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, result)
+	util.ResponseSuccess(c, "操作成功")
 }
 
 // DeleteAlbum 删除相册（后台）
@@ -119,10 +99,10 @@ func (h *PhotoAlbumHandler) ListAdminAlbums(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ListAlbumInfos 获取后台相册列表信息（用于下拉选择）
+// ListAlbumInfos 获取后台相册列表信息（用于下拉选择/移动照片，对标Java listPhotoAlbumInfosAdmin）
 // GET /api/admin/photos/albums/info
 func (h *PhotoAlbumHandler) ListAlbumInfos(c *gin.Context) {
-	list, err := h.svc.GetAlbums(c.Request.Context())
+	list, err := h.svc.GetAlbumInfos(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -130,7 +110,7 @@ func (h *PhotoAlbumHandler) ListAlbumInfos(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// UploadAlbumCover 上传相册封面
+// UploadAlbumCover 上传相册封面（对标Java PhotoAlbumController.savePhotoAlbumCover）
 // POST /api/admin/photos/albums/upload
 func (h *PhotoAlbumHandler) UploadAlbumCover(c *gin.Context) {
 	file, err := c.FormFile("file")
@@ -138,7 +118,29 @@ func (h *PhotoAlbumHandler) UploadAlbumCover(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的封面"))
 		return
 	}
-	// TODO: 上传到MinIO
-	url := "/uploads/albums/" + file.Filename
+
+	// 打开文件获取输入流
+	src, err := file.Open()
+	if err != nil {
+		util.ResponseError(c, errors.ErrFileUploadFailed.WithMsg("打开文件失败"))
+		return
+	}
+	defer src.Close()
+
+	// 读取文件内容到内存（对标Java AbstractUploadStrategyImpl.uploadFile）
+	data, err := io.ReadAll(src)
+	if err != nil {
+		util.ResponseError(c, errors.ErrFileUploadFailed.WithMsg("读取文件失败"))
+		return
+	}
+
+	// 调用上传服务（内部含MD5去重 + MinIO上传）
+	url, err := h.uploadSvc.UploadAlbumCover(c.Request.Context(), data, file.Filename)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+
+	// 返回访问URL
 	util.ResponseSuccess(c, url)
 }

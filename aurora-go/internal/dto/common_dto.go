@@ -16,6 +16,7 @@ type ConditionVO struct {
 	IsReview   *int8  `form:"isReview"`     // 审核状态筛选（前端传 isReview=0/1）
 	Type       *int8  `form:"type"`          // 类型筛选
 	CategoryID *uint  `form:"categoryId"`
+	AlbumID    uint   `form:"albumId"`       // 相册ID（照片列表用）
 	IsDelete   *int8  `form:"isDelete"`
 	DateStart  string `form:"dateStart"`    // 时间范围起始
 	DateEnd    string `form:"dateEnd"`      // 时间范围结束
