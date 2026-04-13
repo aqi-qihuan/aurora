@@ -61,6 +61,33 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		util.ResponseError(c, err)
 		return
 	}
+
+	// 使用TokenService生成JWT Token（替换临时随机字符串）
+	if h.registry.TokenSvc != nil {
+		// 构造UserDetailsDTO用于生成Token
+		userDetail := &dto.UserDetailsDTO{
+			ID:         result.UserInfoID,
+			UserInfoID: result.UserInfoID,
+			Email:      result.Email,
+			Nickname:   result.Nickname,
+			Avatar:     result.Avatar,
+			LoginType:  result.LoginType, // int类型，不是int8
+			IsDisable:  0, // 默认不禁用
+			Roles:      []string{"admin"}, // TODO: 从数据库查询实际角色
+		}
+		
+		tokenString, err := h.registry.TokenSvc.CreateToken(userDetail)
+		if err != nil {
+			slog.Error("生成JWT Token失败", "error", err)
+			util.ResponseError(c, errors.ErrInternalServer.WithMsg("Token生成失败"))
+			return
+		}
+		
+		// 更新返回结果中的Token
+		result.Token = tokenString
+		slog.Debug("JWT Token生成成功", "user_id", result.UserInfoID)
+	}
+
 	util.ResponseSuccess(c, result)
 }
 

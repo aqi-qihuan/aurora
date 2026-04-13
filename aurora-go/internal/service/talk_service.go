@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
@@ -11,87 +14,97 @@ import (
 	"gorm.io/gorm"
 )
 
-// TalkService 说说业务逻辑 (对标 Java TalkServiceImpl)
+// TalkService 说说业务逻辑 (完全对标 Java TalkServiceImpl)
 type TalkService struct {
-	db           *gorm.DB
-	statsService *RedisStatsService // Redis 统计服务
+	db *gorm.DB
 }
 
-func NewTalkService(db *gorm.DB, statsService *RedisStatsService) *TalkService {
-	return &TalkService{
-		db:           db,
-		statsService: statsService,
-	}
+func NewTalkService(db *gorm.DB) *TalkService {
+	return &TalkService{db: db}
 }
 
-// CreateTalk 发布说说
-func (s *TalkService) CreateTalk(ctx context.Context, userID uint, vo vo.TalkVO) (*model.Talk, error) {
+// SaveOrUpdateTalk 保存或更新说说（对标 Java saveOrUpdateTalk）
+// 根据ID有无自动判断新增/更新
+func (s *TalkService) SaveOrUpdateTalk(ctx context.Context, userID uint, talkVO vo.TalkVO) error {
 	talk := model.Talk{
 		UserID:  userID,
-		Content: vo.Content,
-		Status:  1,
+		Content: talkVO.Content,
+		Images:  talkVO.Images,
+		IsTop:   talkVO.IsTop,
+		Status:  talkVO.Status,
 	}
 
-	if vo.Status != 0 {
-		talk.Status = vo.Status
-	}
-
-	if err := s.db.WithContext(ctx).Create(&talk).Error; err != nil {
-		return nil, fmt.Errorf("发布说说失败: %w", err)
-	}
-	return &talk, nil
-}
-
-// UpdateTalk 更新说说
-func (s *TalkService) UpdateTalk(ctx context.Context, id uint, vo vo.TalkVO) error {
-	var talk model.Talk
-	if err := s.db.WithContext(ctx).First(&talk, id).Error; err != nil {
-		return errors.ErrTalkNotFound
-	}
-
-	updates := map[string]interface{}{
-		"content": vo.Content,
-	}
-	if vo.Status != 0 {
-		updates["status"] = vo.Status
-	}
-
-	return s.db.WithContext(ctx).Model(&talk).Updates(updates).Error
-}
-
-// DeleteTalk 删除说说 (事务: 删除关联评论)
-func (s *TalkService) DeleteTalk(ctx context.Context, id uint) error {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var talk model.Talk
-		if err := tx.First(&talk, id).Error; err != nil {
-			return errors.ErrTalkNotFound
+	if talkVO.ID > 0 {
+		// 更新：使用Updates()只更新非零值字段，对标Java MyBatis-Plus的saveOrUpdate行为
+		// Omit("create_time") 确保不会覆盖原有创建时间
+		if err := s.db.WithContext(ctx).Model(&model.Talk{}).Where("id = ?", talkVO.ID).Updates(map[string]interface{}{
+			"user_id": userID,
+			"content": talkVO.Content,
+			"images":  talkVO.Images,
+			"is_top":  talkVO.IsTop,
+			"status":  talkVO.Status,
+		}).Error; err != nil {
+			return fmt.Errorf("更新说说失败: %w", err)
 		}
+	} else {
+		// 新增
+		if err := s.db.WithContext(ctx).Create(&talk).Error; err != nil {
+			return fmt.Errorf("发布说说失败: %w", err)
+		}
+	}
+	return nil
+}
 
-		// 删除说说下的所有评论（对标Java: topic_id + type=5）
-		tx.Where("topic_id = ? AND type = ?", id, 5).Delete(&model.Comment{})
-
-		if err := tx.Delete(&talk).Error; err != nil {
-			return fmt.Errorf("删除说说失败: %w", err)
+// DeleteTalks 批量删除说说（对标 Java deleteTalks）
+// 物理删除，需要先删除关联评论
+func (s *TalkService) DeleteTalks(ctx context.Context, ids []uint) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先删除关联评论（topic_id + type=5表示说说评论）
+		tx.Where("topic_id IN ? AND type = ?", ids, 5).Delete(&model.Comment{})
+		
+		// 再删除说说本身
+		result := tx.Unscoped().Where("id IN ?", ids).Delete(&model.Talk{})
+		if result.Error != nil {
+			return fmt.Errorf("删除说说失败: %w", result.Error)
 		}
 		return nil
 	})
 }
 
-// GetTalks 获取公开说说列表(前台用)
+// GetTalks 获取公开说说列表（前台用，对标 Java listTalks）
+// 使用JOIN查询用户信息，批量查询评论数，JSON解析images
 func (s *TalkService) GetTalks(ctx context.Context, page dto.PageVO) (*dto.PageResultDTO, error) {
-	var talks []model.Talk
+	type TalkRow struct {
+		ID         uint
+		Nickname   string
+		Avatar     string
+		Content    string
+		Images     string
+		IsTop      int8
+		CreateTime time.Time `gorm:"column:create_time"`  // 直接使用 time.Time，让GORM自动转换
+	}
+
+	var talks []TalkRow
 	var count int64
 
-	baseQuery := s.db.WithContext(ctx).
-		Model(&model.Talk{}).
-		Where("status = 1")
-
-	baseQuery.Count(&count)
+	// 统计总数
+	s.db.WithContext(ctx).Model(&model.Talk{}).Where("status = 1").Count(&count)
+	if count == 0 {
+		return &dto.PageResultDTO{
+			List:     []dto.TalkDTO{},
+			Count:    0,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
+	}
 
 	offset := page.GetOffset()
-	err := baseQuery.
-		Preload("UserInfo").
-		Order("is_top DESC, create_time DESC").
+	err := s.db.WithContext(ctx).
+		Table("t_talk t").
+		Select("t.id, ui.nickname, ui.avatar, t.content, t.images, t.is_top, t.create_time").
+		Joins("JOIN t_user_info ui ON t.user_id = ui.id").
+		Where("t.status = 1").
+		Order("t.is_top DESC, t.id DESC").
 		Limit(page.PageSize).
 		Offset(offset).
 		Find(&talks).Error
@@ -101,29 +114,26 @@ func (s *TalkService) GetTalks(ctx context.Context, page dto.PageVO) (*dto.PageR
 	}
 
 	list := make([]dto.TalkDTO, len(talks))
+	talkIDs := make([]uint, len(talks))
 	for i, t := range talks {
+		talkIDs[i] = t.ID
 		list[i] = dto.TalkDTO{
 			ID:         t.ID,
-			UserID:     t.UserID,
+			Nickname:   t.Nickname,
+			Avatar:     t.Avatar,
 			Content:    t.Content,
+			Images:     t.Images,
 			IsTop:      t.IsTop,
-			Status:     t.Status,
-			LikeCount:  s.getTalkLikeCount(t.ID),
-			CreateTime: t.CreateTime,
+			CreateTime: t.CreateTime,  // 直接使用，GORM已自动转换
 		}
-		if t.UserInfo != nil {
-			list[i].Nickname = t.UserInfo.Nickname
-			list[i].Avatar = t.UserInfo.Avatar
+		// 解析images JSON为List<String>
+		if t.Images != "" {
+			json.Unmarshal([]byte(t.Images), &list[i].Imgs)
 		}
 	}
 
-	// 批量查询评论数（一次SQL替代N次循环查询，优化N+1问题）
-	if len(talks) > 0 {
-		talkIDs := make([]uint, len(talks))
-		for i, t := range talks {
-			talkIDs[i] = t.ID
-		}
-
+	// 批量查询评论数（对标Java: commentMapper.listCommentCountByTypeAndTopicIds）
+	if len(talkIDs) > 0 {
 		var commentCounts []struct {
 			TopicID uint
 			Count   int
@@ -135,13 +145,10 @@ func (s *TalkService) GetTalks(ctx context.Context, page dto.PageVO) (*dto.PageR
 			Group("topic_id").
 			Find(&commentCounts)
 
-		// 构建 ID -> Count 映射
-		countMap := make(map[uint]int, len(commentCounts))
+		countMap := make(map[uint]int)
 		for _, cc := range commentCounts {
 			countMap[cc.TopicID] = cc.Count
 		}
-
-		// 填充评论数
 		for i := range list {
 			list[i].CommentCount = countMap[list[i].ID]
 		}
@@ -155,13 +162,25 @@ func (s *TalkService) GetTalks(ctx context.Context, page dto.PageVO) (*dto.PageR
 	}, nil
 }
 
-// GetTalkByID 根据ID获取说说详情(含评论树)
-func (s *TalkService) GetTalkByID(ctx context.Context, id uint) (*dto.TalkDetailDTO, error) {
-	var talk model.Talk
+// GetTalkByID 根据ID获取说说详情（前台用，对标 Java getTalkById）
+func (s *TalkService) GetTalkByID(ctx context.Context, id uint) (*dto.TalkDTO, error) {
+	type TalkRow struct {
+		ID         uint
+		Nickname   string
+		Avatar     string
+		Content    string
+		Images     string
+		IsTop      int8
+		CreateTime time.Time `gorm:"column:create_time"`  // 直接使用 time.Time，让GORM自动转换
+	}
 
+	var talk TalkRow
 	err := s.db.WithContext(ctx).
-		Preload("UserInfo").
-		First(&talk, id).Error
+		Table("t_talk t").
+		Select("t.id, ui.nickname, ui.avatar, t.content, t.images, t.is_top, t.create_time").
+		Joins("JOIN t_user_info ui ON t.user_id = ui.id").
+		Where("t.id = ? AND t.status = 1", id).
+		First(&talk).Error
 
 	if err != nil {
 		if errors.IsStd(err, gorm.ErrRecordNotFound) {
@@ -170,73 +189,77 @@ func (s *TalkService) GetTalkByID(ctx context.Context, id uint) (*dto.TalkDetail
 		return nil, fmt.Errorf("查询说说详情失败: %w", err)
 	}
 
-	dto := &dto.TalkDetailDTO{
-		TalkDTO: dto.TalkDTO{
-			ID:         talk.ID,
-			UserID:     talk.UserID,
-			Content:    talk.Content,
-			IsTop:      talk.IsTop,
-			Status:     talk.Status,
-			LikeCount:  s.getTalkLikeCount(talk.ID),
-			CreateTime: talk.CreateTime,
-		},
+	dto := &dto.TalkDTO{
+		ID:         talk.ID,
+		Nickname:   talk.Nickname,
+		Avatar:     talk.Avatar,
+		Content:    talk.Content,
+		Images:     talk.Images,
+		IsTop:      talk.IsTop,
+		CreateTime: talk.CreateTime,  // 直接使用，GORM已自动转换
 	}
 
-	if talk.UserInfo != nil {
-		dto.Nickname = talk.UserInfo.Nickname
-		dto.Avatar = talk.UserInfo.Avatar
+	// 解析images JSON
+	if talk.Images != "" {
+		json.Unmarshal([]byte(talk.Images), &dto.Imgs)
 	}
+
+	// 查询评论数（对标Java: commentMapper.listCommentCountByTypeAndTopicId）
+	var commentCount struct {
+		TopicID uint
+		Count   int
+	}
+	s.db.WithContext(ctx).
+		Table("t_comment").
+		Select("topic_id, COUNT(*) as count").
+		Where("topic_id = ? AND type = 5 AND is_review = 1", id).
+		Group("topic_id").
+		First(&commentCount)
+
+	dto.CommentCount = commentCount.Count
 
 	return dto, nil
 }
 
-// LikeTalk 点赞说说 (使用 Redis)
-func (s *TalkService) LikeTalk(ctx context.Context, id uint) error {
-	// TODO: 从 Context 中获取 userID
-	// 临时方案：直接返回成功
-	if s.statsService != nil {
-		// 假设 userID = 1，实际需要从中获取
-		return s.statsService.LikeTalk(ctx, id, 1)
-	}
-	return nil
-}
-
-// SetTalkTop 设置说说置顶
-func (s *TalkService) SetTalkTop(ctx context.Context, id uint, isTop int8) error {
-	result := s.db.WithContext(ctx).
-		Model(&model.Talk{}).
-		Where("id = ?", id).
-		Update("is_top", isTop)
-
-	if result.Error != nil {
-		return fmt.Errorf("设置说说置顶失败: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return errors.ErrTalkNotFound
-	}
-	return nil
-}
-
-// ListAdminTalks 后台管理分页查询说说
+// ListAdminTalks 后台管理分页查询说说（对标 Java listBackTalks）
+// 返回TalkAdminDTO，包含status字段
 func (s *TalkService) ListAdminTalks(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
-	var talks []model.Talk
+	type TalkRow struct {
+		ID         uint
+		Nickname   string
+		Avatar     string
+		Content    string
+		Images     string
+		IsTop      int8
+		Status     int8
+		CreateTime time.Time `gorm:"column:create_time"`  // 直接使用 time.Time，让GORM自动转换
+	}
+
+	var talks []TalkRow
 	var count int64
 
-	baseQuery := s.db.WithContext(ctx).Model(&model.Talk{})
+	baseQuery := s.db.WithContext(ctx).Table("t_talk t").
+		Select("t.id, ui.nickname, ui.avatar, t.content, t.images, t.is_top, t.status, t.create_time").
+		Joins("JOIN t_user_info ui ON t.user_id = ui.id")
 
-	if cond.Keywords != "" {
-		baseQuery = baseQuery.Where("content LIKE ?", "%"+cond.Keywords+"%")
-	}
+	// 条件过滤
 	if cond.Status != nil && *cond.Status > 0 {
-		baseQuery = baseQuery.Where("status = ?", *cond.Status)
+		baseQuery = baseQuery.Where("t.status = ?", *cond.Status)
 	}
 
 	baseQuery.Count(&count)
+	if count == 0 {
+		return &dto.PageResultDTO{
+			List:     []dto.TalkAdminDTO{},
+			Count:    0,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
+	}
 
 	offset := page.GetOffset()
 	err := baseQuery.
-		Preload("UserInfo").
-		Order("create_time DESC").
+		Order("t.is_top DESC, t.id DESC").
 		Limit(page.PageSize).
 		Offset(offset).
 		Find(&talks).Error
@@ -245,19 +268,21 @@ func (s *TalkService) ListAdminTalks(ctx context.Context, cond dto.ConditionVO, 
 		return nil, fmt.Errorf("查询说说列表失败: %w", err)
 	}
 
-	list := make([]dto.TalkDTO, len(talks))
+	list := make([]dto.TalkAdminDTO, len(talks))
 	for i, t := range talks {
-		list[i] = dto.TalkDTO{
+		list[i] = dto.TalkAdminDTO{
 			ID:         t.ID,
-			UserID:     t.UserID,
-			Content:    t.Content[:MinInt(len(t.Content), 100)] + "...",
+			Nickname:   t.Nickname,
+			Avatar:     t.Avatar,
+			Content:    t.Content,
+			Images:     t.Images,
 			IsTop:      t.IsTop,
 			Status:     t.Status,
-			LikeCount:  s.getTalkLikeCount(t.ID),
-			CreateTime: t.CreateTime,
+			CreateTime: t.CreateTime,  // 直接使用，GORM已自动转换
 		}
-		if t.UserInfo != nil {
-			list[i].Nickname = t.UserInfo.Nickname
+		// 解析images JSON
+		if t.Images != "" {
+			json.Unmarshal([]byte(t.Images), &list[i].Imgs)
 		}
 	}
 
@@ -269,13 +294,84 @@ func (s *TalkService) ListAdminTalks(ctx context.Context, cond dto.ConditionVO, 
 	}, nil
 }
 
-func MinInt(a, b int) int { if a < b { return a }; return b }
-
-// getTalkLikeCount 获取说说点赞数（从 Redis）
-func (s *TalkService) getTalkLikeCount(talkID uint) int64 {
-	if s.statsService == nil {
-		return 0
+// GetAdminTalkByID 后台获取说说详情（对标 Java getBackTalkById）
+func (s *TalkService) GetAdminTalkByID(ctx context.Context, id uint) (*dto.TalkAdminDTO, error) {
+	type TalkRow struct {
+		ID         uint
+		Nickname   string
+		Avatar     string
+		Content    string
+		Images     string
+		IsTop      int8
+		Status     int8
+		CreateTime time.Time `gorm:"column:create_time"`  // 直接使用 time.Time，让GORM自动转换
 	}
-	count, _ := s.statsService.GetTalkLikeCount(context.Background(), talkID)
-	return count
+
+	var talk TalkRow
+	err := s.db.WithContext(ctx).
+		Table("t_talk t").
+		Select("t.id, ui.nickname, ui.avatar, t.content, t.images, t.is_top, t.status, t.create_time").
+		Joins("JOIN t_user_info ui ON t.user_id = ui.id").
+		Where("t.id = ?", id).
+		First(&talk).Error
+
+	if err != nil {
+		if errors.IsStd(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrTalkNotFound
+		}
+		return nil, fmt.Errorf("查询说说详情失败: %w", err)
+	}
+
+	dto := &dto.TalkAdminDTO{
+		ID:         talk.ID,
+		Nickname:   talk.Nickname,
+		Avatar:     talk.Avatar,
+		Content:    talk.Content,
+		Images:     talk.Images,
+		IsTop:      talk.IsTop,
+		Status:     talk.Status,
+		CreateTime: talk.CreateTime,  // 直接使用，GORM已自动转换
+	}
+
+	// 解析images JSON
+	if talk.Images != "" {
+		json.Unmarshal([]byte(talk.Images), &dto.Imgs)
+	}
+
+	return dto, nil
+}
+
+// parseTime 解析时间字符串（支持多种格式，对标Java的LocalDateTime）
+func (s *TalkService) parseTime(timeStr string) time.Time {
+	if timeStr == "" {
+		return time.Time{}
+	}
+	
+	// 调试日志：查看原始时间字符串
+	log.Printf("[parseTime] 原始时间字符串: '%s'", timeStr)
+	
+	// 尝试多种时间格式（优先匹配带毫秒的格式）
+	formats := []string{
+		"2006-01-02 15:04:05.000",  // MySQL datetime with milliseconds (优先)
+		"2006-01-02 15:04:05",      // MySQL datetime without milliseconds
+		"2006-01-02T15:04:05Z",     // ISO8601
+		"2006-01-02T15:04:05.000Z", // ISO8601 with milliseconds
+	}
+	
+	for _, format := range formats {
+		if t, err := time.Parse(format, timeStr); err == nil {
+			log.Printf("[parseTime] 成功解析，使用格式: %s", format)
+			return t
+		}
+	}
+	
+	// 如果都失败，尝试使用 time.ParseInLocation
+	if t, err := time.ParseInLocation("2006-01-02 15:04:05", timeStr, time.Local); err == nil {
+		log.Printf("[parseTime] 使用 ParseInLocation 成功")
+		return t
+	}
+	
+	// 如果还是失败，记录日志并返回零值
+	log.Printf("[parseTime] 解析失败! 原始字符串: '%s'", timeStr)
+	return time.Time{}
 }

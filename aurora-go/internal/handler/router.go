@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log/slog"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/middleware"
@@ -31,11 +33,14 @@ type Router struct {
 	FileHandler          *FileHandler
 	ResourceHandler      *ResourceHandler
 	AboutHandler         *AboutHandler
+	// JWT认证服务（用于admin路由）
+	tokenSvc *service.TokenService
+	logger   *slog.Logger
 }
 
 // NewRouter 创建路由器并初始化所有Handler实例
 // 所有Handler通过Registry获取Service实例, 确保单例共享
-func NewRouter(registry *service.Registry) *Router {
+func NewRouter(registry *service.Registry, tokenSvc *service.TokenService, logger *slog.Logger) *Router {
 	return &Router{
 		ArticleHandler:       NewArticleHandler(registry.Article, registry.File),
 		UserAuthHandler:      NewUserAuthHandler(registry),
@@ -43,7 +48,7 @@ func NewRouter(registry *service.Registry) *Router {
 		CategoryHandler:      NewCategoryHandler(registry.Category),
 		TagHandler:           NewTagHandler(registry.Tag),
 		FriendLinkHandler:    NewFriendLinkHandler(registry.FriendLink),
-		TalkHandler:          NewTalkHandler(registry.Talk),
+		TalkHandler:          NewTalkHandler(registry.Talk, registry.File),
 		PhotoHandler:         NewPhotoHandler(registry.Photo),
 		PhotoAlbumHandler:    NewPhotoAlbumHandler(registry.PhotoAlbum),
 		RoleHandler:          NewRoleHandler(registry.Role),
@@ -57,12 +62,18 @@ func NewRouter(registry *service.Registry) *Router {
 		FileHandler:          NewFileHandler(registry.File),
 		ResourceHandler:      NewResourceHandler(registry.Resource),
 		AboutHandler:         NewAboutHandler(registry.About),
+		tokenSvc:             tokenSvc,
+		logger:               logger,
 	}
 }
 
 // RegisterRoutes 注册所有路由（在main.go中调用）
 // 路径完全对齐 Java SpringBoot 原始 API 路径
 func (r *Router) RegisterRoutes(engine *gin.Engine) {
+	// 静态文件服务 - 服务上传的资源文件（对标Java版 Spring Boot static-resource）
+	// 访问 http://localhost:8080/aurora/articles/xxx.jpg 可以访问上传的图片
+	engine.Static("/aurora", "./aurora")
+
 	api := engine.Group("/api")
 
 	// ==================== 公开路由（无需认证）====================
@@ -77,7 +88,8 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 
 	// ==================== 后台管理路由（需JWT + 管理员角色）====================
 	admin := api.Group("/admin")
-	admin.Use(middleware.JWTAuth())
+	// 使用完整的JWT认证中间件（解析Token，获取用户ID，自动续期）
+	admin.Use(middleware.JWTAuthEnhanced(r.tokenSvc, r.logger))
 
 	r.registerAdminRoutes(admin)
 }
@@ -208,7 +220,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.GET("/talks/:id", r.TalkHandler.GetAdminTalkById)
 	rg.POST("/talks", r.TalkHandler.SaveOrUpdate)
 	rg.POST("/talks/images", r.TalkHandler.UploadTalkImage)
-	rg.DELETE("/talks", r.TalkHandler.DeleteTalk)
+	rg.DELETE("/talks", r.TalkHandler.DeleteTalks)
 
 	// --- 相册管理（PhotoAlbumController） ---
 	rg.GET("/photos/albums", r.PhotoAlbumHandler.ListAdminAlbums)

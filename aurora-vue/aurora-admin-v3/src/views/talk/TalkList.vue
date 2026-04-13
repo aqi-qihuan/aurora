@@ -209,36 +209,14 @@ const topCount = computed(() => talks.value.filter(t => t.isTop === 1).length)
  * Talk 组件路由为 /talk/:talkId，用 "write" 作为 talkId 标识发布模式
  */
 const goToWrite = () => {
-  const allRoutes = router.getRoutes()
-  const talkRoute = allRoutes.find(r => {
-    const comp = r.components?.default
-    if (!comp) return false
-    const name = comp.__file || comp.name || ''
-    return name.includes('Talk.vue') && !name.includes('TalkList.vue')
-  })
-  if (talkRoute) {
-    router.push({ path: talkRoute.path.replace(':talkId', 'write') })
-  } else {
-    router.push('/talk/write')
-  }
+  router.push({ path: '/talk/write' })
 }
 
 /**
  * 导航到编辑说说页面
  */
 const goToEdit = (id) => {
-  const allRoutes = router.getRoutes()
-  const talkRoute = allRoutes.find(r => {
-    const comp = r.components?.default
-    if (!comp) return false
-    const name = comp.__file || comp.name || ''
-    return name.includes('Talk.vue') && !name.includes('TalkList.vue')
-  })
-  if (talkRoute) {
-    router.push({ path: talkRoute.path.replace(':talkId', id) })
-  } else {
-    router.push('/talk/' + id)
-  }
+  router.push({ path: '/talk/' + id })
 }
 
 const formatDateTime = (date) => {

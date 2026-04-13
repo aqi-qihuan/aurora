@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -386,11 +387,23 @@ func (s *AuroraInfoService) getFriendLinks(ctx context.Context) ([]dto.FriendLin
 }
 
 func (s *AuroraInfoService) getTalks(ctx context.Context) ([]dto.TalkDTO, error) {
-	var talks []model.Talk
+	type TalkRow struct {
+		ID         uint
+		Nickname   string
+		Avatar     string
+		Content    string
+		Images     string
+		IsTop      int8
+		CreateTime string `gorm:"column:create_time"`
+	}
+
+	var talks []TalkRow
 	err := s.db.WithContext(ctx).
-		Where("status = 1").
-		Preload("UserInfo").
-		Order("create_time DESC").
+		Table("t_talk t").
+		Select("t.id, ui.nickname, ui.avatar, t.content, t.images, t.is_top, t.create_time").
+		Joins("JOIN t_user_info ui ON t.user_id = ui.id").
+		Where("t.status = 1").
+		Order("t.create_time DESC").
 		Limit(5).
 		Find(&talks).Error
 
@@ -402,14 +415,16 @@ func (s *AuroraInfoService) getTalks(ctx context.Context) ([]dto.TalkDTO, error)
 		}
 		list[i] = dto.TalkDTO{
 			ID:         t.ID,
-			UserID:     t.UserID,
+			Nickname:   t.Nickname,
+			Avatar:     t.Avatar,
 			Content:    content,
-			LikeCount:  s.getTalkLikeCount(t.ID),
-			CreateTime: t.CreateTime,
+			Images:     t.Images,
+			IsTop:      t.IsTop,
+			CreateTime: s.parseTime(t.CreateTime),
 		}
-		if t.UserInfo != nil {
-			list[i].Nickname = t.UserInfo.Nickname
-			list[i].Avatar = t.UserInfo.Avatar
+		// 解析images JSON
+		if t.Images != "" {
+			json.Unmarshal([]byte(t.Images), &list[i].Imgs)
 		}
 	}
 	return list, err
@@ -443,4 +458,13 @@ func (s *AuroraInfoService) getTalkLikeCount(talkID uint) int64 {
 	}
 	count, _ := s.statsService.GetTalkLikeCount(context.Background(), talkID)
 	return count
+}
+
+// parseTime 解析时间字符串（对标Java的LocalDateTime）
+func (s *AuroraInfoService) parseTime(timeStr string) time.Time {
+	t, err := time.Parse("2006-01-02 15:04:05", timeStr)
+	if err != nil {
+		return time.Time{}
+	}
+	return t
 }

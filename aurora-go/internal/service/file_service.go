@@ -211,6 +211,56 @@ func (s *FileService) ReadFileContent(r io.Reader) ([]byte, error) {
 	return content, nil
 }
 
+// UploadTalkImage 上传说说图片 (完全对标 Java 版 TalkController.saveTalkImages)
+// 对标Java: uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.TALK.getPath())
+// FilePathEnum.TALK = "aurora/talks/"
+func (s *FileService) UploadTalkImage(ctx context.Context, file *multipart.FileHeader) (string, error) {
+	if file == nil || file.Size == 0 {
+		return "", fmt.Errorf("图片文件不能为空")
+	}
+
+	// 检查文件大小限制(10MB)
+	const maxSize = 10 << 20 // 10MB
+	if file.Size > maxSize {
+		return "", fmt.Errorf("图片大小超过10MB限制")
+	}
+
+	// 验证图片扩展名白名单
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	allowedExts := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+		".svg": true,
+	}
+	if !allowedExts[ext] {
+		return "", fmt.Errorf("不支持的图片类型: %s", ext)
+	}
+
+	// 生成文件名: 时间戳 + 随机字符串 + 扩展名
+	randomStr, _ := util.GenerateRandomString(16)
+	timestamp := time.Now().Unix()
+	fileName := fmt.Sprintf("%d_%s%s", timestamp, randomStr, ext)
+
+	// 对标Java FilePathEnum.TALK = "aurora/talks/"
+	talkPath := "aurora/talks/" + fileName
+
+	// 上传文件
+	src, err := file.Open()
+	if err != nil {
+		return "", fmt.Errorf("打开文件失败: %w", err)
+	}
+	defer src.Close()
+
+	if err := s.uploadFile(ctx, src, talkPath); err != nil {
+		return "", fmt.Errorf("上传图片失败: %w", err)
+	}
+
+	// 获取完整URL (对标Java getFileAccessUrl)
+	fullURL := s.getFileAccessURL(talkPath)
+
+	slog.Info("说说图片上传成功", "url", fullURL)
+	return fullURL, nil
+}
+
 // UploadAvatar 上传用户头像 (完全对标 Java 版 UserInfoServiceImpl.updateUserAvatar)
 // 流程: 1)计算文件MD5去重 2)上传到对象存储 3)更新数据库avatar字段 4)返回完整URL
 func (s *FileService) UploadAvatar(ctx context.Context, file *multipart.FileHeader, userID uint) (string, error) {

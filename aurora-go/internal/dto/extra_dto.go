@@ -98,25 +98,6 @@ type FriendLinkAdminDTO struct {
 	CreateTime   time.Time `json:"createTime"`
 }
 
-// ===== 说说 DTO =====
-
-type TalkDTO struct {
-	ID         uint      `json:"id"`
-	UserID     uint      `json:"userId"`
-	Nickname   string    `json:"nickname,omitempty"`
-	Avatar     string    `json:"avatar,omitempty"`
-	Content    string    `json:"content"`
-	IsTop      int8      `json:"isTop"`
-	Status     int8      `json:"status"`
-	LikeCount  int64     `json:"likeCount"`
-	CommentCount int     `json:"commentCount"`
-	CreateTime time.Time `json:"createTime"`
-}
-
-type TalkDetailDTO struct {
-	TalkDTO
-}
-
 // ===== 相册/照片 DTO =====
 
 type PhotoDTO struct {

@@ -7,18 +7,20 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
 )
 
-// TalkHandler 说说处理器（对标 Java TalkController）
+// TalkHandler 说说处理器（完全对标 Java TalkController）
 type TalkHandler struct {
 	svc *service.TalkService
+	fileSvc *service.FileService
 }
 
-func NewTalkHandler(svc *service.TalkService) *TalkHandler {
-	return &TalkHandler{svc: svc}
+func NewTalkHandler(svc *service.TalkService, fileSvc *service.FileService) *TalkHandler {
+	return &TalkHandler{svc: svc, fileSvc: fileSvc}
 }
 
 // ListTalks 获取说说列表（前台，按时间倒序）
@@ -35,7 +37,7 @@ func (h *TalkHandler) ListTalks(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// GetTalkById 获取说说详情
+// GetTalkById 获取说说详情（前台）
 // GET /api/talks/:id
 func (h *TalkHandler) GetTalkById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -51,9 +53,9 @@ func (h *TalkHandler) GetTalkById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SaveOrUpdate 保存/更新说说（后台）
-// POST /api/admin/talks (新增)
-// PUT /api/admin/talks/:id (更新)
+// SaveOrUpdate 保存或更新说说（后台，统一接口）
+// POST /api/admin/talks
+// 对标Java版：根据ID有无自动判断新增/更新
 func (h *TalkHandler) SaveOrUpdate(c *gin.Context) {
 	var talkVO vo.TalkVO
 	if err := c.ShouldBindJSON(&talkVO); err != nil {
@@ -61,77 +63,35 @@ func (h *TalkHandler) SaveOrUpdate(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userId")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
-	}
-
-	idStr := c.Param("id")
-	if idStr != "" {
-		id, err := strconv.ParseUint(idStr, 10, 64)
-		if err != nil {
-			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
-			return
-		}
-		if err := h.svc.UpdateTalk(c.Request.Context(), uint(id), talkVO); err != nil {
-			util.ResponseError(c, err)
-			return
-		}
-		util.ResponseSuccess(c, nil)
+	// 从Context获取用户ID（JWTAuthEnhanced会设置user_id）
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("请先登录"))
 		return
 	}
 
-	result, err := h.svc.CreateTalk(c.Request.Context(), uid, talkVO)
-	if err != nil {
+	if err := h.svc.SaveOrUpdateTalk(c.Request.Context(), userID, talkVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, result)
+	util.ResponseSuccess(c, nil)
 }
 
-// DeleteTalk 删除说说（后台）
-// DELETE /api/admin/talks/:id
-func (h *TalkHandler) DeleteTalk(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
+// DeleteTalks 批量删除说说（后台）
+// DELETE /api/admin/talks
+// 对标Java版：接收ID数组批量删除
+func (h *TalkHandler) DeleteTalks(c *gin.Context) {
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的说说"))
 		return
 	}
-	if err := h.svc.DeleteTalk(c.Request.Context(), uint(id)); err != nil {
+
+	if err := h.svc.DeleteTalks(c.Request.Context(), ids); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "说说已删除")
-}
-
-// LikeTalk 点赞说说
-// POST /api/talks/:id/like
-func (h *TalkHandler) LikeTalk(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
-		return
-	}
-	if err := h.svc.LikeTalk(c.Request.Context(), uint(id)); err != nil {
-		util.ResponseError(c, err)
-		return
-	}
-	util.ResponseSuccess(c, "点赞成功")
-}
-
-// AddTalkComment 对说说发表评论/回复
-// POST /api/talks/:id/comments
-func (h *TalkHandler) AddTalkComment(c *gin.Context) {
-	talkID, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
-		return
-	}
-	util.ResponseSuccess(c, map[string]interface{}{
-		"talkId":  talkID,
-		"message": "评论成功",
-	})
 }
 
 // ListAdminTalks 后台说说列表
@@ -142,7 +102,7 @@ func (h *TalkHandler) ListAdminTalks(c *gin.Context) {
 	pageNum, pageSize := util.PageQuery(c)
 	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
 
-	result, err := h.svc.GetTalks(c.Request.Context(), page)
+	result, err := h.svc.ListAdminTalks(c.Request.Context(), condition, page)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -158,7 +118,7 @@ func (h *TalkHandler) GetAdminTalkById(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的说说ID"))
 		return
 	}
-	result, err := h.svc.GetTalkByID(c.Request.Context(), uint(id))
+	result, err := h.svc.GetAdminTalkByID(c.Request.Context(), uint(id))
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -168,13 +128,19 @@ func (h *TalkHandler) GetAdminTalkById(c *gin.Context) {
 
 // UploadTalkImage 上传说说图片
 // POST /api/admin/talks/images
+// 对标Java: uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.TALK.getPath())
 func (h *TalkHandler) UploadTalkImage(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的图片"))
 		return
 	}
-	// TODO: 上传到MinIO
-	url := "/uploads/talks/" + file.Filename
+	
+	// 调用FileService上传到MinIO/本地存储
+	url, err := h.fileSvc.UploadTalkImage(c.Request.Context(), file)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
 	util.ResponseSuccess(c, url)
 }

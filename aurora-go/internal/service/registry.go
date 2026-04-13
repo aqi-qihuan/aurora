@@ -64,7 +64,7 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.Category = NewCategoryService(db)
 	r.Tag = NewTagService(db)
 	r.FriendLink = NewFriendLinkService(db)
-	r.Talk = NewTalkService(db, statsService)
+	r.Talk = NewTalkService(db)
 	r.Photo = NewPhotoService(db)
 	r.PhotoAlbum = NewPhotoAlbumService(db)
 	r.Role = NewRoleService(db)

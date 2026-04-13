@@ -99,7 +99,8 @@ func main() {
 	slog.Info("Service registry initialized", "services", 24)
 
 	// 7. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
-	router := handler.NewRouter(registry)
+	tokenSvc := registry.TokenSvc
+	router := handler.NewRouter(registry, tokenSvc, slog.Default())
 	router.RegisterRoutes(r)
 	slog.Info("All routes registered (80+ endpoints)")
 

@@ -54,13 +54,6 @@ type FriendLinkVO struct {
 	LinkIntro   string `json:"linkIntro" binding:"omitempty,max=500"`
 }
 
-// ===== 说说 VO =====
-
-type TalkVO struct {
-	Content string `json:"content" binding:"required"`
-	Status  int8   `json:"status" binding:"omitempty,oneof=1 2"`
-}
-
 // ===== 相册 VO =====
 
 type PhotoAlbumVO struct {

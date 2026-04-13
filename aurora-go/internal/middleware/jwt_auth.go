@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -11,7 +12,7 @@ import (
 )
 
 // JWTAuth 便利函数 - 无参数版本的JWT认证中间件
-// 基础版本：验证Bearer Token存在性并解析基本用户信息
+// 完整功能: 解析JWT Token → 从Redis获取用户详情 → 设置用户ID/角色等到Context
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		method := c.Request.Method
@@ -26,7 +27,7 @@ func JWTAuth() gin.HandlerFunc {
 		authHeader := c.GetHeader(constant.TokenHeader)
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"flag":    false,
+				"code":    401,
 				"message": "未登录或Token已过期",
 			})
 			return
@@ -35,7 +36,7 @@ func JWTAuth() gin.HandlerFunc {
 		tokenString := service.ExtractToken(authHeader)
 		if tokenString == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"flag":    false,
+				"code":    401,
 				"message": "认证格式错误，请使用 Bearer <token>",
 			})
 			return
@@ -44,8 +45,61 @@ func JWTAuth() gin.HandlerFunc {
 		// 将token存入context，后续handler可使用
 		c.Set("token", tokenString)
 		
-		// 临时方案：如果Token是32位随机字符串，从Session中获取用户ID
-		// TODO: P0-6 替换为完整的JWT解析逻辑
+		// 解析JWT获取用户ID（不依赖Redis，直接从JWT claims提取）
+		tokenSvc := service.GetGlobalRegistry().TokenSvc
+		if tokenSvc == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Token服务未初始化",
+			})
+			return
+		}
+
+		claims, err := tokenSvc.ParseToken(tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Token无效或已过期，请重新登录",
+			})
+			return
+		}
+
+		userIdStr, ok := claims[constant.JwtClaimUserID].(string)
+		if !ok || userIdStr == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Token中缺少用户ID",
+			})
+			return
+		}
+
+		var userId uint
+		fmt.Sscanf(userIdStr, "%d", &userId)
+		if userId == 0 {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "用户ID格式错误",
+			})
+			return
+		}
+
+		// 从Redis获取完整用户详情（含角色、权限等）
+		userDetail, err := tokenSvc.GetUserDetailDTO(tokenString)
+		if err != nil {
+			// Redis中无Session，但至少设置了userId（用于发布说说等基础操作）
+			c.Set("user_id", userId)
+			c.Next()
+			return
+		}
+
+		// 将用户信息注入Context
+		if userDetail != nil {
+			setUserContext(c, userDetail)
+		} else {
+			// Redis中无Session，仅设置userId
+			c.Set("user_id", userId)
+		}
+
 		c.Next()
 	}
 }

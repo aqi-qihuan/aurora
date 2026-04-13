@@ -124,14 +124,6 @@ type ReviewVO struct {
 	IsApproved bool `json:"isApproved" binding:"required"`
 }
 
-// ===== 说说 =====
-
-// TalkVO 说说请求
-type TalkVO struct {
-	Content string `json:"content" binding:"required"`
-	Status  int8   `json:"status" binding:"omitempty,oneof=1 2"`
-}
-
 // ===== 相册 =====
 
 // PhotoAlbumVO 相册请求

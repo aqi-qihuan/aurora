@@ -187,9 +187,15 @@ const dropdownTitle = computed(() => {
 })
 
 onMounted(() => {
+  // 调试日志：查看路由参数
+  console.log('[Talk.vue] route.params:', route.params)
+  console.log('[Talk.vue] route.params.talkId:', route.params.talkId)
+  
   // "write" 标识发布模式，不需要加载已有数据
   if (route.params.talkId && route.params.talkId !== 'write') {
+    console.log('[Talk.vue] Loading talk data for ID:', route.params.talkId)
     request.get('/admin/talks/' + route.params.talkId).then(({ data }) => {
+      console.log('[Talk.vue] API response:', data)
       if (data && data.data) {
         Object.assign(talk, data.data)
         if (data.data.imgs) {
@@ -197,8 +203,13 @@ onMounted(() => {
             uploads.value.push({ url: item })
           })
         }
+        console.log('[Talk.vue] Talk data loaded:', talk)
       }
+    }).catch(err => {
+      console.error('[Talk.vue] Failed to load talk data:', err)
     })
+  } else {
+    console.log('[Talk.vue] Write mode or no talkId')
   }
 })
 
