@@ -90,6 +90,8 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 	admin := api.Group("/admin")
 	// 使用完整的JWT认证中间件（解析Token，获取用户ID，自动续期）
 	admin.Use(middleware.JWTAuthEnhanced(r.tokenSvc, r.logger))
+	// 使用RBAC权限控制中间件（对标Java的FilterInvocationSecurityMetadataSource + AccessDecisionManager）
+	admin.Use(middleware.RBAC(service.GetGlobalRegistry()))
 
 	r.registerAdminRoutes(admin)
 }

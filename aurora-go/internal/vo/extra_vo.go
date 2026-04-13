@@ -66,10 +66,7 @@ type PhotoAlbumVO struct {
 // ===== 角色 VO =====
 
 type RoleVO struct {
-	RoleName    string `json:"roleName" binding:"required,max=50"`
-	RoleLabel   string `json:"roleLabel" binding:"required,max=50"`
-	Description string `json:"description,omitempty" binding:"omitempty,max=200"`
-	Sort        int    `json:"sort"`
+	RoleName    string `json:"roleName" binding:"required,max=20"`
 	MenuIDs     []uint `json:"menuIds"`
 }
 
@@ -110,9 +107,12 @@ type JobVO struct {
 // ===== 资源权限 VO =====
 
 type ResourceVO struct {
+	ID            uint   `json:"id"`                                  // 更新时必填，创建时为空
 	ResourceName  string `json:"resourceName" binding:"required,max=50"`
-	URL           string `json:"url" binding:"required,url,max=255"`
-	RequestMethod string `json:"requestMethod" binding:"required,oneof=GET POST PUT DELETE PATCH"`
+	URL           string `json:"url" binding:"omitempty,max=255"`      // 模块不需要URL
+	RequestMethod string `json:"requestMethod" binding:"omitempty,oneof=GET POST PUT DELETE PATCH"`
+	ParentID      *uint  `json:"parentId"`                            // 父模块ID，模块为null
+	IsAnonymous   *int8  `json:"isAnonymous"`                         // 是否匿名 0否1是
 }
 
 // ===== 网站配置 VO =====

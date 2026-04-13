@@ -22,15 +22,13 @@ func NewResourceHandler(svc *service.ResourceService) *ResourceHandler {
 	return &ResourceHandler{svc: svc}
 }
 
-// ListResources 获取资源权限列表
+// ListResources 获取资源权限列表（树形结构，对标Java版）
 // GET /api/admin/resources
 func (h *ResourceHandler) ListResources(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
-	pageNum, pageSize := util.PageQuery(c)
-	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
 
-	result, err := h.svc.ListResources(c.Request.Context(), condition, page)
+	result, err := h.svc.ListResourcesTree(c.Request.Context(), condition)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -40,7 +38,7 @@ func (h *ResourceHandler) ListResources(c *gin.Context) {
 
 // SaveOrUpdate 保存/更新资源
 // POST /api/admin/resources
-// PUT /api/admin/resources/:id
+// 对标Java版 saveOrUpdateResource，根据ID判断新增或更新
 func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 	var resourceVO vo.ResourceVO
 	if err := c.ShouldBindJSON(&resourceVO); err != nil {
@@ -48,14 +46,10 @@ func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	if idStr != "" {
-		id, err := strconv.ParseUint(idStr, 10, 64)
-		if err != nil {
-			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的资源ID"))
-			return
-		}
-		if err := h.svc.UpdateResource(c.Request.Context(), uint(id), resourceVO); err != nil {
+	// 根据ID判断新增或更新（对标Java版 MyBatis-Plus saveOrUpdate）
+	if resourceVO.ID > 0 {
+		// 更新
+		if err := h.svc.UpdateResource(c.Request.Context(), resourceVO.ID, resourceVO); err != nil {
 			util.ResponseError(c, err)
 			return
 		}
@@ -63,6 +57,7 @@ func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 		return
 	}
 
+	// 新增
 	result, err := h.svc.CreateResource(c.Request.Context(), resourceVO)
 	if err != nil {
 		util.ResponseError(c, err)
@@ -105,11 +100,10 @@ func (h *ResourceHandler) DeleteResource(c *gin.Context) {
 	util.ResponseSuccess(c, "资源已删除")
 }
 
-// ListResourceOptions 获取角色资源选项（用于角色授权下拉框）
+// ListResourceOptions 获取角色资源选项（用于角色授权下拉框，树形结构）
 // GET /api/admin/role/resources
 func (h *ResourceHandler) ListResourceOptions(c *gin.Context) {
-	var condition dto.ConditionVO
-	result, err := h.svc.ListResources(c.Request.Context(), condition, dto.PageVO{PageNum: 1, PageSize: 100})
+	result, err := h.svc.ListResourceOptions(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return

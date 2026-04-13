@@ -86,6 +86,14 @@ type OptionDTO struct {
 	Value uint   `json:"value"`
 }
 
+// LabelOptionDTO 标签选项DTO（对标Java LabelOptionDTO）
+// 用于树形下拉框（菜单选择、资源选择等）
+type LabelOptionDTO struct {
+	ID       uint              `json:"id"`
+	Label    string            `json:"label"`
+	Children []LabelOptionDTO  `json:"children,omitempty"`
+}
+
 // ===== 标签 DTO =====
 
 type TagDetailDTO struct {
@@ -139,48 +147,44 @@ type AlbumDTO struct {
 // ===== 角色/菜单 DTO =====
 
 type RoleDTO struct {
-	ID          uint   `json:"id"`
-	RoleName    string `json:"roleName"`
-	RoleLabel   string `json:"roleLabel"`
-	Description  string `json:"description"`
-	IsDisable   int8   `json:"isDisable"`
-	IsDefault   int8   `json:"isDefault"`
-	MenuIDs     []uint `json:"menuIds"`
-	CreateTime   time.Time `json:"createTime"`
+	ID          uint      `json:"id"`
+	RoleName    string    `json:"roleName"`
+	IsDisable   int8      `json:"isDisable"`
+	MenuIDs     []uint    `json:"menuIds"`
+	CreateTime  time.Time `json:"createTime"`
 }
 
 type RoleDetailDTO struct {
 	ID          uint     `json:"id"`
 	RoleName    string   `json:"roleName"`
-	RoleLabel   string   `json:"roleLabel"`
-	Description  string   `json:"description"`
 	IsDisable   int8     `json:"isDisable"`
-	IsDefault   int8     `json:"isDefault"`
 	MenuIDs     []uint   `json:"menuIds"`
 	Menus       []model.Menu `json:"menus,omitempty"` // 直接返回Menu用于前端渲染
 }
 
 type MenuDTO struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	Path        string    `json:"path"`
-	Component   string    `json:"component"`
-	Icon        string    `json:"icon"`
-	OrderNum    int       `json:"orderNum"`  // 排序号（数据库对应 order_num 字段）
-	IsHidden    int8      `json:"isHidden"`  // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
-	ParentID    *uint     `json:"parentId"`
-	CreateTime   time.Time `json:"createTime"`
-	UpdateTime  *time.Time `json:"updateTime,omitempty"`
+	ID         uint        `json:"id"`
+	Name       string      `json:"name"`
+	Path       string      `json:"path"`
+	Component  string      `json:"component"`
+	Icon       string      `json:"icon"`
+	OrderNum   int         `json:"orderNum"`  // 排序号（数据库对应 order_num 字段）
+	IsHidden   int8        `json:"isHidden"`  // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
+	ParentID   *uint       `json:"parentId"`
+	Children   []MenuDTO   `json:"children,omitempty"` // 子菜单（树形结构）
+	CreateTime time.Time   `json:"createTime"`
+	UpdateTime *time.Time  `json:"updateTime,omitempty"`
 }
 
 type MenuTreeDTO struct {
 	ID          uint          `json:"id"`
-	Name        string        `json:"name"`
+	Name        string        `json:"name"`          // 侧边栏菜单用
+	Label       string        `json:"label"`         // 角色权限树用（el-tree默认用label）
 	Path        string        `json:"path"`
 	Component   string        `json:"component"`
 	Icon        string        `json:"icon"`
-	IsHidden    int8          `json:"isHidden"`  // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
-	OrderNum    int           `json:"orderNum"`  // 排序号（数据库对应 order_num 字段）
+	IsHidden    int8          `json:"isHidden"`      // 是否隐藏 0否1是（数据库对应 is_hidden 字段）
+	OrderNum    int           `json:"orderNum"`      // 排序号（数据库对应 order_num 字段）
 	ParentID    *uint         `json:"parentId"`
 	Children    []MenuTreeDTO `json:"children"`
 	CreateTime  time.Time     `json:"createTime,omitempty"`
@@ -364,11 +368,15 @@ type FileUploadDTO struct {
 // ===== 资源权限 DTO =====
 
 type ResourceDTO struct {
-	ID            uint      `json:"id"`
-	ResourceName  string    `json:"resourceName"`
-	URL           string    `json:"url"`
-	RequestMethod string    `json:"requestMethod"`
-	CreateTime     time.Time `json:"createTime"`
+	ID            uint          `json:"id"`
+	ResourceName  string        `json:"resourceName"`
+	URL           string        `json:"url"`
+	RequestMethod string        `json:"requestMethod"`
+	ParentID      *uint         `json:"parentId"`
+	IsAnonymous   int8          `json:"isAnonymous"`
+	CreateTime    time.Time     `json:"createTime"`
+	UpdateTime    *time.Time    `json:"updateTime,omitempty"`
+	Children      []ResourceDTO `json:"children,omitempty"` // 子资源（树形结构）
 }
 
 // ===== 评论 DTO (补充完整) =====

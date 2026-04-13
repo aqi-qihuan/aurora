@@ -130,6 +130,95 @@ func (s *MenuService) GetUserMenus(ctx context.Context, userID uint) ([]dto.Menu
 	return s.convertUserMenuList(menus), nil
 }
 
+// ListMenus 后台管理获取菜单列表（树形结构，对标Java listMenus，不过滤isHidden）
+func (s *MenuService) ListMenus(ctx context.Context) ([]dto.MenuDTO, error) {
+	var menus []model.Menu
+
+	err := s.db.WithContext(ctx).
+		Order("order_num ASC").
+		Find(&menus).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询菜单列表失败: %w", err)
+	}
+
+	// 构建目录（一级菜单）和子菜单映射，对标Java listCatalogs + getMenuMap
+	catalogs := make([]model.Menu, 0)
+	childrenMap := make(map[uint][]model.Menu)
+
+	for _, m := range menus {
+		if m.ParentID == nil || *m.ParentID == 0 {
+			catalogs = append(catalogs, m)
+		} else {
+			childrenMap[*m.ParentID] = append(childrenMap[*m.ParentID], m)
+		}
+	}
+
+	// 转换为DTO并组装树
+	var menuDTOs []dto.MenuDTO
+	for _, catalog := range catalogs {
+		catalogDTO := dto.MenuDTO{
+			ID:         catalog.ID,
+			Name:       catalog.Name,
+			Path:       catalog.Path,
+			Component:  catalog.Component,
+			Icon:       catalog.Icon,
+			OrderNum:   catalog.OrderNum,
+			IsHidden:   catalog.IsHidden,
+			CreateTime: catalog.CreateTime,
+			UpdateTime: catalog.UpdateTime,
+			Children:   []dto.MenuDTO{},
+		}
+
+		if children, ok := childrenMap[catalog.ID]; ok {
+			for _, child := range children {
+				childDTO := dto.MenuDTO{
+					ID:         child.ID,
+					Name:       child.Name,
+					Path:       child.Path,
+					Component:  child.Component,
+					Icon:       child.Icon,
+					OrderNum:   child.OrderNum,
+					IsHidden:   child.IsHidden,
+					CreateTime: child.CreateTime,
+					UpdateTime: child.UpdateTime,
+				}
+				if child.ParentID != nil {
+					parentID := *child.ParentID
+					childDTO.ParentID = &parentID
+				}
+				catalogDTO.Children = append(catalogDTO.Children, childDTO)
+			}
+			delete(childrenMap, catalog.ID)
+		}
+		menuDTOs = append(menuDTOs, catalogDTO)
+	}
+
+	// 处理孤儿节点（父菜单已删除的情况）
+	for _, children := range childrenMap {
+		for _, child := range children {
+			childDTO := dto.MenuDTO{
+				ID:         child.ID,
+				Name:       child.Name,
+				Path:       child.Path,
+				Component:  child.Component,
+				Icon:       child.Icon,
+				OrderNum:   child.OrderNum,
+				IsHidden:   child.IsHidden,
+				CreateTime: child.CreateTime,
+				UpdateTime: child.UpdateTime,
+			}
+			if child.ParentID != nil {
+				parentID := *child.ParentID
+				childDTO.ParentID = &parentID
+			}
+			menuDTOs = append(menuDTOs, childDTO)
+		}
+	}
+
+	return menuDTOs, nil
+}
+
 // ListAllMenus 后台管理获取所有菜单(扁平列表)
 func (s *MenuService) ListAllMenus(ctx context.Context) ([]dto.MenuDTO, error) {
 	var menus []model.Menu
@@ -174,6 +263,7 @@ func (s *MenuService) buildMenuTree(menus []model.Menu) []dto.MenuTreeDTO {
 		dto := dto.MenuTreeDTO{
 			ID:         m.ID,
 			Name:       m.Name,
+			Label:      m.Name,
 			Path:       m.Path,
 			Component:  m.Component,
 			Icon:       m.Icon,
@@ -246,6 +336,7 @@ func (s *MenuService) buildUserMenuTree(menus []model.Menu) []dto.MenuTreeDTO {
 			parentMenu = dto.MenuTreeDTO{
 				ID:         root.ID,
 				Name:       root.Name,
+				Label:      root.Name,
 				Path:       root.Path,
 				Component:  root.Component,
 				Icon:       root.Icon,
@@ -260,6 +351,7 @@ func (s *MenuService) buildUserMenuTree(menus []model.Menu) []dto.MenuTreeDTO {
 				children = append(children, dto.MenuTreeDTO{
 					ID:         child.ID,
 					Name:       child.Name,
+					Label:      child.Name,
 					Path:       child.Path,
 					Component:  child.Component,
 					Icon:       child.Icon,
@@ -276,6 +368,7 @@ func (s *MenuService) buildUserMenuTree(menus []model.Menu) []dto.MenuTreeDTO {
 			parentMenu = dto.MenuTreeDTO{
 				ID:         root.ID,
 				Name:       root.Name,
+				Label:      root.Name,
 				Path:       root.Path,
 				Component:  "Layout",
 				Icon:       root.Icon,
@@ -289,6 +382,7 @@ func (s *MenuService) buildUserMenuTree(menus []model.Menu) []dto.MenuTreeDTO {
 			// 虚拟子菜单：path="", component=原component
 			children = append(children, dto.MenuTreeDTO{
 				Name:      root.Name,
+				Label:     root.Name,
 				Path:      "",
 				Component: root.Component,
 				Icon:      root.Icon,
@@ -347,6 +441,7 @@ func (s *MenuService) convertUserMenuList(menus []model.Menu) []dto.MenuTreeDTO 
 			parentMenu = dto.MenuTreeDTO{
 				ID:         root.ID,
 				Name:       root.Name,
+				Label:      root.Name,
 				Path:       root.Path,
 				Component:  root.Component, // 保留原始component
 				Icon:       root.Icon,
@@ -362,6 +457,7 @@ func (s *MenuService) convertUserMenuList(menus []model.Menu) []dto.MenuTreeDTO 
 				children = append(children, dto.MenuTreeDTO{
 					ID:         child.ID,
 					Name:       child.Name,
+					Label:      child.Name,
 					Path:       child.Path,
 					Component:  child.Component, // 保留原始component
 					Icon:       child.Icon,
@@ -398,6 +494,7 @@ func (s *MenuService) convertUserMenuList(menus []model.Menu) []dto.MenuTreeDTO 
 			children = append(children, dto.MenuTreeDTO{
 				Path:      childPath,
 				Name:      root.Name,      // 只有子菜单设置name
+				Label:     root.Name,      // label与name保持一致
 				Component: root.Component, // 保留原始component（如 /home/Home.vue）
 				Icon:      root.Icon,
 				IsHidden:  root.IsHidden, // 使用原始int8值

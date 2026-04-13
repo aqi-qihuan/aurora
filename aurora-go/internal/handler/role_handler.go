@@ -2,8 +2,8 @@ package handler
 
 import (
 	"strconv"
-	"strings"
 
+	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/errors"
@@ -21,15 +21,20 @@ func NewRoleHandler(svc *service.RoleService) *RoleHandler {
 	return &RoleHandler{svc: svc}
 }
 
-// ListRoles 获取角色列表（后台管理）
+// ListRoles 获取角色列表（后台管理，分页）
 // GET /api/admin/roles
 func (h *RoleHandler) ListRoles(c *gin.Context) {
-	list, err := h.svc.ListRoles(c.Request.Context())
+	var condition dto.ConditionVO
+	c.ShouldBindQuery(&condition)
+	pageNum, pageSize := util.PageQuery(c)
+	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
+
+	result, err := h.svc.ListRolesPage(c.Request.Context(), condition, page)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, list)
+	util.ResponseSuccess(c, result)
 }
 
 // SaveOrUpdate 保存/更新角色
@@ -66,20 +71,15 @@ func (h *RoleHandler) SaveOrUpdate(c *gin.Context) {
 }
 
 // DeleteRoles 批量删除角色
-// DELETE /api/admin/roles?ids=1,2,3
+// DELETE /api/admin/roles
 func (h *RoleHandler) DeleteRoles(c *gin.Context) {
-	idsStr := c.Query("ids")
-	if idsStr == "" {
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要删除的角色"))
 		return
 	}
-	parts := strings.Split(idsStr, ",")
-	for _, p := range parts {
-		id, err := strconv.ParseUint(strings.TrimSpace(p), 10, 64)
-		if err != nil {
-			continue
-		}
-		_ = h.svc.DeleteRole(c.Request.Context(), uint(id))
+	for _, id := range ids {
+		_ = h.svc.DeleteRole(c.Request.Context(), id)
 	}
 	util.ResponseSuccess(c, "角色已删除")
 }

@@ -9,14 +9,12 @@ import (
 // Role 角色实体 (对应 t_role 表)
 type Role struct {
 	ID          uint      `gorm:"primarykey" json:"id"`
-	RoleName    string    `gorm:"size:30;not null;uniqueIndex" json:"roleName"`
-	RoleLabel   string    `gorm:"size:50;not null" json:"roleLabel"`   // 角色标签(如:超级管理员)
-	Description  string    `gorm:"size:200" json:"description"`        // 角色描述
-	IsDisable   int8      `gorm:"default:0" json:"isDisable"`
-	IsDefault   int8      `gorm:"default:0" json:"isDefault"`         // 是否默认角色
-	CreateTime  time.Time `json:"createTime"`
+	RoleName    string    `gorm:"column:role_name;size:20;not null;uniqueIndex" json:"roleName"`
+	IsDisable   int8      `gorm:"column:is_disable;default:0" json:"isDisable"`
+	CreateTime  time.Time `gorm:"column:create_time" json:"createTime"`
+	UpdateTime  *time.Time `gorm:"column:update_time" json:"updateTime,omitempty"`
 
-	// 关联
+	// 关联（仅用于 GORM Preload/Association，不对应 t_role 表字段）
 	Menus []Menu `gorm:"many2many:t_role_menu;" json:"menus,omitempty"`
 }
 
@@ -30,3 +28,4 @@ type RoleMenu struct {
 func (RoleMenu) TableName() string { return "t_role_menu" }
 
 func (r *Role) BeforeCreate(tx *gorm.DB) error { r.CreateTime = time.Now(); return nil }
+func (r *Role) BeforeUpdate(tx *gorm.DB) error { now := time.Now(); r.UpdateTime = &now; return nil }

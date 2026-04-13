@@ -24,10 +24,8 @@ func NewRoleService(db *gorm.DB) *RoleService {
 // CreateRole 创建角色
 func (s *RoleService) CreateRole(ctx context.Context, vo vo.RoleVO) (*model.Role, error) {
 	role := model.Role{
-		RoleName:    vo.RoleName,
-		RoleLabel:   vo.RoleLabel,
-		Description:  vo.Description,
-		IsDisable:   0, // 默认启用
+		RoleName:  vo.RoleName,
+		IsDisable: 0, // 默认启用
 	}
 
 	if err := s.db.WithContext(ctx).Create(&role).Error; err != nil {
@@ -55,9 +53,7 @@ func (s *RoleService) UpdateRole(ctx context.Context, id uint, vo vo.RoleVO) err
 	}
 
 	updates := map[string]interface{}{
-		"role_name":    vo.RoleName,
-		"role_label":   vo.RoleLabel,
-		"description":   vo.Description,
+		"role_name": vo.RoleName,
 	}
 	if err := s.db.WithContext(ctx).Model(&role).Updates(updates).Error; err != nil {
 		if errors.IsStd(err, gorm.ErrDuplicatedKey) {
@@ -88,11 +84,6 @@ func (s *RoleService) DeleteRole(ctx context.Context, id uint) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.First(&role, id).Error; err != nil {
 			return errors.ErrRoleNotFound
-		}
-
-		// 检查是否是默认角色(不可删除)
-		if role.IsDefault == 1 {
-			return errors.ErrCannotDeleteDefaultRole
 		}
 
 		// 检查是否有关联用户
@@ -132,17 +123,62 @@ func (s *RoleService) ListRoles(ctx context.Context) ([]dto.RoleDTO, error) {
 			menuIDs[j] = m.ID
 		}
 		list[i] = dto.RoleDTO{
-			ID:          r.ID,
-			RoleName:    r.RoleName,
-			RoleLabel:   r.RoleLabel,
-			Description:  r.Description,
-			IsDisable:   r.IsDisable,
-			IsDefault:   r.IsDefault,
-			MenuIDs:     menuIDs,
-			CreateTime:   r.CreateTime,
+			ID:         r.ID,
+			RoleName:   r.RoleName,
+			IsDisable:  r.IsDisable,
+			MenuIDs:    menuIDs,
+			CreateTime: r.CreateTime,
 		}
 	}
 	return list, nil
+}
+
+// ListRolesPage 获取角色列表（分页，对标Java RoleServiceImpl.listRoles）
+func (s *RoleService) ListRolesPage(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
+	var roles []model.Role
+	var count int64
+
+	baseQuery := s.db.WithContext(ctx).Model(&model.Role{})
+
+	if cond.Keywords != "" {
+		baseQuery = baseQuery.Where("role_name LIKE ?", "%"+cond.Keywords+"%")
+	}
+
+	baseQuery.Count(&count)
+
+	offset := page.GetOffset()
+	err := baseQuery.
+		Preload("Menus").
+		Order("create_time DESC").
+		Limit(page.PageSize).
+		Offset(offset).
+		Find(&roles).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询角色列表失败: %w", err)
+	}
+
+	list := make([]dto.RoleDTO, len(roles))
+	for i, r := range roles {
+		menuIDs := make([]uint, len(r.Menus))
+		for j, m := range r.Menus {
+			menuIDs[j] = m.ID
+		}
+		list[i] = dto.RoleDTO{
+			ID:         r.ID,
+			RoleName:   r.RoleName,
+			IsDisable:  r.IsDisable,
+			MenuIDs:    menuIDs,
+			CreateTime: r.CreateTime,
+		}
+	}
+
+	return &dto.PageResultDTO{
+		List:     list,
+		Count:    count,
+		PageNum:  page.PageNum,
+		PageSize: page.PageSize,
+	}, nil
 }
 
 // GetRoleByID 根据ID获取角色详情(含菜单树)
@@ -163,23 +199,20 @@ func (s *RoleService) GetRoleByID(ctx context.Context, id uint) (*dto.RoleDetail
 		return nil, fmt.Errorf("查询角色详情失败: %w", err)
 	}
 
-	dto := &dto.RoleDetailDTO{
-		ID:          role.ID,
-		RoleName:    role.RoleName,
-		RoleLabel:   role.RoleLabel,
-		Description:  role.Description,
-		IsDisable:   role.IsDisable,
-		IsDefault:   role.IsDefault,
+	result := &dto.RoleDetailDTO{
+		ID:        role.ID,
+		RoleName:  role.RoleName,
+		IsDisable: role.IsDisable,
 	}
 
 	menuIDs := make([]uint, len(role.Menus))
 	for i, m := range role.Menus {
 		menuIDs[i] = m.ID
 	}
-	dto.MenuIDs = menuIDs
-	dto.Menus = role.Menus // 直接返回Menu结构用于前端渲染
+	result.MenuIDs = menuIDs
+	result.Menus = role.Menus // 直接返回Menu结构用于前端渲染
 
-	return dto, nil
+	return result, nil
 }
 
 // AssignRoleToUser 为用户分配角色

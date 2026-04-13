@@ -27,6 +27,8 @@ func (s *ResourceService) CreateResource(ctx context.Context, vo vo.ResourceVO) 
 		ResourceName:  vo.ResourceName,
 		URL:           vo.URL,
 		RequestMethod: vo.RequestMethod,
+		ParentID:      vo.ParentID,
+		IsAnonymous:   0, // 默认非匿名
 	}
 
 	if err := s.db.WithContext(ctx).Create(&resource).Error; err != nil {
@@ -43,9 +45,19 @@ func (s *ResourceService) UpdateResource(ctx context.Context, id uint, vo vo.Res
 	}
 
 	updates := map[string]interface{}{
-		"resource_name":   vo.ResourceName,
-		"url":             vo.URL,
-		"request_method":  vo.RequestMethod,
+		"resource_name":  vo.ResourceName,
+	}
+	if vo.URL != "" {
+		updates["url"] = vo.URL
+	}
+	if vo.RequestMethod != "" {
+		updates["request_method"] = vo.RequestMethod
+	}
+	if vo.ParentID != nil {
+		updates["parent_id"] = vo.ParentID
+	}
+	if vo.IsAnonymous != nil {
+		updates["is_anonymous"] = *vo.IsAnonymous
 	}
 	return s.db.WithContext(ctx).Model(&resource).Updates(updates).Error
 }
@@ -69,7 +81,7 @@ func (s *ResourceService) DeleteResource(ctx context.Context, id uint) error {
 	})
 }
 
-// ListResources 获取所有资源权限列表(含角色绑定信息)
+// ListResources 获取所有资源权限列表(分页)
 func (s *ResourceService) ListResources(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
 	var resources []model.Resource
 	var count int64
@@ -100,7 +112,10 @@ func (s *ResourceService) ListResources(ctx context.Context, cond dto.ConditionV
 			ResourceName:  r.ResourceName,
 			URL:           r.URL,
 			RequestMethod: r.RequestMethod,
-			CreateTime:     r.CreateTime,
+			ParentID:      r.ParentID,
+			IsAnonymous:   r.IsAnonymous,
+			CreateTime:    r.CreateTime,
+			UpdateTime:    r.UpdateTime,
 		}
 	}
 
@@ -110,6 +125,136 @@ func (s *ResourceService) ListResources(ctx context.Context, cond dto.ConditionV
 		PageNum:  page.PageNum,
 		PageSize: page.PageSize,
 	}, nil
+}
+
+// ListResourcesTree 获取资源树形列表(对标Java版 listResources)
+// 前端期望: data.data 直接是树形数组
+func (s *ResourceService) ListResourcesTree(ctx context.Context, cond dto.ConditionVO) ([]dto.ResourceDTO, error) {
+	var resources []model.Resource
+
+	query := s.db.WithContext(ctx).Order("id ASC")
+
+	if cond.Keywords != "" {
+		query = query.Where("resource_name LIKE ? OR url LIKE ?", "%"+cond.Keywords+"%", "%"+cond.Keywords+"%")
+	}
+
+	err := query.Find(&resources).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询资源列表失败: %w", err)
+	}
+
+	// 构建树形结构 (对标Java listResourceModule + listResourceChildren)
+	parents := make([]model.Resource, 0)
+	childrenMap := make(map[uint][]model.Resource)
+
+	for _, r := range resources {
+		if r.ParentID == nil {
+			parents = append(parents, r)
+		} else {
+			childrenMap[*r.ParentID] = append(childrenMap[*r.ParentID], r)
+		}
+	}
+
+	// 转换为DTO并组装树
+	result := make([]dto.ResourceDTO, 0, len(parents))
+	for _, parent := range parents {
+		parentDTO := dto.ResourceDTO{
+			ID:            parent.ID,
+			ResourceName:  parent.ResourceName,
+			URL:           parent.URL,
+			RequestMethod: parent.RequestMethod,
+			ParentID:      parent.ParentID,
+			IsAnonymous:   parent.IsAnonymous,
+			CreateTime:    parent.CreateTime,
+			UpdateTime:    parent.UpdateTime,
+			Children:      make([]dto.ResourceDTO, 0),
+		}
+
+		if children, ok := childrenMap[parent.ID]; ok {
+			for _, child := range children {
+				childDTO := dto.ResourceDTO{
+					ID:            child.ID,
+					ResourceName:  child.ResourceName,
+					URL:           child.URL,
+					RequestMethod: child.RequestMethod,
+					ParentID:      child.ParentID,
+					IsAnonymous:   child.IsAnonymous,
+					CreateTime:    child.CreateTime,
+					UpdateTime:    child.UpdateTime,
+				}
+				parentDTO.Children = append(parentDTO.Children, childDTO)
+			}
+			delete(childrenMap, parent.ID)
+		}
+		result = append(result, parentDTO)
+	}
+
+	// 处理孤儿节点(父节点已删除的情况)
+	for _, children := range childrenMap {
+		for _, child := range children {
+			result = append(result, dto.ResourceDTO{
+				ID:            child.ID,
+				ResourceName:  child.ResourceName,
+				URL:           child.URL,
+				RequestMethod: child.RequestMethod,
+				ParentID:      child.ParentID,
+				IsAnonymous:   child.IsAnonymous,
+				CreateTime:    child.CreateTime,
+				UpdateTime:    child.UpdateTime,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+// ListResourceOptions 获取角色资源选项(用于角色授权下拉框，树形结构)
+// 对标Java listResourceOption，返回 LabelOptionDTO 格式
+func (s *ResourceService) ListResourceOptions(ctx context.Context) ([]dto.LabelOptionDTO, error) {
+	var resources []model.Resource
+
+	err := s.db.WithContext(ctx).
+		Select("id", "resource_name", "parent_id").
+		Order("id ASC").
+		Find(&resources).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询资源选项失败: %w", err)
+	}
+
+	// 构建树形结构
+	parents := make([]model.Resource, 0)
+	childrenMap := make(map[uint][]model.Resource)
+
+	for _, r := range resources {
+		if r.ParentID == nil {
+			parents = append(parents, r)
+		} else {
+			childrenMap[*r.ParentID] = append(childrenMap[*r.ParentID], r)
+		}
+	}
+
+	// 转换为LabelOptionDTO
+	result := make([]dto.LabelOptionDTO, 0, len(parents))
+	for _, parent := range parents {
+		option := dto.LabelOptionDTO{
+			ID:       parent.ID,
+			Label:    parent.ResourceName,
+			Children: make([]dto.LabelOptionDTO, 0),
+		}
+
+		if children, ok := childrenMap[parent.ID]; ok {
+			for _, child := range children {
+				option.Children = append(option.Children, dto.LabelOptionDTO{
+					ID:    child.ID,
+					Label: child.ResourceName,
+				})
+			}
+			delete(childrenMap, parent.ID)
+		}
+		result = append(result, option)
+	}
+
+	return result, nil
 }
 
 // AssignResourceToRole 为角色分配资源权限
@@ -167,7 +312,6 @@ func (s *ResourceService) ListResourceRoles(ctx context.Context) ([]dto.Resource
 			FROM t_resource r
 			LEFT JOIN t_role_resource rr ON rr.resource_id = r.id
 			LEFT JOIN t_role rl ON rl.id = rr.role_id
-			WHERE r.is_delete = 0
 			ORDER BY r.id ASC
 		`).Scan(&rows).Error
 

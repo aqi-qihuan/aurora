@@ -21,15 +21,16 @@ func NewMenuHandler(svc *service.MenuService) *MenuHandler {
 	return &MenuHandler{svc: svc}
 }
 
-// ListMenus 获取菜单树形列表（后台）
+// ListMenus 获取菜单列表（后台，对标Java listMenus，不过滤isHidden）
 // GET /api/admin/menus
 func (h *MenuHandler) ListMenus(c *gin.Context) {
-	tree, err := h.svc.GetMenuTree(c.Request.Context())
+	// 后台管理应显示所有菜单（包含隐藏），对标Java listMenus无is_hidden过滤
+	result, err := h.svc.ListMenus(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, tree)
+	util.ResponseSuccess(c, result)
 }
 
 // GetUserMenus 获取当前用户的菜单树（用于前端动态路由）
@@ -134,8 +135,9 @@ func (h *MenuHandler) UpdateMenuIsHidden(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	menuVO := vo.MenuVO{}
-	_ = body.IsHidden
+	// 修复：将IsHidden赋值到menuVO中
+	isHidden := body.IsHidden
+	menuVO := vo.MenuVO{IsHidden: &isHidden}
 	if err := h.svc.UpdateMenu(c.Request.Context(), body.ID, menuVO); err != nil {
 		util.ResponseError(c, err)
 		return
