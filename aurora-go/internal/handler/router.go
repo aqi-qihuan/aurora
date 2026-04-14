@@ -215,7 +215,8 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 
 	// --- 友链管理（FriendLinkController） ---
 	rg.GET("/links", r.FriendLinkHandler.ListAdminFriendLinks)
-	rg.POST("/links", r.FriendLinkHandler.SaveFriendLink)
+	rg.POST("/links", r.FriendLinkHandler.SaveOrUpdateFriendLink)  // 新增或更新（对标Java: saveOrUpdateFriendLink）
+	rg.PUT("/links", r.FriendLinkHandler.UpdateFriendLink)        // 更新（兼容前端）
 	rg.DELETE("/links", r.FriendLinkHandler.DeleteFriendLink)
 
 	// --- 说说管理（TalkController） ---
@@ -268,7 +269,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.DELETE("/jobs", r.JobHandler.DeleteJob)
 	rg.GET("/jobs/:id", r.JobHandler.GetJobById)
 	rg.PUT("/jobs/status", r.JobHandler.UpdateJobStatus)
-	rg.PUT("/jobs/run", r.JobHandler.RunJobOnce)
+	rg.PUT("/jobs/run", r.JobHandler.RunJobOnce)  // Java使用PUT
 	rg.GET("/jobs/jobGroups", r.JobHandler.ListJobGroups)
 
 	// --- 定时任务日志（JobLogController） ---

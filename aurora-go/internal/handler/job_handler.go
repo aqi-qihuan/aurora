@@ -70,37 +70,41 @@ func (h *JobHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteJob 删除定时任务
-// DELETE /api/admin/jobs/:id
+// DeleteJob 批量删除定时任务
+// DELETE /api/admin/jobs
+// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
 func (h *JobHandler) DeleteJob(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的任务ID"))
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请提供要删除的任务ID列表"))
 		return
 	}
-	if err := h.svc.DeleteJob(c.Request.Context(), uint(id)); err != nil {
-		util.ResponseError(c, err)
+	if len(ids) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("任务ID列表不能为空"))
 		return
+	}
+	for _, id := range ids {
+		if err := h.svc.DeleteJob(c.Request.Context(), id); err != nil {
+			util.ResponseError(c, err)
+			return
+		}
 	}
 	util.ResponseSuccess(c, "任务已删除")
 }
 
 // UpdateJobStatus 启用/禁用定时任务
-// PUT /api/admin/jobs/:id/status
+// PUT /api/admin/jobs/status
+// Java: @PutMapping("/jobs/status")
 func (h *JobHandler) UpdateJobStatus(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的任务ID"))
-		return
-	}
-	var statusVO struct {
+	var body struct {
+		ID     uint `json:"id"`
 		Status int8 `json:"status"`
 	}
-	if err := c.ShouldBindJSON(&statusVO); err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	if err := h.svc.ChangeJobStatus(c.Request.Context(), uint(id), statusVO.Status); err != nil {
+	if err := h.svc.ChangeJobStatus(c.Request.Context(), body.ID, body.Status); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
@@ -108,10 +112,11 @@ func (h *JobHandler) UpdateJobStatus(c *gin.Context) {
 }
 
 // RunJobOnce 立即执行一次定时任务
-// POST /api/admin/jobs/:id/run
+// PUT /api/admin/jobs/run
+// Java: @PutMapping("/jobs/run")
 func (h *JobHandler) RunJobOnce(c *gin.Context) {
 	var body struct {
-		ID       uint `json:"id"`
+		ID       uint   `json:"id"`
 		JobGroup string `json:"jobGroup"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -145,17 +150,16 @@ func (h *JobHandler) SaveJob(c *gin.Context) {
 // UpdateJob 修改定时任务
 // PUT /api/admin/jobs
 func (h *JobHandler) UpdateJob(c *gin.Context) {
-	var jobVO vo.JobVO
-	if err := c.ShouldBindJSON(&jobVO); err != nil {
+	var body struct {
+		ID    uint        `json:"id"`
+		JobVO vo.JobVO    `json:"jobVO"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	var jobID uint
-	c.ShouldBindJSON(&struct {
-		ID uint `json:"id"`
-	}{ID: jobID})
-	if jobID > 0 {
-		if err := h.svc.UpdateJob(c.Request.Context(), jobID, jobVO); err != nil {
+	if body.ID > 0 {
+		if err := h.svc.UpdateJob(c.Request.Context(), body.ID, body.JobVO); err != nil {
 			util.ResponseError(c, err)
 			return
 		}
@@ -171,14 +175,12 @@ func (h *JobHandler) GetJobById(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的任务ID"))
 		return
 	}
-	// 使用 ListJobs 查找
-	result, err := h.svc.ListJobs(c.Request.Context(), dto.ConditionVO{}, dto.PageVO{PageNum: 1, PageSize: 1})
-	_ = id
+	job, err := h.svc.GetJobByID(c.Request.Context(), uint(id))
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, result)
+	util.ResponseSuccess(c, job)
 }
 
 // ListJobGroups 获取所有任务分组

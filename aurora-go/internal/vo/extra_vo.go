@@ -48,10 +48,11 @@ type TagVO struct {
 // ===== 友链 VO =====
 
 type FriendLinkVO struct {
-	LinkName    string `json:"linkName" binding:"required,max=50"`
-	LinkAvatar  string `json:"linkAvatar" binding:"omitempty,max=1024"`
-	LinkAddress string `json:"linkAddress" binding:"required,url,max=500"`
-	LinkIntro   string `json:"linkIntro" binding:"omitempty,max=500"`
+	ID          uint   `json:"id"`                                     // 更新时必填，创建时为空
+	LinkName    string `json:"linkName" binding:"required,max=20"`     // 对标Java：@NotBlank
+	LinkAvatar  string `json:"linkAvatar" binding:"required,max=255"`  // 对标Java：@NotBlank
+	LinkAddress string `json:"linkAddress" binding:"required,max=50"`  // 对标Java：@NotBlank
+	LinkIntro   string `json:"linkIntro" binding:"required,max=100"`   // 对标Java：@NotBlank
 }
 
 // ===== 相册 VO =====
@@ -99,10 +100,14 @@ type CommentVO struct {
 // ===== 定时任务 VO =====
 
 type JobVO struct {
-	JobName        string `json:"jobName" binding:"required,max=50"`
-	JobGroup       string `json:"jobGroup" binding:"required,max=50"`
-	InvokeTarget   string `json:"invokeTarget" binding:"required,max=200"`
-	CronExpression string `json:"cronExpression" binding:"required,max=100"`
+	JobName        string `json:"jobName,omitempty"`        // 对标Java：无验证标签
+	JobGroup       string `json:"jobGroup,omitempty"`       // 对标Java：无验证标签（前端可能不传）
+	InvokeTarget   string `json:"invokeTarget,omitempty"`   // 对标Java：无验证标签
+	CronExpression string `json:"cronExpression,omitempty"` // 对标Java：无验证标签
+	MisfirePolicy  *int   `json:"misfirePolicy,omitempty"`  // 对标Java：Integer类型
+	Concurrent     *int   `json:"concurrent,omitempty"`     // 对标Java：Integer类型
+	Status         *int   `json:"status,omitempty"`         // 对标Java：Integer类型
+	Remark         string `json:"remark,omitempty"`         // 对标Java：无验证标签
 }
 
 // ===== 资源权限 VO =====
@@ -117,23 +122,38 @@ type ResourceVO struct {
 }
 
 // ===== 网站配置 VO =====
+// 对标Java WebsiteConfigVO，字段名必须与前端期望完全一致
 
 type WebsiteConfigVO struct {
-	SiteName             string `json:"siteName" binding:"omitempty,max=50"`
-	SiteURL              string `json:"siteUrl" binding:"omitempty,max=255"`
-	AuthorName           string `json:"authorName" binding:"omitempty,max=30"`
-	AuthorAvatar         string `json:"authorAvatar" binding:"omitempty,max=1024"`
-	Logo                 string `json:"logo" binding:"omitempty,max=1024"`
-	Favicon              string `json:"favicon" binding:"omitempty,max=1024"`
-	SiteIntro            string `json:"siteIntro" binding:"omitempty,max=500"`
-	Notice               string `json:"notice" binding:"omitempty,max=500"`
-	FooterInfo           string `json:"footerInfo" binding:"omitempty,max=500"`
-	IcpNumber            string `json:"icpNumber" binding:"omitempty,max=50"`
-	BaiduPushURL         string `json:"baiduPushUrl" binding:"omitempty,max=255"`
-	GAID                 string `json:"gaId" binding:"omitempty,max=100"`
-	WechatQRCode         string `json:"wechatQrcode" binding:"omitempty,max=1024"`
-	AlipayQRCode         string `json:"alipayQrcode" binding:"omitempty,max=1024"`
-	CommentNotifyEnabled bool   `json:"commentNotifyEnabled"`
-	RegisterEnabled      bool   `json:"registerEnabled"`
-	RewardEnabled        bool   `json:"rewardEnabled"`
+	Name                 string `json:"name"`                 // 对标Java：网站名称
+	EnglishName          string `json:"englishName"`          // 对标Java：网站英文名称
+	Author               string `json:"author"`               // 对标Java：网站作者
+	AuthorAvatar         string `json:"authorAvatar"`         // 对标Java：网站头像
+	AuthorIntro          string `json:"authorIntro"`          // 对标Java：网站作者介绍
+	Logo                 string `json:"logo"`                 // 对标Java：网站logo
+	MultiLanguage        *int   `json:"multiLanguage"`        // 对标Java：Integer（0关闭1开启）
+	Notice               string `json:"notice"`               // 对标Java：网站公告
+	WebsiteCreateTime    string `json:"websiteCreateTime"`    // 对标Java：网站创建时间
+	BeianNumber          string `json:"beianNumber"`          // 对标Java：工信部备案号
+	QqLogin              *int   `json:"qqLogin"`              // 对标Java：Integer（0关闭1开启）
+	Github               string `json:"github"`               // 对标Java：github
+	Gitee                string `json:"gitee"`                // 对标Java：gitee
+	Qq                   string `json:"qq"`                   // 对标Java：qq
+	WeChat               string `json:"weChat"`               // 对标Java：微信
+	Weibo                string `json:"weibo"`                // 对标Java：微博
+	Csdn                 string `json:"csdn"`                 // 对标Java：csdn
+	Zhihu                string `json:"zhihu"`                // 对标Java：zhihu
+	Juejin               string `json:"juejin"`               // 对标Java：juejin
+	Twitter              string `json:"twitter"`              // 对标Java：twitter
+	Stackoverflow        string `json:"stackoverflow"`        // 对标Java：stackoverflow
+	TouristAvatar        string `json:"touristAvatar"`        // 对标Java：游客头像
+	UserAvatar           string `json:"userAvatar"`           // 对标Java：用户头像
+	IsCommentReview      *int   `json:"isCommentReview"`      // 对标Java：Integer（0关闭1开启）
+	IsEmailNotice        *int   `json:"isEmailNotice"`        // 对标Java：Integer（0关闭1开启）
+	IsReward             *int   `json:"isReward"`             // 对标Java：Integer（0关闭1开启）
+	WeiXinQRCode         string `json:"weiXinQRCode"`         // 对标Java：微信二维码
+	AlipayQRCode         string `json:"alipayQRCode"`         // 对标Java：支付宝二维码
+	Favicon              string `json:"favicon"`              // 对标Java：favicon
+	WebsiteTitle         string `json:"websiteTitle"`         // 对标Java：网页标题
+	GonganBeianNumber    string `json:"gonganBeianNumber"`    // 对标Java：公安部备案编号
 }

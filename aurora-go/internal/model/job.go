@@ -7,23 +7,19 @@ import (
 )
 
 // Job 定时任务实体 (对应 t_job 表)
+// 对标Java: id, job_name, job_group, invoke_target, cron_expression, misfire_policy, concurrent, status, create_time, update_time, remark
 type Job struct {
-	ID             uint       `gorm:"primarykey" json:"id"`
-	JobName        string     `gorm:"size:100;not null;uniqueIndex" json:"jobName"`
-	JobGroup       string     `gorm:"size:50" json:"jobGroup"`              // 任务分组
-	InvokeTarget   string     `gorm:"size:500" json:"invokeTarget"`          // 调用目标(全限定类名或函数名)
-	CronExpression  string     `gorm:"size:100" json:"cronExpression"`       // Cron表达式
-	MisfirePolicy  int8       `gorm:"default:1" json:"misfirePolicy"`        // 错失策略
-	Status         int8       `gorm:"default:0;index" json:"status"`         // 0正常 1暂停
-	Param          string     `gorm:"type:text" json:"param"`                // 参数(JSON)
-	RetryCount     int        `gorm:"default:3" json:"retryCount"`           // 重试次数
-	Interval       string     `gorm:"size:50" json:"interval"`               // 执行间隔(备用)
-	LastRunTime    *time.Time `json:"lastRunTime,omitempty"`                // 上次执行时间
-	CreateTime     time.Time  `json:"createTime"`
-	UpdateTime     time.Time  `json:"updateTime"`
-
-	// 关联
-	Logs []JobLog `gorm:"foreignKey:JobID" json:"logs,omitempty"`
+	ID             uint       `gorm:"primarykey;column:id" json:"id"`
+	JobName        string     `gorm:"column:job_name;size:64;not null" json:"jobName"`
+	JobGroup       string     `gorm:"column:job_group;size:64;not null;default:DEFAULT" json:"jobGroup"`
+	InvokeTarget   string     `gorm:"column:invoke_target;size:500;not null" json:"invokeTarget"`
+	CronExpression string     `gorm:"column:cron_expression;size:255" json:"cronExpression"`
+	MisfirePolicy  int        `gorm:"column:misfire_policy;default:3" json:"misfirePolicy"`
+	Concurrent     int        `gorm:"column:concurrent;default:1" json:"concurrent"`
+	Status         int        `gorm:"column:status;default:0" json:"status"` // 0暂停 1正常（Java: 0暂停 1正常）
+	Remark         string     `gorm:"column:remark;size:500" json:"remark"`
+	CreateTime     time.Time  `gorm:"column:create_time;autoCreateTime" json:"createTime"`
+	UpdateTime     time.Time  `gorm:"column:update_time;autoUpdateTime" json:"updateTime"`
 }
 
 func (Job) TableName() string { return "t_job" }

@@ -1,4 +1,4 @@
-﻿package infrastructure
+package infrastructure
 
 import (
 	"context"
@@ -105,8 +105,9 @@ func Bootstrap(cfg *config.Config) {
 
 	// 9. 定时任务调度器 (robfig/cron, 对标Java Quartz)
 	if db != nil {
-		InitScheduler(cfg)
-		slog.Info("[9/10] Scheduler initialized with default tasks")
+		rdb := database.GetRedis()
+		InitScheduler(cfg, db, rdb)
+		slog.Info("[9/10] Scheduler initialized from database")
 	} else {
 		slog.Warn("[9/10] Skipped scheduler init (no DB connection)")
 	}
@@ -271,15 +272,17 @@ var (
 )
 
 // InitScheduler 初始化定时任务调度器 (robfig/cron, 对标Java Quartz Scheduler)
-// 注册6个预定义任务: UniqueView/缓存清理/地域分布/百度SEO/日志清理/ES同步
-func InitScheduler(cfg *config.Config) {
-	db := database.GetDB()
+// 从数据库动态加载所有任务并注册到调度器
+func InitScheduler(cfg *config.Config, db *gorm.DB, rdb *redis.Client) {
+	// 创建调度器（传入Redis客户端）
+	appScheduler = scheduler.NewScheduler(db, rdb, cfg.Server.GetSiteURL())
 
-	appScheduler = scheduler.NewScheduler(db, cfg.Server.GetSiteURL())
+	// 初始化任务函数注册表（对标Java Spring Bean扫描）
+	scheduler.InitTaskRegistry(appScheduler)
 
-	// 注册所有默认定时任务
-	if err := appScheduler.InitDefaultTasks(); err != nil {
-		slog.Error("初始化默认定时任务失败", "error", err)
+	// 从数据库加载所有任务（对标Java @PostConstruct init()）
+	if err := appScheduler.InitFromDatabase(); err != nil {
+		slog.Error("从数据库加载定时任务失败", "error", err)
 	}
 
 	// 启动调度器

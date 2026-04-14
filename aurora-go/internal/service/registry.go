@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/aurora-go/aurora/internal/config"
+	"github.com/aurora-go/aurora/internal/infrastructure"
 	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -71,7 +72,7 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.PhotoAlbum = NewPhotoAlbumService(db)
 	r.Role = NewRoleService(db)
 	r.Menu = NewMenuService(db)
-	r.Job = NewJobService(db)
+	r.Job = NewJobService(db, infrastructure.GetScheduler())
 	r.JobLog = NewJobLogService(db)
 	r.OperationLog = NewOperationLogService(db)
 	r.ExceptionLog = NewExceptionLogService(db)

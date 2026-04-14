@@ -63,11 +63,7 @@ func (h *WebsiteConfigHandler) UploadConfigImage(c *gin.Context) {
 
 	// 更新配置中的图片URL
 	imgType := c.DefaultPostForm("type", "avatar")
-	imgVO := service.ConfigImageVO{
-		Type: imgType,
-		URL:  result.URL,
-	}
-	if err := h.registry.WebsiteConfig.UploadConfigImages(c.Request.Context(), imgVO); err != nil {
+	if err := h.registry.WebsiteConfig.UploadConfigImage(c.Request.Context(), imgType, result.URL); err != nil {
 		util.ResponseError(c, err)
 		return
 	}

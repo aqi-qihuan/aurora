@@ -8,7 +8,7 @@
 //
 // 特性:
 //   - 支持标准Cron表达式 (秒 分 时 日 月 周)
-//   - 内置6个预定义任务(对标Java版t_job表的5条记录+ES同步)
+//   - 从数据库动态加载任务（对标Java @PostConstruct init）
 //   - 自动记录执行日志到t_job_log表
 //   - panic恢复机制(单个任务崩溃不影响其他任务)
 //   - 优雅关闭(signal-based)
@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"github.com/redis/go-redis/v9"
 
-	"github.com/aurora-go/aurora/internal/infrastructure/database"
 	"github.com/aurora-go/aurora/internal/model"
 	"gorm.io/gorm"
 )
@@ -35,8 +35,9 @@ import (
 type Scheduler struct {
 	cron      *cron.Cron
 	db        *gorm.DB
-	jobMap    map[string]JobHandler       // invokeTarget → handler
-	entryIDs  map[string]cron.EntryID     // jobName → cron.EntryID
+	rdb       *redis.Client // Redis客户端（任务需要）
+	jobMap    map[string]JobHandler   // invokeTarget → handler
+	entryIDs  map[string]cron.EntryID // jobName → cron.EntryID
 	mu        sync.RWMutex
 	running   bool
 	siteURL   string // 网站访问URL (用于百度SEO等需要生成URL的任务)
@@ -45,50 +46,16 @@ type Scheduler struct {
 // JobHandler 定时任务处理函数类型
 type JobHandler func(ctx context.Context) error
 
-// JobResult 任务执行结果
-type JobResult struct {
-	JobID   uint
-	JobName string
-	Status  int8    // 0=成功 1=失败
-	Duration int64  // 执行耗时(ms)
-	ErrorMsg string
-}
-
 // NewScheduler 创建调度器实例
-func NewScheduler(db *gorm.DB, siteURL string) *Scheduler {
+func NewScheduler(db *gorm.DB, rdb *redis.Client, siteURL string) *Scheduler {
 	return &Scheduler{
 		cron:     cron.New(cron.WithSeconds(), cron.WithChain(cron.Recover(cron.DefaultLogger))),
 		db:       db,
+		rdb:      rdb,
 		jobMap:   make(map[string]JobHandler),
 		entryIDs: make(map[string]cron.EntryID),
 		siteURL:  siteURL,
 	}
-}
-
-// Register 注册一个定时任务 (程序化注册, 对标Java t_job表动态注册)
-func (s *Scheduler) Register(jobName, invokeTarget, cronExpr string, handler JobHandler) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// 验证Cron表达式
-	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-	if _, err := parser.Parse(cronExpr); err != nil {
-		return err
-	}
-
-	s.jobMap[invokeTarget] = handler
-
-	// 添加到Cron调度器
-	entryID, err := s.cron.AddFunc(cronExpr, func() {
-		s.executeJob(context.Background(), jobName, invokeTarget, handler)
-	})
-	if err != nil {
-		return err
-	}
-
-	s.entryIDs[jobName] = entryID
-	slog.Info("定时任务已注册", "job", jobName, "cron", cronExpr, "target", invokeTarget)
-	return nil
 }
 
 // Start 启动调度器 (对标Java Scheduler.start())
@@ -123,15 +90,131 @@ func (s *Scheduler) IsRunning() bool {
 	return s.running
 }
 
-// GetEntryIDs 获取所有已注册任务的 EntryID
-func (s *Scheduler) GetEntryIDs() map[string]cron.EntryID {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	result := make(map[string]cron.EntryID, len(s.entryIDs))
-	for k, v := range s.entryIDs {
-		result[k] = v
+// InitFromDatabase 从数据库加载所有任务并注册到调度器（对标Java @PostConstruct init()）
+// Java版数据来自 aurora.sql 中 INSERT INTO `t_job` 的记录
+func (s *Scheduler) InitFromDatabase() error {
+	slog.Info("正在从数据库加载定时任务...")
+
+	// 清空调度器（对标Java scheduler.clear()）
+	s.cron.Stop()
+	s.cron = cron.New(cron.WithSeconds(), cron.WithChain(cron.Recover(cron.DefaultLogger)))
+	s.jobMap = make(map[string]JobHandler)
+	s.entryIDs = make(map[string]cron.EntryID)
+
+	// 查询所有任务
+	var jobs []model.Job
+	if err := s.db.Find(&jobs).Error; err != nil {
+		return fmt.Errorf("查询定时任务失败: %w", err)
 	}
-	return result
+
+	if len(jobs) == 0 {
+		slog.Info("数据库中没有定时任务")
+		return nil
+	}
+
+	// 注册每个任务
+	for _, job := range jobs {
+		if err := s.addJobToScheduler(job); err != nil {
+			slog.Error("注册定时任务失败", "job", job.JobName, "id", job.ID, "error", err)
+			continue
+		}
+		slog.Info("定时任务已注册", "id", job.ID, "name", job.JobName, "cron", job.CronExpression, "target", job.InvokeTarget)
+	}
+
+	slog.Info("从数据库加载定时任务完成", "total", len(jobs), "success", len(s.entryIDs))
+	return nil
+}
+
+// addJobToScheduler 将单个任务添加到调度器（对标Java ScheduleUtil.createScheduleJob）
+func (s *Scheduler) addJobToScheduler(job model.Job) error {
+	// 保存 invokeTarget 到 jobMap
+	s.jobMap[job.InvokeTarget] = func(ctx context.Context) error {
+		// 调用任务函数（对标Java JobInvokeUtil.invokeMethod）
+		return InvokeMethod(ctx, job.InvokeTarget)
+	}
+
+	// 添加到 Cron 调度器
+	invokeTarget := job.InvokeTarget
+	jobName := job.JobName
+	entryID, err := s.cron.AddFunc(job.CronExpression, func() {
+		handler := s.jobMap[invokeTarget]
+		if handler != nil {
+			s.executeJob(context.Background(), jobName, invokeTarget, handler)
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("添加任务到Cron失败: %w", err)
+	}
+
+	s.entryIDs[jobName] = entryID
+	return nil
+}
+
+// AddJob 动态添加定时任务（对标Java JobServiceImpl.saveJob → ScheduleUtil.createScheduleJob）
+func (s *Scheduler) AddJob(job model.Job) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.addJobToScheduler(job); err != nil {
+		return err
+	}
+
+	slog.Info("动态添加定时任务成功", "id", job.ID, "name", job.JobName)
+	return nil
+}
+
+// UpdateJob 更新定时任务（对标Java JobServiceImpl.updateJob）
+func (s *Scheduler) UpdateJob(job model.Job) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 先删除旧任务
+	if entryID, ok := s.entryIDs[job.JobName]; ok {
+		s.cron.Remove(entryID)
+		delete(s.entryIDs, job.JobName)
+		delete(s.jobMap, job.InvokeTarget)
+	}
+
+	// 再添加新任务
+	if err := s.addJobToScheduler(job); err != nil {
+		return err
+	}
+
+	slog.Info("更新定时任务成功", "id", job.ID, "name", job.JobName)
+	return nil
+}
+
+// RemoveJob 删除定时任务（对标Java JobServiceImpl.deleteJobs）
+func (s *Scheduler) RemoveJob(jobName string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if entryID, ok := s.entryIDs[jobName]; ok {
+		s.cron.Remove(entryID)
+		delete(s.entryIDs, jobName)
+		slog.Info("删除定时任务成功", "name", jobName)
+	}
+
+	return nil
+}
+
+// RunJobNow 立即执行一次任务（对标Java JobServiceImpl.runJob → scheduler.triggerJob）
+func (s *Scheduler) RunJobNow(ctx context.Context, jobName string, invokeTarget string) error {
+	s.mu.RLock()
+	handler, ok := s.jobMap[invokeTarget]
+	s.mu.RUnlock()
+
+	if !ok {
+		return fmt.Errorf("任务未注册: %s", invokeTarget)
+	}
+
+	// 异步执行（对标Java triggerJob）
+	go func() {
+		s.executeJob(ctx, jobName, invokeTarget, handler)
+	}()
+
+	slog.Info("手动触发任务执行", "name", jobName, "target", invokeTarget)
+	return nil
 }
 
 // executeJob 执行单个任务 (对标Java AbstractQuartzJob.execute() + JobLog记录)
@@ -169,16 +252,17 @@ func (s *Scheduler) executeJob(ctx context.Context, jobName, invokeTarget string
 	}
 
 	// 异步写入日志(避免影响性能)
-	go s.recordJobLog(jobName, status, duration, errorMsg)
+	go s.recordJobLog(jobName, invokeTarget, status, duration, errorMsg)
 }
 
 // recordJobLog 记录调度日志到数据库 (对标Java JobLogMapper.insert)
-func (s *Scheduler) recordJobLog(jobName string, status int8, duration int64, errorMsg string) {
+func (s *Scheduler) recordJobLog(jobName, invokeTarget string, status int8, duration int64, errorMsg string) {
 	now := time.Now()
 	startTime := now.Add(-time.Duration(duration) * time.Millisecond)
 
 	log := model.JobLog{
 		JobName:       jobName,
+		InvokeTarget:  invokeTarget,
 		Status:        status,
 		StartTime:     &startTime,
 		EndTime:       &now,
@@ -199,71 +283,4 @@ func (s *Scheduler) waitForShutdown() {
 	sig := <-sigCh
 	slog.Info("收到终止信号, 正在关闭调度器...", "signal", sig.String())
 	s.Stop()
-}
-
-// InitDefaultTasks 初始化所有预定义定时任务 (对标Java @PostConstruct init() 从t_job加载)
-// Java版数据来自 aurora.sql 中 INSERT INTO `t_job` 的5条记录:
-//   ID=81 统计用户地域分布  '0 0,30 * * * ?'
-//   ID=82 统计访问量        '0 0 0 * * ?'
-//   ID=83 清空redis访客记录  '0 0 1 * * ?'
-//   ID=84 百度SEO          '0 0/10 * * * ?'
-//   ID=85 清理定时任务日志   '0 0 0 * * ?'
-// + ES全量同步 (Go增强, Java版通过手动触发 importDataIntoES)
-func (s *Scheduler) InitDefaultTasks() error {
-	rdb := database.GetRedis()
-
-	// 注册所有内置任务
-	tasks := []struct {
-		name         string
-		invokeTarget string
-		cronExpr     string
-		handler      JobHandler
-	}{
-		{
-			name:         "统计访问量",
-			invokeTarget: "auroraQuartz.saveUniqueView",
-			cronExpr:     "0 0 0 * * *",           // 每天00:00:00 (对标Java ID=82)
-			handler:      NewUniqueViewJob(s.db, rdb).Run,
-		},
-		{
-			name:         "清空redis访客记录",
-			invokeTarget: "auroraQuartz.clear",
-			cronExpr:     "0 0 1 * * *",           // 每天01:00:00 (对标Java ID=83)
-			handler:      NewClearCacheJob(rdb).Run,
-		},
-		{
-			name:         "统计用户地域分布",
-			invokeTarget: "auroraQuartz.statisticalUserArea",
-			cronExpr:     "0 0,30 * * * *",         // 每30分钟一次 (对标Java ID=81)
-			handler:      NewUserAreaJob(s.db, rdb).Run,
-		},
-		{
-			name:         "百度SEO推送",
-			invokeTarget: "auroraQuartz.baiduSeo",
-			cronExpr:     "0 0/10 * * * *",          // 每10分钟一次 (对标Java ID=84)
-			handler:      NewBaiduSeoJob(s.db, s.siteURL).Run,
-		},
-		{
-			name:         "清理定时任务日志",
-			invokeTarget: "auroraQuartz.clearJobLogs",
-			cronExpr:     "0 0 3 * * *",             // 每天03:00:00 (对标Java ID=85)
-			handler:      NewCleanLogJob(s.db).Run,
-		},
-		{
-			name:         "ES全量数据同步",
-			invokeTarget: "auroraQuartz.importDataIntoES",
-			cronExpr:     "0 0 4 * * *",             // 每天04:00:00 (Go增强: 自动全量同步)
-			handler:      NewESSyncJob(s.db).Run,
-		},
-	}
-
-	for _, task := range tasks {
-		if err := s.Register(task.name, task.invokeTarget, task.cronExpr, task.handler); err != nil {
-			slog.Error("注册定时任务失败", "job", task.name, "error", err)
-			continue
-		}
-	}
-
-	slog.Info("默认定时任务初始化完成", "total", len(tasks))
-	return nil
 }

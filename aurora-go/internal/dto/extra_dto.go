@@ -107,24 +107,20 @@ type TagDetailDTO struct {
 
 type FriendLinkDTO struct {
 	ID          uint      `json:"id"`
-	Nickname    string    `json:"nickname,omitempty"` // 申请者昵称
 	LinkName    string    `json:"linkName"`
 	LinkAvatar  string    `json:"linkAvatar"`
 	LinkAddress string    `json:"linkAddress"`
 	LinkIntro   string    `json:"linkIntro"`
-	CreateTime   time.Time `json:"createTime,omitempty"`
+	CreateTime  time.Time `json:"createTime,omitempty"`
 }
 
 type FriendLinkAdminDTO struct {
 	ID          uint      `json:"id"`
-	UserID      *uint     `json:"userId,omitempty"`
-	Nickname    string    `json:"nickname,omitempty"`
 	LinkName    string    `json:"linkName"`
 	LinkAvatar  string    `json:"linkAvatar"`
 	LinkAddress string    `json:"linkAddress"`
 	LinkIntro   string    `json:"linkIntro"`
-	Status      int8      `json:"status"`
-	CreateTime   time.Time `json:"createTime"`
+	CreateTime  time.Time `json:"createTime"`
 }
 
 // ===== 相册/照片 DTO =====
@@ -213,16 +209,17 @@ type MenuTreeDTO struct {
 // ===== 定时任务 DTO =====
 
 type JobDTO struct {
-	ID              uint       `json:"id"`
-	JobName         string     `json:"jobName"`
-	JobGroup        string     `json:"jobGroup,omitempty"`
-	InvokeTarget    string     `json:"invokeTarget"`
-	CronExpression  string     `json:"cronExpression,omitempty"`
-	Status          int8       `json:"status"`
-	Duration        *int64     `json:"duration,omitempty"`
-	ErrorMsg        string     `json:"errorMsg,omitempty"`
-	LastRunTime     *time.Time `json:"lastRunTime,omitempty"`
-	CreateTime      time.Time  `json:"createTime"`
+	ID             uint       `json:"id"`
+	JobName        string     `json:"jobName"`
+	JobGroup       string     `json:"jobGroup,omitempty"`
+	InvokeTarget   string     `json:"invokeTarget"`
+	CronExpression string     `json:"cronExpression,omitempty"`
+	MisfirePolicy  int        `json:"misfirePolicy,omitempty"`
+	Concurrent     int        `json:"concurrent,omitempty"`
+	Status         int        `json:"status"`
+	Remark         string     `json:"remark,omitempty"`
+	CreateTime     time.Time  `json:"createTime"`
+	UpdateTime     time.Time  `json:"updateTime,omitempty"`
 }
 
 type JobLogDTO struct {
@@ -240,14 +237,17 @@ type JobLogDTO struct {
 }
 
 type JobDetailDTO struct {
-	ID              uint       `json:"id"`
-	JobName         string     `json:"jobName"`
-	JobGroup        string     `json:"jobGroup,omitempty"`
-	InvokeTarget    string     `json:"invokeTarget"`
-	CronExpression  string     `json:"cronExpression"`
-	Status          int8       `json:"status"`
-	LastRunTime     *time.Time `json:"lastRunTime"`
-	CreateTime      time.Time  `json:"createTime"`
+	ID             uint       `json:"id"`
+	JobName        string     `json:"jobName"`
+	JobGroup       string     `json:"jobGroup,omitempty"`
+	InvokeTarget   string     `json:"invokeTarget"`
+	CronExpression string     `json:"cronExpression"`
+	MisfirePolicy  int        `json:"misfirePolicy,omitempty"`
+	Concurrent     int        `json:"concurrent,omitempty"`
+	Status         int        `json:"status"`
+	Remark         string     `json:"remark,omitempty"`
+	CreateTime     time.Time  `json:"createTime"`
+	UpdateTime     time.Time  `json:"updateTime,omitempty"`
 }
 
 // ===== 日志 DTO =====
@@ -354,26 +354,45 @@ type AdminDashboardDTO struct {
 }
 
 // ===== 网站配置 DTO =====
+// 对标Java WebsiteConfigDTO，字段名必须与前端期望完全一致
 
 type WebsiteConfigDTO struct {
-	ID                     uint  `json:"id,omitempty"`
-	SiteName               string `json:"siteName"`
-	SiteURL                string `json:"siteUrl"`
-	AuthorName             string `json:"authorName"`
-	AuthorAvatar           string `json:"authorAvatar"`
-	Logo                   string `json:"logo"`
-	Favicon                string `json:"favicon"`
-	SiteIntro              string `json:"siteIntro"`
-	Notice                 string `json:"notice"`
-	FooterInfo             string `json:"footerInfo"`
-	IcpNumber              string `json:"icpNumber"`
-	BaiduPushURL           string `json:"baiduPushUrl"`
-	GAID                   string `json:"gaId"`
-	WechatQRCode           string `json:"wechatQrcode"`
-	AlipayQRCode           string `json:"alipayQrcode"`
-	CommentNotifyEnabled   bool   `json:"commentNotifyEnabled"`
-	RegisterEnabled        bool   `json:"registerEnabled"`
-	RewardEnabled           bool   `json:"rewardEnabled"`
+	Name                 string `json:"name"`                 // 对标Java：网站名称
+	EnglishName          string `json:"englishName"`          // 对标Java：网站英文名称
+	Author               string `json:"author"`               // 对标Java：网站作者
+	AuthorAvatar         string `json:"authorAvatar"`         // 对标Java：作者头像
+	AuthorIntro          string `json:"authorIntro"`          // 对标Java：作者介绍
+	Logo                 string `json:"logo"`                 // 对标Java：网站logo
+	MultiLanguage        *int   `json:"multiLanguage"`        // 对标Java：多语言（0关闭1开启）
+	Notice               string `json:"notice"`               // 对标Java：网站公告
+	WebsiteCreateTime    string `json:"websiteCreateTime"`    // 对标Java：网站创建时间
+	BeianNumber          string `json:"beianNumber"`          // 对标Java：工信部备案号
+	QqLogin              *int   `json:"qqLogin"`              // 对标Java：QQ登录（0关闭1开启）
+	Github               string `json:"github"`               // 对标Java：github
+	Gitee                string `json:"gitee"`                // 对标Java：gitee
+	Qq                   string `json:"qq"`                   // 对标Java：qq
+	WeChat               string `json:"weChat"`               // 对标Java：微信
+	Weibo                string `json:"weibo"`                // 对标Java：微博
+	Csdn                 string `json:"csdn"`                 // 对标Java：csdn
+	Zhihu                string `json:"zhihu"`                // 对标Java：zhihu
+	Juejin               string `json:"juejin"`               // 对标Java：juejin
+	Twitter              string `json:"twitter"`              // 对标Java：twitter
+	Stackoverflow        string `json:"stackoverflow"`        // 对标Java：stackoverflow
+	TouristAvatar        string `json:"touristAvatar"`        // 对标Java：游客头像
+	UserAvatar           string `json:"userAvatar"`           // 对标Java：用户头像
+	IsCommentReview      *int   `json:"isCommentReview"`      // 对标Java：评论审核（0关闭1开启）
+	IsEmailNotice        *int   `json:"isEmailNotice"`        // 对标Java：邮箱通知（0关闭1开启）
+	IsReward             *int   `json:"isReward"`             // 对标Java：打赏（0关闭1开启）
+	WeiXinQRCode         string `json:"weiXinQRCode"`         // 对标Java：微信二维码
+	AlipayQRCode         string `json:"alipayQRCode"`         // 对标Java：支付宝二维码
+	Favicon              string `json:"favicon"`              // 对标Java：favicon
+	WebsiteTitle         string `json:"websiteTitle"`         // 对标Java：网页标题
+	GonganBeianNumber    string `json:"gonganBeianNumber"`    // 对标Java：公安部备案编号
+}
+
+// AboutDTO 关于页面DTO（对标Java AboutDTO）
+type AboutDTO struct {
+	Content string `json:"content"` // 关于页面内容（HTML/Markdown）
 }
 
 // ===== 文件上传 DTO =====

@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/dto"
@@ -21,10 +19,10 @@ func NewFriendLinkHandler(svc *service.FriendLinkService) *FriendLinkHandler {
 	return &FriendLinkHandler{svc: svc}
 }
 
-// ListFriendLinks 获取友链列表（前台，仅审核通过的）
+// ListFriendLinks 获取友链列表（前台，对标Java: listFriendLinks）
 // GET /api/links
 func (h *FriendLinkHandler) ListFriendLinks(c *gin.Context) {
-	list, err := h.svc.GetApprovedLinks(c.Request.Context())
+	list, err := h.svc.ListFriendLinks(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -32,25 +30,19 @@ func (h *FriendLinkHandler) ListFriendLinks(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// SaveFriendLink 申请友链（前台，需后台审核）
-// POST /api/links
-func (h *FriendLinkHandler) SaveFriendLink(c *gin.Context) {
+// SaveOrUpdateFriendLink 新增或更新友链（对标Java: saveOrUpdateFriendLink）
+// POST /api/admin/links
+func (h *FriendLinkHandler) SaveOrUpdateFriendLink(c *gin.Context) {
 	var friendLinkVO vo.FriendLinkVO
 	if err := c.ShouldBindJSON(&friendLinkVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	userID, _ := c.Get("userId")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
-	}
-	result, err := h.svc.ApplyFriendLink(c.Request.Context(), uid, friendLinkVO)
-	if err != nil {
+	if err := h.svc.SaveOrUpdateFriendLink(c.Request.Context(), friendLinkVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, result)
+	util.ResponseSuccess(c, nil)
 }
 
 // ==================== 后台管理端点 ====================
@@ -72,81 +64,37 @@ func (h *FriendLinkHandler) ListAdminFriendLinks(c *gin.Context) {
 }
 
 // UpdateFriendLink 更新友链信息（后台）
-// PUT /api/admin/links/:id
+// PUT /api/admin/links
 func (h *FriendLinkHandler) UpdateFriendLink(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的友链ID"))
-		return
-	}
 	var friendLinkVO vo.FriendLinkVO
 	if err := c.ShouldBindJSON(&friendLinkVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	if err := h.svc.UpdateFriendLink(c.Request.Context(), uint(id), friendLinkVO); err != nil {
+	if err := h.svc.SaveOrUpdateFriendLink(c.Request.Context(), friendLinkVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, nil)
 }
 
-// ReviewFriendLink 审核友链申请
-// PUT /api/admin/links/:id/review
-func (h *FriendLinkHandler) ReviewFriendLink(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的友链ID"))
-		return
-	}
-	var body struct {
-		IsApproved bool `json:"isApproved"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
-		return
-	}
-	status := int8(1) // 通过
-	if !body.IsApproved {
-		status = -1 // 拒绝
-	}
-	if err := h.svc.ReviewFriendLink(c.Request.Context(), uint(id), status); err != nil {
-		util.ResponseError(c, err)
-		return
-	}
-	util.ResponseSuccess(c, "审核完成")
-}
-
-// DeleteFriendLink 删除友链
-// DELETE /api/admin/links/:id
+// DeleteFriendLink 批量删除友链
+// DELETE /api/admin/links
+// Java: @DeleteMapping("/admin/links") public ResultVO<?> deleteFriendLink(@RequestBody List<Integer> linkIdList)
+// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
 func (h *FriendLinkHandler) DeleteFriendLink(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的友链ID"))
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请提供要删除的友链ID列表"))
 		return
 	}
-	if err := h.svc.DeleteFriendLink(c.Request.Context(), uint(id)); err != nil {
+	if len(ids) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("友链ID列表不能为空"))
+		return
+	}
+	if err := h.svc.DeleteFriendLinks(c.Request.Context(), ids); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "友链已删除")
-}
-
-// ToggleOnline 切换友链上线/下线状态
-// PUT /api/admin/links/:id/toggle
-func (h *FriendLinkHandler) ToggleOnline(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的友链ID"))
-		return
-	}
-	var body struct {
-		Online bool `json:"online"`
-	}
-	c.ShouldBindJSON(&body)
-	if err := h.svc.SetFriendLinkOnline(c.Request.Context(), uint(id), body.Online); err != nil {
-		util.ResponseError(c, err)
-		return
-	}
-	util.ResponseSuccess(c, nil)
 }

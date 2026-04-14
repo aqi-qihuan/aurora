@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -19,14 +19,13 @@ func NewAboutHandler(svc *service.AboutService) *AboutHandler {
 // GetAbout 获取关于页面内容（前台公开）
 // GET /api/about
 func (h *AboutHandler) GetAbout(c *gin.Context) {
-	content, err := h.svc.GetAbout(c.Request.Context())
+	// 对标Java：返回AboutDTO对象（包含content字段）
+	aboutDTO, err := h.svc.GetAboutDTO(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, map[string]interface{}{
-		"content": content,
-	})
+	util.ResponseSuccess(c, aboutDTO) // ✅ 返回 {"content":"xxx"}
 }
 
 // SaveOrUpdate 保存/更新关于页面（后台）
