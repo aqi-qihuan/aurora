@@ -12,6 +12,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/scheduler"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
@@ -120,10 +121,19 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 // Logout 用户登出
 // POST /api/auth/logout
 func (h *UserAuthHandler) Logout(c *gin.Context) {
-	userID, _ := c.Get("userId")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
+	userID, _ := c.Get("user_id")
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
 	}
 	if err := h.registry.UserAuth.Logout(c.Request.Context(), uid); err != nil {
 		util.ResponseError(c, err)
@@ -175,10 +185,19 @@ func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	userID, _ := c.Get("userId")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
+	userID, _ := c.Get("user_id")
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
 	}
 	if err := h.registry.UserAuth.ChangePassword(c.Request.Context(), uid, passwordVO); err != nil {
 		util.ResponseError(c, err)
@@ -202,14 +221,23 @@ func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 // GetUserInfo 获取当前登录用户信息
 // GET /api/user/info
 func (h *UserAuthHandler) GetUserInfo(c *gin.Context) {
-	userID, exists := c.Get("userId")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		util.ResponseError(c, errors.ErrUnauthorized)
 		return
 	}
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	// 兼容 uint64/uint/float64 类型
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
 	}
 	result, err := h.registry.UserAuth.GetUserInfoByID(c.Request.Context(), uid)
 	if err != nil {
@@ -354,24 +382,34 @@ func (h *UserAuthHandler) TriggerUserAreaStats(c *gin.Context) {
 	util.ResponseSuccess(c, "用户地域统计已更新")
 }
 
-// UpdateAdminPassword 修改管理员密码
+// UpdateAdminPassword 修改管理员密码（对标Java UserAuthController.updateAdminPassword）
 // PUT /api/admin/users/password
+// Java逻辑: 管理员直接重置密码，不需要验证旧密码
 func (h *UserAuthHandler) UpdateAdminPassword(c *gin.Context) {
 	var passwordVO vo.PasswordVO
 	if err := c.ShouldBindJSON(&passwordVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	userID, _ := c.Get("userId")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
+	userID, _ := c.Get("user_id")
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
 	}
-	if err := h.registry.UserAuth.ChangePassword(c.Request.Context(), uid, passwordVO); err != nil {
+	if err := h.registry.UserAuth.UpdateAdminPassword(c.Request.Context(), uid, passwordVO.NewPassword); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, "密码修改成功")
+	util.ResponseSuccess(c, nil)
 }
 
 // UpdateUserRole 修改用户角色和昵称（完全对标Java UserInfoController.updateUserRole）
@@ -417,18 +455,36 @@ func (h *UserAuthHandler) UpdateUserRole(c *gin.Context) {
 	util.ResponseSuccess(c, "角色修改成功")
 }
 
-// UpdateUserDisable 修改用户禁用状态
+// UpdateUserDisable 修改用户禁用状态（对标Java UserInfoController.updateUserDisable）
 // PUT /api/admin/users/disable
+// Java逻辑: 1)下线用户(删除Redis Session) 2)更新 isDisable 字段
 func (h *UserAuthHandler) UpdateUserDisable(c *gin.Context) {
 	var body struct {
-		UserID    uint `json:"userId"`
-		IsDisable int8 `json:"isDisable"`
+		UserID    uint `json:"userId" binding:"required"`
+		IsDisable int8 `json:"isDisable" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	util.ResponseSuccess(c, "用户状态已更新")
+
+	ctx := c.Request.Context()
+
+	// Step 1: 下线用户（对标Java removeOnlineUser(userDisableVO.getId())）
+	if body.IsDisable == 1 {
+		if err := h.registry.UserAuth.RemoveOnlineUser(ctx, body.UserID); err != nil {
+			slog.Warn("下线用户失败", "error", err.Error(), "userId", body.UserID)
+			// 不阻断后续操作
+		}
+	}
+
+	// Step 2: 更新禁用状态
+	if err := h.registry.DB.WithContext(ctx).Model(&model.UserInfo{}).Where("id = ?", body.UserID).Update("is_disable", body.IsDisable).Error; err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+
+	util.ResponseSuccess(c, nil)
 }
 
 // ListOnlineUsers 查看在线用户列表
@@ -468,11 +524,12 @@ func (h *UserAuthHandler) RemoveOnlineUser(c *gin.Context) {
 
 // ==================== 用户信息端点（UserInfoController） ====================
 
-// UpdateUserInfo 更新用户信息
+// UpdateUserInfo 更新用户信息（对标Java UserInfoController.updateUserInfo）
 // PUT /api/users/info
+// Java逻辑: 更新当前用户的 nickname, intro, website
 func (h *UserAuthHandler) UpdateUserInfo(c *gin.Context) {
 	var body struct {
-		Nickname string `json:"nickname"`
+		Nickname string `json:"nickname" binding:"required"`
 		Intro    string `json:"intro"`
 		Website  string `json:"website"`
 	}
@@ -480,7 +537,44 @@ func (h *UserAuthHandler) UpdateUserInfo(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	util.ResponseSuccess(c, "用户信息已更新")
+
+	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
+	userID, _ := c.Get("user_id")
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Step 1: 查询当前用户的 userInfoId (对标Java UserUtil.getUserDetailsDTO().getUserInfoId())
+	var auth model.UserAuth
+	if err := h.registry.DB.WithContext(ctx).Select("user_info_id").Where("id = ?", uid).First(&auth).Error; err != nil {
+		slog.Warn("查询用户信息失败", "error", err.Error(), "userId", uid)
+		util.ResponseError(c, errors.ErrUserNotFound)
+		return
+	}
+	userInfoID := auth.UserID
+
+	// Step 2: 更新用户信息（对标Java UserInfoServiceImpl.updateUserInfo）
+	if err := h.registry.UserAuth.UpdateUserInfo(ctx, userInfoID, vo.UpdateUserVO{
+		Nickname: &body.Nickname,
+		Intro:    &body.Intro,
+		WebSite:  &body.Website,
+	}); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+
+	util.ResponseSuccess(c, nil)
 }
 
 // UpdateUserAvatar 更新用户头像
@@ -493,11 +587,19 @@ func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID, _ := c.Get("userId")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
+	userID, _ := c.Get("user_id")
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
 	}
 
 	// 使用 FileService 上传头像 (对标Java版 uploadStrategyContext.executeUploadStrategy)
@@ -509,29 +611,100 @@ func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 	util.ResponseSuccess(c, avatarURL)
 }
 
-// BindUserEmail 绑定用户邮箱
+// BindUserEmail 绑定用户邮箱（对标Java UserInfoController.saveUserEmail）
 // PUT /api/users/email
+// Java逻辑: 1)校验验证码 2)更新当前用户邮箱
 func (h *UserAuthHandler) BindUserEmail(c *gin.Context) {
 	var emailVO dto.EmailVO
 	if err := c.ShouldBindJSON(&emailVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	util.ResponseSuccess(c, "邮箱绑定成功")
+
+	if emailVO.Code == "" || emailVO.Email == "" {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("邮箱和验证码不能为空"))
+		return
+	}
+
+	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
+	userID, _ := c.Get("user_id")
+	var uid uint
+	switch v := userID.(type) {
+	case uint:
+		uid = v
+	case uint64:
+		uid = uint(v)
+	case float64:
+		uid = uint(v)
+	default:
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Step 1: 查询当前用户的 userInfoId
+	var auth model.UserAuth
+	if err := h.registry.DB.WithContext(ctx).Select("user_info_id").Where("id = ?", uid).First(&auth).Error; err != nil {
+		util.ResponseError(c, errors.ErrUserNotFound)
+		return
+	}
+	userInfoID := auth.UserID
+
+	// Step 2: 校验验证码（对标Java redisService.get(USER_CODE_KEY + emailVO.getEmail())）
+	if h.registry.RDB != nil {
+		codeKey := "user_code:" + emailVO.Email
+		storedCode, err := h.registry.RDB.Get(ctx, codeKey).Result()
+		if err != nil || storedCode != emailVO.Code {
+			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("验证码错误"))
+			return
+		}
+		// 删除验证码（一次性使用）
+		h.registry.RDB.Del(ctx, codeKey)
+	}
+
+	// Step 3: 更新邮箱（对标Java UserInfoServiceImpl.saveUserEmail - 直接updateById）
+	if err := h.registry.DB.WithContext(ctx).Model(&model.UserInfo{}).Where("id = ?", userInfoID).Update("email", emailVO.Email).Error; err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+
+	util.ResponseSuccess(c, nil)
 }
 
-// UpdateUserSubscribe 修改用户订阅状态
+// UpdateUserSubscribe 修改用户订阅状态（对标Java UserInfoController.updateUserSubscribe）
 // PUT /api/users/subscribe
+// Java逻辑: 1)检查用户是否绑定邮箱 2)更新 isSubscribe 字段
 func (h *UserAuthHandler) UpdateUserSubscribe(c *gin.Context) {
 	var body struct {
-		UserID      uint `json:"userId"`
-		IsSubscribe int8 `json:"isSubscribe"`
+		UserID      uint `json:"userId" binding:"required"`
+		IsSubscribe int8 `json:"isSubscribe" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	util.ResponseSuccess(c, "订阅状态已更新")
+
+	ctx := c.Request.Context()
+
+	// Step 1: 检查用户是否绑定邮箱（对标Java StringUtils.isEmpty(temp.getEmail())）
+	var email string
+	if err := h.registry.DB.WithContext(ctx).Select("email").Where("id = ?", body.UserID).Table("t_user_info").First(&email).Error; err != nil {
+		util.ResponseError(c, errors.ErrUserNotFound)
+		return
+	}
+	if email == "" {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("邮箱未绑定！"))
+		return
+	}
+
+	// Step 2: 更新订阅状态
+	if err := h.registry.DB.WithContext(ctx).Model(&model.UserInfo{}).Where("id = ?", body.UserID).Update("is_subscribe", body.IsSubscribe).Error; err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+
+	util.ResponseSuccess(c, nil)
 }
 
 // GetUserInfoById 根据ID获取用户信息

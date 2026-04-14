@@ -127,7 +127,7 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userId")
+	userID, _ := c.Get("user_id")
 	uid := uint(0)
 	if id, ok := userID.(uint); ok {
 		uid = id
@@ -211,7 +211,7 @@ func (h *ArticleHandler) ImportArticle(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userId")
+	userID, _ := c.Get("user_id")
 	uid := uint(0)
 	if id, ok := userID.(uint); ok {
 		uid = id

@@ -50,7 +50,7 @@ func (h *CommentHandler) AddComment(c *gin.Context) {
 		return
 	}
 	// 从上下文中获取用户ID
-	userID, _ := c.Get("userId")
+	userID, _ := c.Get("user_id")
 	uid := uint(0)
 	if id, ok := userID.(uint); ok {
 		uid = id
@@ -73,7 +73,7 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	userID, _ := c.Get("userId")
+	userID, _ := c.Get("user_id")
 	uid := uint(0)
 	if id, ok := userID.(uint); ok {
 		uid = id

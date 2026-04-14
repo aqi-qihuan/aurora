@@ -267,11 +267,13 @@ func (s *UserAuthService) UpdateUserInfo(ctx context.Context, id uint, vo vo.Upd
 	return nil
 }
 
-// ChangePassword 修改密码
+// ChangePassword 修改密码（用户端，需验证旧密码）
 func (s *UserAuthService) ChangePassword(ctx context.Context, id uint, vo vo.PasswordVO) error {
 	var auth model.UserAuth
 
-	if err := s.db.WithContext(ctx).Where("user_id = ? AND login_type = ?", id, 1).First(&auth).Error; err != nil {
+	// id 是 UserAuth.id（从JWT的user_id获取），直接按主键查
+	if err := s.db.WithContext(ctx).First(&auth, id).Error; err != nil {
+		slog.Warn("查询UserAuth失败", "id", id, "error", err.Error())
 		return errors.ErrUserNotFound
 	}
 
@@ -290,7 +292,31 @@ func (s *UserAuthService) ChangePassword(ctx context.Context, id uint, vo vo.Pas
 		return fmt.Errorf("修改密码失败: %w", err)
 	}
 
-	slog.Info("密码修改成功", "user_id", id)
+	slog.Info("密码修改成功", "user_info_id", id)
+	return nil
+}
+
+// UpdateAdminPassword 管理员修改密码（后台，不需要旧密码）
+// 对标Java: UserAuthServiceImpl.updateAdminPassword - 管理员直接重置密码，不需要验证旧密码
+func (s *UserAuthService) UpdateAdminPassword(ctx context.Context, id uint, newPassword string) error {
+	var auth model.UserAuth
+
+	// id 是 UserAuth.id（从JWT的user_id获取），直接按主键查
+	if err := s.db.WithContext(ctx).First(&auth, id).Error; err != nil {
+		return errors.ErrUserNotFound
+	}
+
+	// 直接加密新密码（不需要验证旧密码）
+	hashedPwd, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("新密码加密失败: %w", err)
+	}
+
+	if err := s.db.WithContext(ctx).Model(&auth).Update("password", string(hashedPwd)).Error; err != nil {
+		return fmt.Errorf("修改密码失败: %w", err)
+	}
+
+	slog.Info("管理员密码修改成功", "user_info_id", id)
 	return nil
 }
 
