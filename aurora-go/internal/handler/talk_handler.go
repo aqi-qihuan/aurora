@@ -7,7 +7,6 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
-	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
@@ -15,7 +14,7 @@ import (
 
 // TalkHandler 说说处理器（完全对标 Java TalkController）
 type TalkHandler struct {
-	svc *service.TalkService
+	svc     *service.TalkService
 	fileSvc *service.FileService
 }
 
@@ -63,14 +62,27 @@ func (h *TalkHandler) SaveOrUpdate(c *gin.Context) {
 		return
 	}
 
-	// 从Context获取用户ID（JWTAuthEnhanced会设置user_id）
-	userID := middleware.GetUserID(c)
-	if userID == 0 {
+	// 从Context获取用户信息ID（t_talk.user_id 应关联 t_user_info.id，不是 t_user_auth.id）
+	// JWTAuthEnhanced注入了 user_info_id = UserInfo.id
+	var userInfoID uint
+	if uid, exists := c.Get("user_info_id"); exists {
+		switch v := uid.(type) {
+		case float64:
+			userInfoID = uint(v)
+		case int64:
+			userInfoID = uint(v)
+		case int:
+			userInfoID = uint(v)
+		case uint:
+			userInfoID = v
+		}
+	}
+	if userInfoID == 0 {
 		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("请先登录"))
 		return
 	}
 
-	if err := h.svc.SaveOrUpdateTalk(c.Request.Context(), userID, talkVO); err != nil {
+	if err := h.svc.SaveOrUpdateTalk(c.Request.Context(), userInfoID, talkVO); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
@@ -135,7 +147,7 @@ func (h *TalkHandler) UploadTalkImage(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要上传的图片"))
 		return
 	}
-	
+
 	// 调用FileService上传到MinIO/本地存储
 	url, err := h.fileSvc.UploadTalkImage(c.Request.Context(), file)
 	if err != nil {

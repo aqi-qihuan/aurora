@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/dto"
+	"github.com/aurora-go/aurora/internal/infrastructure/storage"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/util"
 	"gorm.io/gorm"
@@ -20,12 +22,13 @@ import (
 // FileService 文件上传业务逻辑 (对标 Java FileServiceImpl + UploadStrategyContext)
 // 策略模式: MinIO/OSS双上传策略 (P0-9实现)
 type FileService struct {
-	db *gorm.DB
+	db  *gorm.DB
+	cfg config.MinIOConfig
 }
 
 // NewFileService 创建文件服务
-func NewFileService(db *gorm.DB) *FileService {
-	return &FileService{db: db}
+func NewFileService(db *gorm.DB, cfg config.MinIOConfig) *FileService {
+	return &FileService{db: db, cfg: cfg}
 }
 
 // UploadSingle 上传单个文件
@@ -321,9 +324,30 @@ func (s *FileService) exists(filePath string) bool {
 	return err == nil
 }
 
-// uploadFile 上传文件到本地存储 (对标 Java AbstractUploadStrategyImpl.upload)
+// uploadFile 上传文件（优先MinIO，回退本地）(对标 Java AbstractUploadStrategyImpl.upload)
 func (s *FileService) uploadFile(ctx context.Context, src io.Reader, filePath string) error {
-	// 创建目录
+	// 优先尝试MinIO上传
+	if storage.MinIOClient != nil && s.cfg.Endpoint != "" {
+		// 读取全部内容
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return fmt.Errorf("读取文件内容失败: %w", err)
+		}
+
+		// 检测Content-Type
+		contentType := s.detectContentType(filePath)
+
+		// 上传到MinIO
+		_, err = storage.UploadBytes(ctx, filePath, data, int64(len(data)), contentType, s.cfg.Bucket)
+		if err != nil {
+			slog.Warn("MinIO上传失败，回退本地存储", "path", filePath, "error", err)
+		} else {
+			slog.Debug("MinIO上传成功", "path", filePath)
+			return nil
+		}
+	}
+
+	// 回退到本地文件系统
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建目录失败: %w", err)
@@ -343,10 +367,38 @@ func (s *FileService) uploadFile(ctx context.Context, src io.Reader, filePath st
 	return nil
 }
 
-// getFileAccessURL 获取文件访问URL (对标 Java MinioUploadStrategyImpl.getFileAccessUrl)
+// detectContentType 根据文件扩展名检测Content-Type
+func (s *FileService) detectContentType(filePath string) string {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch ext {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".svg":
+		return "image/svg+xml"
+	case ".mp4":
+		return "video/mp4"
+	case ".pdf":
+		return "application/pdf"
+	default:
+		return "application/octet-stream"
+	}
+}
+
+// getFileAccessURL 获取文件访问URL（优先MinIO外部URL，回退本地）
 func (s *FileService) getFileAccessURL(filePath string) string {
-	// 对标 Java: minioProperties.getUrl() + filePath
-	// TODO: P0-9 接入MinIO/OSS后改为真实URL
+	// 优先使用MinIO外部URL
+	if storage.MinIOClient != nil && s.cfg.Endpoint != "" {
+		// storage.UploadBytes 已返回完整URL（含bucket），直接使用storage.GetObjectURL
+		return storage.GetObjectURL(s.cfg.Bucket, filePath)
+	}
+
+	// 回退到本地静态文件访问URL
 	baseURL := "http://localhost:8080"
 	return fmt.Sprintf("%s/%s", baseURL, filePath)
 }

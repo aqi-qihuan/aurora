@@ -26,19 +26,20 @@ func NewTalkService(db *gorm.DB) *TalkService {
 // SaveOrUpdateTalk 保存或更新说说（对标 Java saveOrUpdateTalk）
 // 根据ID有无自动判断新增/更新
 func (s *TalkService) SaveOrUpdateTalk(ctx context.Context, userID uint, talkVO vo.TalkVO) error {
-	talk := model.Talk{
-		UserID:  userID,
-		Content: talkVO.Content,
-		Images:  talkVO.Images,
-		IsTop:   talkVO.IsTop,
-		Status:  talkVO.Status,
-	}
+	log.Printf("[TalkService.SaveOrUpdateTalk] 收到请求: userID=%d, talkID=%d, content_len=%d, status=%d, isTop=%d",
+		userID, talkVO.ID, len(talkVO.Content), talkVO.Status, talkVO.IsTop)
 
 	if talkVO.ID > 0 {
+		// 更新：检查记录是否存在
+		var existTalk model.Talk
+		if err := s.db.WithContext(ctx).First(&existTalk, talkVO.ID).Error; err != nil {
+			log.Printf("[TalkService.SaveOrUpdateTalk] 更新失败-记录不存在: talkID=%d, error=%v", talkVO.ID, err)
+			return fmt.Errorf("说说不存在: %w", err)
+		}
+		log.Printf("[TalkService.SaveOrUpdateTalk] 执行更新: talkID=%d", talkVO.ID)
+		
 		// 更新：使用Updates()只更新非零值字段，对标Java MyBatis-Plus的saveOrUpdate行为
-		// Omit("create_time") 确保不会覆盖原有创建时间
-		if err := s.db.WithContext(ctx).Model(&model.Talk{}).Where("id = ?", talkVO.ID).Updates(map[string]interface{}{
-			"user_id": userID,
+		if err := s.db.WithContext(ctx).Model(&existTalk).Updates(map[string]interface{}{
 			"content": talkVO.Content,
 			"images":  talkVO.Images,
 			"is_top":  talkVO.IsTop,
@@ -46,11 +47,22 @@ func (s *TalkService) SaveOrUpdateTalk(ctx context.Context, userID uint, talkVO 
 		}).Error; err != nil {
 			return fmt.Errorf("更新说说失败: %w", err)
 		}
+		log.Printf("[TalkService.SaveOrUpdateTalk] 更新成功: talkID=%d", talkVO.ID)
 	} else {
 		// 新增
+		talk := model.Talk{
+			UserID:  userID,
+			Content: talkVO.Content,
+			Images:  talkVO.Images,
+			IsTop:   talkVO.IsTop,
+			Status:  talkVO.Status,
+		}
+		log.Printf("[TalkService.SaveOrUpdateTalk] 执行新增: userID=%d, content_len=%d", userID, len(talkVO.Content))
 		if err := s.db.WithContext(ctx).Create(&talk).Error; err != nil {
+			log.Printf("[TalkService.SaveOrUpdateTalk] 新增失败: error=%v", err)
 			return fmt.Errorf("发布说说失败: %w", err)
 		}
+		log.Printf("[TalkService.SaveOrUpdateTalk] 新增成功: newTalkID=%d", talk.ID)
 	}
 	return nil
 }

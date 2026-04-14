@@ -49,9 +49,11 @@ func Fail(c *gin.Context, code int, message string) {
 }
 
 // PageResultVO 分页结果
+// 对齐Java MyBatis-Plus的IPage结构，前端期望records字段
 type PageResultVO struct {
-	List     interface{} `json:"list"`
-	Count    int64       `json:"count"`    // 总记录数 (非当前页)
+	Records  interface{} `json:"records"`   // 数据列表（对齐前端records字段）
+	List     interface{} `json:"list"`      // 兼容旧版list字段
+	Count    int64       `json:"count"`     // 总记录数
 	PageNum  int         `json:"pageNum"`
 	PageSize int         `json:"pageSize"`
 }
@@ -59,7 +61,8 @@ type PageResultVO struct {
 // NewPageResult 创建分页结果
 func NewPageResult(list interface{}, count int64, pageNum, pageSize int) PageResultVO {
 	return PageResultVO{
-		List:     list,
+		Records:  list,   // 前端期望的字段
+		List:     list,   // 兼容旧版
 		Count:    count,
 		PageNum:  pageNum,
 		PageSize: pageSize,

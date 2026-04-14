@@ -78,10 +78,10 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.ExceptionLog = NewExceptionLogService(db)
 	r.AuroraInfo = NewAuroraInfoService(db, statsService)
 	r.WebsiteConfig = NewWebsiteConfigService(db)
-	r.File = NewFileService(db)
+	r.File = NewFileService(db, cfg.MinIO)
 	r.Resource = NewResourceService(db)
 	r.About = NewAboutService(db)
-
+	
 	// ===== 安全认证服务 (依赖DB+Redis+配置) =====
 	r.TokenSvc = NewTokenService(cfg.JWT, rdb, logger)
 	r.QQOAuthSvc = NewQQOAuthService(cfg.QQ, r.UserAuth, r.TokenSvc, logger)

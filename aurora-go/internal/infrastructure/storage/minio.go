@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log/slog"
 	"net/url"
 	"path/filepath"
@@ -106,6 +107,11 @@ func DeleteFile(ctx context.Context, objectName string, bucketName string) error
 
 // GetObjectURL 获取文件的完整访问URL
 func GetObjectURL(bucketName string, objectName string) string {
+	// 优先使用外部URL（如CDN/域名代理）
+	if externalURL != "" {
+		// externalURL 已包含 bucket（如 https://ws.aqi125.cn/aurora），直接拼接 objectName
+		return fmt.Sprintf("%s/%s", strings.TrimSuffix(externalURL, "/"), objectName)
+	}
 	u := url.URL{
 		Scheme: "http",
 		Host:   minIOEndpoint,

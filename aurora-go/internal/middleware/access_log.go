@@ -138,10 +138,6 @@ func AccessLog(registry *service.Registry, logger *slog.Logger) gin.HandlerFunc 
 			}
 
 			userID := GetUserID(c)
-			bodyStr := string(body)
-			if len(bodyStr) > 1000 {
-				bodyStr = bodyStr[:1000] + "...(truncated)"
-			}
 
 			// 1. 匹配路由元数据 (支持 QueryString 的模糊匹配)
 			var meta OptLogMeta
@@ -155,6 +151,18 @@ func AccessLog(registry *service.Registry, logger *slog.Logger) gin.HandlerFunc 
 				if meta.Module == "" {
 					// 使用 Info 级别确保能看到调试日志（日志级别为 Info）
 					logger.Info("[操作日志] 未匹配到路由元数据", "routeKey", routeKey, "baseKey", baseKey)
+				}
+			}
+
+			// 文件上传接口不记录原始请求体（含二进制数据）
+			bodyStr := "[文件上传]"
+			if !strings.HasPrefix(routeKey, "POST /api/admin/talks/images") &&
+				!strings.HasPrefix(routeKey, "POST /api/admin/articles/images") &&
+				!strings.HasPrefix(routeKey, "POST /api/admin/photos/upload") &&
+				!strings.HasPrefix(routeKey, "POST /api/admin/upload") {
+				bodyStr = string(body)
+				if len(bodyStr) > 1000 {
+					bodyStr = bodyStr[:1000] + "...(truncated)"
 				}
 			}
 
