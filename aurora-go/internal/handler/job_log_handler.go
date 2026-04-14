@@ -1,6 +1,8 @@
-﻿package handler
+package handler
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/aurora-go/aurora/internal/dto"
@@ -33,28 +35,33 @@ func (h *JobLogHandler) ListJobLogs(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteJobLogs 清理调度日志
+// DeleteJobLogs 批量删除调度日志（对标Java: deleteJobLogs）
 // DELETE /api/admin/jobLogs
+// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
 func (h *JobLogHandler) DeleteJobLogs(c *gin.Context) {
-	var ids []int
-	c.ShouldBindJSON(&ids)
-	if len(ids) > 0 {
-		for _, id := range ids {
-			_ = h.svc.ClearJobLogs(c.Request.Context(), id)
-		}
-	} else {
-		if err := h.svc.ClearJobLogs(c.Request.Context(), 30); err != nil {
-			util.ResponseError(c, err)
-			return
-		}
+	var ids []uint
+	if err := c.ShouldBindJSON(&ids); err != nil {
+		util.ResponseError(c, err)
+		return
 	}
-	util.ResponseSuccess(c, "日志已清理")
+	if len(ids) == 0 {
+		util.ResponseError(c, fmt.Errorf("请提供要删除的日志ID列表"))
+		return
+	}
+
+	// 批量删除（对标Java deleteJobLogs）
+	result := h.svc.DeleteJobLogs(c.Request.Context(), ids)
+	if result != nil {
+		util.ResponseError(c, result)
+		return
+	}
+	util.ResponseSuccess(c, "日志已删除")
 }
 
-// CleanJobLogs 清除所有调度日志
+// CleanJobLogs 清空所有调度日志（对标Java: cleanJobLogs）
 // DELETE /api/admin/jobLogs/clean
 func (h *JobLogHandler) CleanJobLogs(c *gin.Context) {
-	if err := h.svc.ClearJobLogs(c.Request.Context(), 0); err != nil {
+	if err := h.svc.CleanJobLogs(c.Request.Context()); err != nil {
 		util.ResponseError(c, err)
 		return
 	}

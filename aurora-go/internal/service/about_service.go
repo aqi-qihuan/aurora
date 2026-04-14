@@ -90,7 +90,7 @@ func (s *AboutService) UpdateAbout(ctx context.Context, content string) error {
 	}
 
 	// 4. 删除Redis缓存（对标Java redisService.del(ABOUT)）
-	rdb := database.RDB
+	rdb := database.GetRedis()
 	if rdb != nil {
 		if err := rdb.Del(ctx, "about").Err(); err != nil {
 			slog.Warn("删除关于页面Redis缓存失败", "error", err)

@@ -252,52 +252,65 @@ type JobDetailDTO struct {
 
 // ===== 日志 DTO =====
 
+// OperationLogVO 操作日志VO（用于中间件创建日志记录，对标Java OperationLog实体）
 type OperationLogVO struct {
-	UserID    uint   `json:"userId"`
-	Module    string `json:"module"`
-	Operation string `json:"operation"`
-	Method    string `json:"method"`
-	URL       string `json:"url"`
-	IP        string `json:"ip"`
-	Duration  *int64 `json:"duration"`
-	Status    int8   `json:"status"`
-	ErrorMsg  string `json:"errorMsg"`
+	UserID        uint   `json:"userId"`
+	Module        string `json:"module"`         // 操作模块（如"文章模块"）
+	Operation     string `json:"operation"`      // 操作类型（如"ADD","UPDATE","DELETE"）
+	Method        string `json:"method"`         // 操作方法（如"ArticleController.addArticle"）
+	URL           string `json:"url"`            // 请求路径
+	IP            string `json:"ip"`             // 操作IP
+	RequestMethod string `json:"requestMethod"`  // 请求方式（GET/POST等）
+	RequestParam  string `json:"requestParam"`   // 请求参数
+	ResponseData  string `json:"responseData"`   // 返回数据
+	OptDesc       string `json:"optDesc"`        // 操作描述
+	Nickname      string `json:"nickname"`       // 用户昵称
+	IpSource      string `json:"ipSource"`       // IP来源
 }
 
+// OperationLogDTO 操作日志DTO（对标Java OperationLogDTO）
+// 注意：JSON标签必须与Java完全一致，否则前端无法渲染
 type OperationLogDTO struct {
-	ID         uint      `json:"id"`
-	UserID     uint      `json:"userId"`
-	Nickname   string    `json:"nickname,omitempty"`
-	Module     string    `json:"module"`
-	Operation  string    `json:"operation"`
-	Method     string    `json:"method"`
-	URL        string    `json:"url"`
-	IP         string    `json:"ip"`
-	Duration   *int64    `json:"duration"`
-	Status     int8      `json:"status"`
-	ErrorMsg   string    `json:"errorMsg"`
-	CreateTIme time.Time `json:"createTime"`
+	ID             uint      `json:"id"`
+	OptModule      string    `json:"optModule"`                // 系统模块（对标Java）
+	OptUri         string    `json:"optUri"`                   // 请求接口（对标Java）
+	OptType        string    `json:"optType"`                  // 操作类型（对标Java）
+	OptMethod      string    `json:"optMethod"`                // 请求方法（对标Java）
+	OptDesc        string    `json:"optDesc"`                  // 操作描述（对标Java）
+	RequestMethod  string    `json:"requestMethod"`            // 请求方式（对标Java）
+	RequestParam   string    `json:"requestParam"`             // 请求参数（对标Java）
+	ResponseData   string    `json:"responseData"`             // 返回数据（对标Java）
+	Nickname       string    `json:"nickname"`                 // 操作人员（对标Java）
+	IpAddress      string    `json:"ipAddress"`                // 登录IP（对标Java）
+	IpSource       string    `json:"ipSource"`                 // 登录地址（对标Java）
+	CreateTime     time.Time `json:"createTime"`               // 操作日期（对标Java）
 }
 
+// ExceptionLogVO 异常日志VO（用于中间件创建异常记录，对标Java ExceptionLog实体）
 type ExceptionLogVO struct {
-	UserID     uint   `json:"userId"`
-	URL        string `json:"url"`
-	Method     string `json:"method"`
-	IP         string `json:"ip"`
-	ErrorMsg   string `json:"errorMsg"`
-	Stacktrace string `json:"stacktrace"`
+	URL           string `json:"url"`            // 请求接口
+	Method        string `json:"method"`         // 请求方法
+	RequestMethod string `json:"requestMethod"`  // 请求方式
+	RequestParam  string `json:"requestParam"`   // 请求参数
+	OptDesc       string `json:"optDesc"`        // 操作描述
+	ExceptionInfo string `json:"exceptionInfo"`  // 异常堆栈信息
+	IP            string `json:"ip"`             // 操作IP
+	IpSource      string `json:"ipSource"`       // IP来源
 }
 
+// ExceptionLogDTO 异常日志DTO（对标Java ExceptionLogDTO）
+// 注意：JSON标签必须与Java完全一致，否则前端无法渲染
 type ExceptionLogDTO struct {
-	ID         uint      `json:"id"`
-	UserID     uint      `json:"userID"`
-	URL        string    `json:"url"`
-	Method     string    `json:"method"`
-	IP         string    `json:"ip"`
-	ErrorMsg   string    `json:"errorMsg"`
-	Stacktrace string    `json:"stacktrace"`
-	Status     int8      `json:"status"`
-	CreateTime  time.Time `json:"createTime"`
+	ID             uint      `json:"id"`
+	OptUri         string    `json:"optUri"`                   // 请求接口（对标Java）
+	OptMethod      string    `json:"optMethod"`                // 请求方法（对标Java）
+	RequestMethod  string    `json:"requestMethod"`            // 请求方式（对标Java）
+	RequestParam   string    `json:"requestParam"`             // 请求参数（对标Java）
+	OptDesc        string    `json:"optDesc"`                  // 操作描述（对标Java）
+	ExceptionInfo  string    `json:"exceptionInfo"`            // 异常堆栈（对标Java）
+	IpAddress      string    `json:"ipAddress"`                // 登录IP（对标Java）
+	IpSource       string    `json:"ipSource"`                 // 登录地址（对标Java）
+	CreateTime     time.Time `json:"createTime"`               // 异常时间（对标Java）
 }
 
 // ===== 后台首页聚合 DTO (对标 Java AuroraAdminInfoDTO) =====

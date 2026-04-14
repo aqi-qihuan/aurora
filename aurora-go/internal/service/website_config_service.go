@@ -76,7 +76,7 @@ func (s *WebsiteConfigService) UpdateConfig(ctx context.Context, configVO vo.Web
 	}
 
 	// 3. 删除Redis缓存（对标Java redisService.del(WEBSITE_CONFIG)）
-	rdb := database.RDB
+	rdb := database.GetRedis()
 	if rdb != nil {
 		if err := rdb.Del(ctx, "website_config").Err(); err != nil {
 			slog.Warn("删除网站配置Redis缓存失败", "error", err)

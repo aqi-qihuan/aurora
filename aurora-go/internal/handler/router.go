@@ -92,6 +92,8 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 	admin.Use(middleware.JWTAuthEnhanced(r.tokenSvc, r.logger))
 	// 使用RBAC权限控制中间件（对标Java的FilterInvocationSecurityMetadataSource + AccessDecisionManager）
 	admin.Use(middleware.RBAC(service.GetGlobalRegistry()))
+	// 使用操作日志中间件（对标Java @OptLog AOP）
+	admin.Use(middleware.AccessLog(service.GetGlobalRegistry(), r.logger))
 
 	r.registerAdminRoutes(admin)
 }

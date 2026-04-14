@@ -22,38 +22,38 @@ func NewExceptionLogService(db *gorm.DB) *ExceptionLogService {
 // SaveExceptionLog 保存异常日志 (由Recovery中间件调用, 对标 ExceptionLogAspect)
 func (s *ExceptionLogService) SaveExceptionLog(ctx context.Context, log dto.ExceptionLogVO) error {
 	elog := model.ExceptionLog{
-		UserID:    log.UserID,
-		URL:       log.URL,
-		Method:    log.Method,
-		IP:        log.IP,
-		ErrorMsg:  log.ErrorMsg,
-		Stacktrace: log.Stacktrace,
-		Status:    1, // 默认未处理
+		OptUri:        log.URL,
+		OptMethod:     log.Method,
+		RequestMethod: log.RequestMethod,
+		RequestParam:  log.RequestParam,
+		OptDesc:       log.OptDesc,
+		ExceptionInfo: log.ExceptionInfo,
+		IpAddress:     log.IP,
+		IpSource:      log.IpSource,
 	}
 
 	if err := s.db.WithContext(ctx).Create(&elog).Error; err != nil {
 		return fmt.Errorf("保存异常日志失败: %w", err)
 	}
-	errMsg := elog.ErrorMsg
+	errMsg := elog.ExceptionInfo
 	if len(errMsg) > 200 {
 		errMsg = errMsg[:200]
 	}
-	slog.Error("异常日志记录", "id", elog.ID, "url", elog.URL, "error", errMsg)
+	slog.Error("异常日志记录", "id", elog.ID, "url", elog.OptUri, "error", errMsg)
 	return nil
 }
 
-// ListExceptionLogs 分页查询异常日志
+// ListExceptionLogs 分页查询异常日志（对标Java ExceptionLogServiceImpl.listExceptionLogs）
+// Java: .like(StringUtils.isNotBlank(conditionVO.getKeywords()), ExceptionLog::getOptDesc, conditionVO.getKeywords())
 func (s *ExceptionLogService) ListExceptionLogs(ctx context.Context, cond dto.ConditionVO, page dto.PageVO) (*dto.PageResultDTO, error) {
 	var logs []model.ExceptionLog
 	var count int64
 
 	baseQuery := s.db.WithContext(ctx).Model(&model.ExceptionLog{})
 
+	// 关键词搜索：搜索 opt_desc（对标Java）
 	if cond.Keywords != "" {
-		baseQuery = baseQuery.Where("error_msg LIKE ?", "%"+cond.Keywords+"%")
-	}
-	if cond.Status != nil && *cond.Status >= 0 {
-		baseQuery = baseQuery.Where("status = ?", *cond.Status)
+		baseQuery = baseQuery.Where("opt_desc LIKE ?", "%"+cond.Keywords+"%")
 	}
 	if cond.DateStart != "" {
 		baseQuery = baseQuery.Where("create_time >= ?", cond.DateStart)
@@ -75,18 +75,20 @@ func (s *ExceptionLogService) ListExceptionLogs(ctx context.Context, cond dto.Co
 		return nil, fmt.Errorf("查询异常日志失败: %w", err)
 	}
 
+	// 转换为DTO（字段完全对标Java ExceptionLogDTO）
 	list := make([]dto.ExceptionLogDTO, len(logs))
 	for i, l := range logs {
 		list[i] = dto.ExceptionLogDTO{
-			ID:         l.ID,
-			UserID:     l.UserID,
-			URL:        l.URL,
-			Method:     l.Method,
-			IP:         l.IP,
-			ErrorMsg:   l.ErrorMsg,
-			Stacktrace: l.Stacktrace,
-			Status:     l.Status,
-			CreateTime:  l.CreateTime,
+			ID:            l.ID,
+			OptUri:        l.OptUri,
+			OptMethod:     l.OptMethod,
+			RequestMethod: l.RequestMethod,
+			RequestParam:  l.RequestParam,
+			OptDesc:       l.OptDesc,
+			ExceptionInfo: l.ExceptionInfo,
+			IpAddress:     l.IpAddress,
+			IpSource:      l.IpSource,
+			CreateTime:    l.CreateTime,
 		}
 	}
 
@@ -98,11 +100,15 @@ func (s *ExceptionLogService) ListExceptionLogs(ctx context.Context, cond dto.Co
 	}, nil
 }
 
-// DeleteExceptionLog 删除异常日志
-func (s *ExceptionLogService) DeleteExceptionLog(ctx context.Context, id uint) error {
-	result := s.db.WithContext(ctx).Delete(&model.ExceptionLog{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("删除异常日志失败: %w", result.Error)
+// DeleteExceptionLogs 批量删除异常日志（对标Java: removeByIds）
+func (s *ExceptionLogService) DeleteExceptionLogs(ctx context.Context, ids []uint) error {
+	if len(ids) == 0 {
+		return nil
 	}
+	result := s.db.WithContext(ctx).Where("id IN ?", ids).Delete(&model.ExceptionLog{})
+	if result.Error != nil {
+		return fmt.Errorf("批量删除异常日志失败: %w", result.Error)
+	}
+	slog.Info("批量删除异常日志", "count", result.RowsAffected, "ids", ids)
 	return nil
 }

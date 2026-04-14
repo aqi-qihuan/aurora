@@ -77,6 +77,30 @@ func (s *JobLogService) ListJobLogs(ctx context.Context, cond dto.ConditionVO, p
 	}, nil
 }
 
+// DeleteJobLogs 批量删除调度日志（对标Java: deleteJobLogs）
+// 根据ID列表批量删除指定的调度日志
+func (s *JobLogService) DeleteJobLogs(ctx context.Context, ids []uint) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	result := s.db.WithContext(ctx).Where("id IN ?", ids).Delete(&model.JobLog{})
+	if result.Error != nil {
+		return fmt.Errorf("批量删除调度日志失败: %w", result.Error)
+	}
+	slog.Info("批量删除调度日志", "count", result.RowsAffected, "ids", ids)
+	return nil
+}
+
+// CleanJobLogs 清空所有调度日志（对标Java: cleanJobLogs）
+func (s *JobLogService) CleanJobLogs(ctx context.Context) error {
+	result := s.db.WithContext(ctx).Exec("DELETE FROM t_job_log")
+	if result.Error != nil {
+		return fmt.Errorf("清空调度日志失败: %w", result.Error)
+	}
+	slog.Info("清空调度日志完成", "rows", result.RowsAffected)
+	return nil
+}
+
 // ClearJobLogs 清理过期日志(保留最近N天)
 func (s *JobLogService) ClearJobLogs(ctx context.Context, days int) error {
 	result := s.db.WithContext(ctx).

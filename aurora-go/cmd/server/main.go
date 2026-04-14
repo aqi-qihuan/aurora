@@ -13,7 +13,6 @@ import (
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/handler"
 	"github.com/aurora-go/aurora/internal/infrastructure"
-	"github.com/aurora-go/aurora/internal/infrastructure/logger"
 	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
@@ -73,19 +72,26 @@ func main() {
 	// 3. 设置 Gin 模式
 	gin.SetMode(gin.ReleaseMode) // 生产模式（Gin默认已处理debug/release）
 
-	// 4. 创建 Gin 引擎并注册全局中间件
+	// 4. 创建Service注册中心（所有Handler通过Registry获取Service实例）
+	db := infrastructure.GetDB()
+	rdb := infrastructure.GetRedis()
+	registry := service.NewRegistry(db, rdb, *cfg, slog.Default())
+	service.SetGlobalRegistry(registry)
+	slog.Info("Service registry initialized", "services", 24)
+
+	// 5. 创建 Gin 引擎并注册全局中间件
 	r := gin.New()
-	zapLogger := logger.GetLogger()
-	r.Use(middleware.Recovery(zapLogger))
-	r.Use(middleware.Logger(zapLogger))
+	slogLogger := slog.Default()
+	r.Use(middleware.Recovery(registry, slogLogger))
+	r.Use(middleware.Logger(slogLogger))
 	r.Use(middleware.CORS())
 	// r.Use(middleware.RateLimiter(rdb, slog.Default())) // P0-6 限流需Redis客户端
 
-	// 4.1 静态文件服务 (上传的图片等资源)
+	// 5.1 静态文件服务 (上传的图片等资源)
 	r.Static("/uploads", "./uploads")
 	slog.Info("Static file server enabled: /uploads -> ./uploads")
 
-	// 5. 健康检查端点（无需认证）- 对标 Spring Actuator /health
+	// 6. 健康检查端点（无需认证）- 对标 Spring Actuator /health
 	r.GET("/health", func(c *gin.Context) {
 		status := infrastructure.HealthCheck()
 		allUp := true
@@ -108,13 +114,6 @@ func main() {
 			"agentReady": cfg.Agent.Enabled,
 		})
 	})
-
-	// 6. 创建Service注册中心（所有Handler通过Registry获取Service实例）
-	db := infrastructure.GetDB()
-	rdb := infrastructure.GetRedis()
-	registry := service.NewRegistry(db, rdb, *cfg, slog.Default())
-	service.SetGlobalRegistry(registry)
-	slog.Info("Service registry initialized", "services", 24)
 
 	// 7. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
 	tokenSvc := registry.TokenSvc

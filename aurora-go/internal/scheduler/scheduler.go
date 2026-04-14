@@ -238,10 +238,11 @@ func (s *Scheduler) executeJob(ctx context.Context, jobName, invokeTarget string
 	duration := time.Since(startTime).Milliseconds()
 
 	// 记录执行日志 (对标Java AbstractQuartzJob.after() → JobLogMapper.insert)
-	status := int8(0) // 成功
+	// Java: ZERO(0)=失败, ONE(1)=成功 (注意: 数据库注释写反了, 以Java代码为准)
+	status := int8(1) // 成功
 	errorMsg := ""
 	if execErr != nil {
-		status = 1 // 失败
+		status = 0 // 失败
 		errorMsg = execErr.Error()
 		if len(errorMsg) > 2000 {
 			errorMsg = errorMsg[:2000] // 截断超长错误信息(对齐Java ExceptionUtil.getTrace截断)

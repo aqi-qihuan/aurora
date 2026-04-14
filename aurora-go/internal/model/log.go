@@ -6,41 +6,51 @@ import (
 	"gorm.io/gorm"
 )
 
-// OperationLog 操作日志实体 (对应 t_operation_log 表)
+// OperationLog 操作日志实体 (对标Java OperationLog，对应 t_operation_log 表)
+// 数据库列名使用 opt_module, opt_type 等Java风格命名
 type OperationLog struct {
-	ID         uint      `gorm:"primarykey" json:"id"`
-	Module     string    `gorm:"size:50;index" json:"module"`           // 操作模块
-	Operation  string    `gorm:"size:50;index" json:"operation"`          // 操作类型
-	Method     string    `gorm:"size:200" json:"method"`                 // 操作方法
-	URL        string    `gorm:"size:500" json:"url"`                    // 请求路径
-	IP         string    `gorm:"size:64" json:"ip"`
-	Duration   *int64    `json:"duration,omitempty"`                     // 执行耗时(ms)
-	Status     int8      `json:"status"`                                // 状态(0失败 1成功)
-	ErrorMsg   string    `gorm:"type:text" json:"errorMsg"`              // 错误信息
-	UserID     uint      `json:"userId"`
-
-	// 关联 (预加载用, 不存DB)
-	UserInfo *UserInfo `gorm:"foreignKey:UserID" json:"userInfo,omitempty"`
-	CreateTime time.Time `json:"createTime"`
+	ID            uint      `gorm:"column:id;primarykey" json:"id"`
+	OptModule     string    `gorm:"column:opt_module;size:20" json:"optModule"`       // 操作模块
+	OptType       string    `gorm:"column:opt_type;size:20" json:"optType"`           // 操作类型
+	OptUri        string    `gorm:"column:opt_uri;size:255" json:"optUri"`            // 操作url
+	OptMethod     string    `gorm:"column:opt_method;size:255" json:"optMethod"`      // 操作方法
+	OptDesc       string    `gorm:"column:opt_desc;size:255" json:"optDesc"`          // 操作描述
+	RequestParam  string    `gorm:"column:request_param;type:longtext" json:"requestParam"`  // 请求参数
+	RequestMethod string    `gorm:"column:request_method;size:20" json:"requestMethod"`    // 请求方式
+	ResponseData  string    `gorm:"column:response_data;type:longtext" json:"responseData"` // 返回数据
+	UserID        uint      `gorm:"column:user_id" json:"userId"`                     // 用户id
+	Nickname      string    `gorm:"column:nickname;size:50" json:"nickname"`          // 用户昵称
+	IpAddress     string    `gorm:"column:ip_address;size:255" json:"ipAddress"`      // 操作ip
+	IpSource      string    `gorm:"column:ip_source;size:255" json:"ipSource"`        // 操作地址
+	CreateTime    time.Time `gorm:"column:create_time" json:"createTime"`
+	UpdateTime    *time.Time `gorm:"column:update_time" json:"updateTime"`
 }
 
 func (OperationLog) TableName() string { return "t_operation_log" }
 
-func (o *OperationLog) BeforeCreate(tx *gorm.DB) error { o.CreateTime = time.Now(); return nil }
+func (o *OperationLog) BeforeCreate(tx *gorm.DB) error {
+	o.CreateTime = time.Now()
+	return nil
+}
 
-// ExceptionLog 异常日志实体 (对应 t_exception_log 表)
+// ExceptionLog 异常日志实体 (对标Java ExceptionLog，对应 t_exception_log 表)
+// 数据库列名使用 opt_uri, opt_method 等Java风格命名
 type ExceptionLog struct {
-	ID         uint      `gorm:"primarykey" json:"id"`
-	URL        string    `gorm:"size:500" json:"url"`                   // 请求URL
-	Method     string    `gorm:"size:200" json:"method"`                  // 请求方法
-	IP         string    `gorm:"size:64" json:"ip"`
-	ErrorMsg   string    `gorm:"type:longtext" json:"errorMsg"`            // 错误消息
-	Stacktrace string    `gorm:"type:longtext" json:"stacktrace"`          // 堆栈信息
-	Status     int8      `gorm:"default:1;index" json:"status"`           // 0已处理 1未处理
-	UserID     uint      `json:"userId"`
-	CreateTime time.Time `json:"createTime"`
+	ID            uint      `gorm:"column:id;primarykey" json:"id"`
+	OptUri        string    `gorm:"column:opt_uri;size:255" json:"optUri"`            // 请求接口
+	OptMethod     string    `gorm:"column:opt_method;size:255" json:"optMethod"`      // 请求方法
+	RequestMethod string    `gorm:"column:request_method;size:255" json:"requestMethod"` // 请求方式
+	RequestParam  string    `gorm:"column:request_param;size:2000" json:"requestParam"`  // 请求参数
+	OptDesc       string    `gorm:"column:opt_desc;size:255" json:"optDesc"`          // 操作描述
+	ExceptionInfo string    `gorm:"column:exception_info;type:text" json:"exceptionInfo"` // 异常信息
+	IpAddress     string    `gorm:"column:ip_address;size:255" json:"ipAddress"`      // ip
+	IpSource      string    `gorm:"column:ip_source;size:255" json:"ipSource"`        // ip来源
+	CreateTime    time.Time `gorm:"column:create_time" json:"createTime"`
 }
 
 func (ExceptionLog) TableName() string { return "t_exception_log" }
 
-func (e *ExceptionLog) BeforeCreate(tx *gorm.DB) error { e.CreateTime = time.Now(); return nil }
+func (e *ExceptionLog) BeforeCreate(tx *gorm.DB) error {
+	e.CreateTime = time.Now()
+	return nil
+}
