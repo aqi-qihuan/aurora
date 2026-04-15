@@ -122,6 +122,44 @@ func (s *FileService) UploadBatch(ctx context.Context, files []*multipart.FileHe
 	return results, nil
 }
 
+// UploadMarkdownContent 上传 Markdown 文件内容（用于文章导出）
+// 对标Java: uploadStrategyContext.executeUploadStrategy(articleTitle + ".md", inputStream, FilePathEnum.MD.getPath())
+// FilePathEnum.MD = "aurora/md/"
+func (s *FileService) UploadMarkdownContent(ctx context.Context, objectName string, content []byte) (string, error) {
+	if len(content) == 0 {
+		return "", fmt.Errorf("文件内容不能为空")
+	}
+
+	// 确保 objectName 包含 .md 扩展名
+	if !strings.HasSuffix(strings.ToLower(objectName), ".md") {
+		objectName += ".md"
+	}
+
+	// 上传到 MinIO（对标Java uploadStrategyContext.executeUploadStrategy）
+	if storage.MinIOClient != nil && s.cfg.Endpoint != "" {
+		contentType := "text/markdown"
+		url, err := storage.UploadBytes(ctx, objectName, content, int64(len(content)), contentType, s.cfg.Bucket)
+		if err != nil {
+			return "", fmt.Errorf("上传 Markdown 文件失败: %w", err)
+		}
+		slog.Info("Markdown 文件上传成功", "url", url)
+		return url, nil
+	}
+
+	// 回退到本地文件系统
+	dir := filepath.Dir(objectName)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("创建目录失败: %w", err)
+	}
+
+	if err := os.WriteFile(objectName, content, 0644); err != nil {
+		return "", fmt.Errorf("写入 Markdown 文件失败: %w", err)
+	}
+
+	slog.Info("Markdown 文件保存到本地", "path", objectName)
+	return "/" + objectName, nil
+}
+
 // UploadMarkdownImage 上传Markdown图片 (文章编辑器专用, 自动生成Markdown格式)
 func (s *FileService) UploadMarkdownImage(ctx context.Context, file *multipart.FileHeader) (string, error) {
 	result, err := s.UploadSingle(ctx, file)

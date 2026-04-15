@@ -262,8 +262,10 @@ func (s *RedisStatsService) GetTagArticleCount(ctx context.Context, tagID uint) 
 
 // ===== 访客统计 =====
 
-// RecordUniqueVisitor 记录独立访客
+// RecordUniqueVisitor 记录独立访客（按天拆分 key，避免累积）
 func (s *RedisStatsService) RecordUniqueVisitor(ctx context.Context, ip string) error {
+	// 使用按天拆分的 key，对标 Java 版实现
+	// 每天独立存储，避免累积
 	today := time.Now().Format("2006-01-02")
 	key := fmt.Sprintf("%s:%s", constant.UniqueVisitor, today)
 	
@@ -273,13 +275,13 @@ func (s *RedisStatsService) RecordUniqueVisitor(ctx context.Context, ip string) 
 		return err
 	}
 	
-	// 设置过期时间（7天）
-	s.rdb.Expire(ctx, key, 7*24*time.Hour)
+	// 设置过期时间（3 天，确保定时任务能读到）
+	s.rdb.Expire(ctx, key, 72*time.Hour)
 	
 	return nil
 }
 
-// GetTodayUniqueVisitors 获取今日独立访客数
+// GetTodayUniqueVisitors 获取今日独立访客数（从当天的 Set 获取）
 func (s *RedisStatsService) GetTodayUniqueVisitors(ctx context.Context) (int64, error) {
 	today := time.Now().Format("2006-01-02")
 	key := fmt.Sprintf("%s:%s", constant.UniqueVisitor, today)
@@ -288,6 +290,31 @@ func (s *RedisStatsService) GetTodayUniqueVisitors(ctx context.Context) (int64, 
 		return 0, err
 	}
 	return count, nil
+}
+
+// GetUniqueVisitorsByDate 获取指定日期的独立访客数（支持新旧两种 key 格式）
+// 优先查询新格式 unique_visitor:YYYY-MM-DD，如果没有则查询旧格式 unique_visitor
+func (s *RedisStatsService) GetUniqueVisitorsByDate(ctx context.Context, date string) (int64, error) {
+	// 1. 先尝试查询新格式（按天拆分）
+	newKey := fmt.Sprintf("%s:%s", constant.UniqueVisitor, date)
+	count, err := s.rdb.SCard(ctx, newKey).Result()
+	if err == nil && count > 0 {
+		return count, nil
+	}
+	
+	// 2. 如果是今天或昨天，可能还在旧格式 key 中（兼容历史数据）
+	today := time.Now().Format("2006-01-02")
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+	
+	if date == today || date == yesterday {
+		// 尝试查询旧格式 key（全局累积）
+		oldCount, oldErr := s.rdb.SCard(ctx, constant.UniqueVisitor).Result()
+		if oldErr == nil && oldCount > 0 {
+			return oldCount, nil
+		}
+	}
+	
+	return 0, nil
 }
 
 // RecordVisitorArea 记录访客地域

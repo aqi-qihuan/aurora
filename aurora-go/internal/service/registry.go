@@ -40,6 +40,7 @@ type Registry struct {
 	File          *FileService
 	Resource      *ResourceService
 	About         *AboutService
+	StatsService  *RedisStatsService // Redis 统计服务（访客上报用）
 
 	// 安全/认证服务 (P0-6新增)
 	TokenSvc    *TokenService       // JWT Token管理(含Redis Session)
@@ -61,7 +62,8 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	}
 
 	// ===== 基础服务 (依赖DB+Redis) =====
-	r.Article = NewArticleService(db, statsService)
+	r.File = NewFileService(db, cfg.MinIO) // 先创建 FileService
+	r.Article = NewArticleService(db, statsService, r.File) // 注入 FileService
 	r.UserAuth = NewUserAuthService(db, rdb)
 	r.Comment = NewCommentService(db, statsService)
 	r.Category = NewCategoryService(db)
@@ -76,9 +78,9 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.JobLog = NewJobLogService(db)
 	r.OperationLog = NewOperationLogService(db)
 	r.ExceptionLog = NewExceptionLogService(db)
-	r.AuroraInfo = NewAuroraInfoService(db, statsService)
 	r.WebsiteConfig = NewWebsiteConfigService(db)
-	r.File = NewFileService(db, cfg.MinIO)
+	r.AuroraInfo = NewAuroraInfoService(db, statsService, r.WebsiteConfig)
+	r.StatsService = statsService // 暴露给 Handler 使用
 	r.Resource = NewResourceService(db)
 	r.About = NewAboutService(db)
 	
@@ -96,6 +98,22 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 			// 不阻断启动，MinIO为可选依赖
 		}
 	}
+
+	// ===== 注入搜索策略上下文到 ArticleService =====
+	searchMode := cfg.Search.Mode
+	if searchMode == "" {
+		searchMode = "mysql" // 默认 MySQL
+	}
+	searchCtx, err := strategy.NewSearchContext(searchMode, infrastructure.GetES(), db)
+	if err != nil {
+		logger.Warn("搜索策略上下文初始化失败，将使用 MySQL 降级方案", "error", err)
+	} else {
+		r.Article.SetSearchContext(searchCtx)
+		logger.Info("搜索策略已配置", "mode", searchCtx.GetMode())
+	}
+
+	// ===== 注入 EmailService 到 UserAuthService =====
+	r.UserAuth.SetEmailService(infrastructure.GetEmailService())
 
 	total := 24 // 24个Service实例 (+2安全服务+1上传服务)
 	logger.Info("Service注册中心初始化完成", "services", total, "has_redis", rdb != nil, "has_minio", r.UploadSvc != nil)

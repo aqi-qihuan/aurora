@@ -57,7 +57,7 @@ func NewRouter(registry *service.Registry, tokenSvc *service.TokenService, logge
 		JobLogHandler:        NewJobLogHandler(registry.JobLog),
 		OperationLogHandler:  NewOperationLogHandler(registry.OperationLog),
 		ExceptionLogHandler:  NewExceptionLogHandler(registry.ExceptionLog),
-		AuroraInfoHandler:    NewAuroraInfoHandler(registry.AuroraInfo),
+		AuroraInfoHandler:    NewAuroraInfoHandler(registry.AuroraInfo, registry.StatsService),
 		WebsiteConfigHandler: NewWebsiteConfigHandler(registry),
 		FileHandler:          NewFileHandler(registry.File),
 		ResourceHandler:      NewResourceHandler(registry.Resource),

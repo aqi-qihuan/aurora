@@ -11,12 +11,15 @@ import (
 
 	"github.com/aurora-go/aurora/internal/agent"
 	"github.com/aurora-go/aurora/internal/config"
+	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/handler"
 	"github.com/aurora-go/aurora/internal/infrastructure"
 	"github.com/aurora-go/aurora/internal/middleware"
+	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // @title Aurora Blog API
@@ -79,12 +82,18 @@ func main() {
 	service.SetGlobalRegistry(registry)
 	slog.Info("Service registry initialized", "services", 24)
 
+	// 4.1 初始化默认网站配置（如果数据库中不存在）
+	if err := initDefaultWebsiteConfig(db); err != nil {
+		slog.Warn("初始化默认网站配置失败", "error", err)
+	}
+
 	// 5. 创建 Gin 引擎并注册全局中间件
 	r := gin.New()
 	slogLogger := slog.Default()
 	r.Use(middleware.Recovery(registry, slogLogger))
 	r.Use(middleware.Logger(slogLogger))
 	r.Use(middleware.CORS())
+	r.Use(middleware.NoCache()) // 禁用缓存，确保前端路由切换时获取最新数据
 	// r.Use(middleware.RateLimiter(rdb, slog.Default())) // P0-6 限流需Redis客户端
 
 	// 5.1 静态文件服务 (上传的图片等资源)
@@ -143,18 +152,46 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 10. 启动服务
+	// 10. 启动 HTTP 服务
 	go func() {
-		slog.Info("Aurora Go 服务启动",
+		slog.Info("Aurora Go 服务启动 (HTTP)",
 			"addr", srv.Addr,
 			"mode", cfg.Server.Mode,
 			"agent_enabled", cfg.Agent.Enabled,
 		)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("服务启动失败", "error", err.Error())
+			slog.Error("HTTP服务启动失败", "error", err.Error())
 			os.Exit(1)
 		}
 	}()
+
+	// 10.1 如果启用了 TLS，同时启动 HTTPS 服务
+	if cfg.Server.TLS.Enabled {
+		slog.Info("TLS/HTTPS 配置已启用",
+			"port", cfg.Server.TLS.Port,
+			"cert_file", cfg.Server.TLS.CertFile,
+			"key_file", cfg.Server.TLS.KeyFile,
+		)
+
+		srvTLS := &http.Server{
+			Addr:         fmt.Sprintf(":%d", cfg.Server.TLS.Port),
+			Handler:      r,
+			ReadTimeout:  15 * time.Second,
+			WriteTimeout: 15 * time.Second,
+			IdleTimeout:  60 * time.Second,
+		}
+
+		go func() {
+			slog.Info("Aurora Go 服务启动 (HTTPS)",
+				"addr", srvTLS.Addr,
+				"mode", cfg.Server.Mode,
+			)
+			if err := srvTLS.ListenAndServeTLS(cfg.Server.TLS.CertFile, cfg.Server.TLS.KeyFile); err != nil && err != http.ErrServerClosed {
+				slog.Error("HTTPS服务启动失败", "error", err.Error())
+				os.Exit(1)
+			}
+		}()
+	}
 
 	// 11. 等待关闭信号 → 优雅关闭所有基础设施
 	infrastructure.WaitForSignal()
@@ -179,4 +216,47 @@ func registerAgentRoutes(r *gin.Engine) {
 	agentGroup.GET("/sessions", agentHandler.Sessions)// 会话列表
 
 	slog.Info("Agent routes registered: /api/agent/{chat,write,search,analyze,sessions}")
+}
+
+// initDefaultWebsiteConfig 初始化默认网站配置（如果数据库中不存在）
+func initDefaultWebsiteConfig(db *gorm.DB) error {
+	var config model.WebsiteConfig
+	err := db.First(&config, 1).Error
+	
+	// 如果记录存在，直接返回
+	if err == nil {
+		slog.Info("网站配置已存在", "id", config.ID)
+		return nil
+	}
+	
+	// 如果不是 RecordNotFound 错误，返回错误
+	if !errors.IsStd(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("查询网站配置失败: %w", err)
+	}
+	
+	// 创建默认配置
+	defaultConfig := `{
+		"name": "Aurora Blog",
+		"englishName": "Aurora",
+		"author": "Aurora",
+		"authorAvatar": "https://static.aqi125.cn/aurora/config/avatar.jpg",
+		"authorIntro": "欢迎来到我的博客",
+		"logo": "https://static.aqi125.cn/aurora/config/logo.png",
+		"notice": "欢迎来到 Aurora 博客系统",
+		"websiteCreateTime": "2024-01-01 00:00:00",
+		"touristAvatar": "https://static.aqi125.cn/aurora/config/tourist.png",
+		"userAvatar": "https://static.aqi125.cn/aurora/config/user.png"
+	}`
+	
+	newConfig := model.WebsiteConfig{
+		ID:     1,
+		Config: defaultConfig,
+	}
+	
+	if err := db.Create(&newConfig).Error; err != nil {
+		return fmt.Errorf("创建默认网站配置失败: %w", err)
+	}
+	
+	slog.Info("默认网站配置已创建")
+	return nil
 }

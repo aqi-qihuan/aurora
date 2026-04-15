@@ -348,12 +348,18 @@ type ArticleRankDTO struct {
 // ===== 首页聚合 DTO =====
 
 type HomeInfoDTO struct {
-	TopArticles    []ArticleCardDTO `json:"topArticles"`
-	LatestArticles []ArticleCardDTO `json:"latestArticles"`
-	Categories     []CategoryDTO    `json:"categories"`
-	Tags           []TagDTO         `json:"tags"`
-	FriendLinks    []FriendLinkDTO  `json:"friendLinks"`
-	Talks          []TalkDTO        `json:"talks"`
+	TopArticles    []ArticleCardDTO  `json:"topArticles"`
+	LatestArticles []ArticleCardDTO  `json:"latestArticles"`
+	Categories     []CategoryDTO     `json:"categories"`
+	Tags           []TagDTO          `json:"tags"`
+	FriendLinks    []FriendLinkDTO   `json:"friendLinks"`
+	Talks          []TalkDTO         `json:"talks"`
+	WebsiteConfig  *WebsiteConfigDTO `json:"websiteConfig,omitempty"` // 网站配置（对标Java websiteConfigDTO）
+	ViewCount      int               `json:"viewCount"`               // 总浏览量（对标Java viewCount）
+	ArticleCount   int               `json:"articleCount"`            // 文章总数（对标Java articleCount）
+	CategoryCount  int               `json:"categoryCount"`           // 分类总数（对标Java categoryCount）
+	TagCount       int               `json:"tagCount"`                // 标签总数（对标Java tagCount）
+	TalkCount      int               `json:"talkCount"`               // 说说总数（对标Java talkCount）
 }
 
 type AdminDashboardDTO struct {

@@ -53,6 +53,15 @@ type ServerConfig struct {
 	Port    int    `mapstructure:"port"`
 	Mode    string `mapstructure:"mode"` // debug/release
 	SiteURL string `mapstructure:"site_url"` // 网站访问URL (用于邮件中的链接)
+	TLS     TLSConfig `mapstructure:"tls"` // TLS/HTTPS 配置
+}
+
+// TLSConfig TLS/HTTPS 配置
+type TLSConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`  // 是否启用 HTTPS
+	Port     int    `mapstructure:"port"`     // HTTPS 端口（默认 8082）
+	CertFile string `mapstructure:"cert_file"` // SSL 证书文件路径
+	KeyFile  string `mapstructure:"key_file"`  // SSL 私钥文件路径
 }
 
 // GetSiteURL 获取网站URL (带默认值兜底)

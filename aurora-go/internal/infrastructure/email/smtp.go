@@ -1,4 +1,4 @@
-﻿package email
+package email
 
 import (
 	"bytes"
@@ -20,6 +20,11 @@ type EmailService struct {
 }
 
 var emailService *EmailService
+
+// GetEmailService 获取邮件服务实例（供外部注入）
+func GetEmailService() *EmailService {
+	return emailService
+}
 
 // InitEmailService 初始化邮件服务（延迟初始化，按需连接）
 func InitEmailService(cfg *config.EmailConfig) {

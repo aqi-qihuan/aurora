@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
@@ -88,21 +89,89 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uint, vo vo.C
 }
 
 // GetCommentsByArticle 获取文章评论列表 (嵌套树形结构)
+// 当 articleID=0 时，返回全局最新评论（用于侧边栏）
 func (s *CommentService) GetCommentsByArticle(ctx context.Context, articleID uint) ([]dto.CommentTreeDTO, error) {
 	var comments []model.Comment
 
-	err := s.db.WithContext(ctx).
-		Where("topic_id = ? AND type = 1 AND is_review = 1", articleID).
+	query := s.db.WithContext(ctx).
 		Preload("UserInfo").
 		Preload("ReplyUser").
-		Order("create_time ASC").
-		Find(&comments).Error
-	
+		Where("is_review = 1")
+
+	// 如果指定了 articleID，则只查询该文章的评论
+	if articleID > 0 {
+		query = query.Where("topic_id = ? AND type = 1", articleID)
+	}
+
+	// 按创建时间倒序（最新评论在前）
+	query = query.Order("create_time DESC")
+
+	// 如果是全局最新评论，限制返回数量
+	if articleID == 0 {
+		query = query.Limit(6)
+	} else {
+		query = query.Order("create_time ASC") // 文章评论按正序
+	}
+
+	err := query.Find(&comments).Error
 	if err != nil {
-		return nil, fmt.Errorf("查询文章评论失败: %w", err)
+		return nil, fmt.Errorf("查询评论失败: %w", err)
+	}
+
+	// 确保返回空数组而非 null
+	if comments == nil {
+		comments = []model.Comment{}
 	}
 
 	return s.buildCommentTree(comments), nil
+}
+
+// GetLatestComments 获取最新的评论列表（扁平结构，用于侧边栏）
+// 对标 Java CommentMapper.listTopSixComments
+func (s *CommentService) GetLatestComments(ctx context.Context, limit int) ([]dto.CommentDTO, error) {
+	type CommentWithUser struct {
+		ID             uint      `gorm:"column:id"`
+		UserID         uint      `gorm:"column:user_id"`
+		CommentContent string    `gorm:"column:comment_content"`
+		CreateTime     time.Time `gorm:"column:create_time"`
+		Nickname       string    `gorm:"column:nickname"`
+		Avatar         string    `gorm:"column:avatar"`
+	}
+
+	var results []CommentWithUser
+
+	err := s.db.WithContext(ctx).
+		Table("t_comment").
+		Select("t_comment.id, t_comment.user_id, t_comment.comment_content, t_comment.create_time, t_user_info.nickname, t_user_info.avatar").
+		Joins("JOIN t_user_info ON t_comment.user_id = t_user_info.id").
+		Where("t_comment.is_review = 1").
+		Order("t_comment.id DESC").
+		Limit(limit).
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询最新评论失败: %w", err)
+	}
+
+	// 确保返回空数组而非 null
+	if results == nil {
+		return []dto.CommentDTO{}, nil
+	}
+
+	// 转换为 DTO
+	list := make([]dto.CommentDTO, len(results))
+	for i, r := range results {
+		list[i] = dto.CommentDTO{
+			ID:         r.ID,
+			UserID:     r.UserID,
+			Nickname:   r.Nickname,
+			Avatar:     r.Avatar,
+			Content:    r.CommentContent,
+			CreateTime: r.CreateTime,
+		}
+	}
+
+	return list, nil
 }
 
 // GetCommentsByTalk 获取说说评论列表
@@ -125,6 +194,109 @@ func (s *CommentService) GetCommentsByTalk(ctx context.Context, talkID uint) ([]
 		list[i] = s.toCommentDTO(&c)
 	}
 	return list, nil
+}
+
+// ListComments 前台评论分页查询（对标 Java getComments）
+// 支持按 type/topicId 筛选，返回树形结构评论
+func (s *CommentService) ListComments(ctx context.Context, commentVO vo.CommentVO) (*dto.PageResultDTO, error) {
+	var comments []model.Comment
+	var count int64
+
+	baseQuery := s.db.WithContext(ctx).Model(&model.Comment{}).
+		Where("is_review = 1")
+
+	// 按类型筛选（type=1文章, type=5说说, type=4友链, type=3关于）
+	if commentVO.Type > 0 {
+		baseQuery = baseQuery.Where("type = ?", commentVO.Type)
+	}
+	// 按关联ID筛选
+	if commentVO.TopicID != nil && *commentVO.TopicID > 0 {
+		baseQuery = baseQuery.Where("topic_id = ?", *commentVO.TopicID)
+	}
+
+	// 统计总数
+	if err := baseQuery.Count(&count).Error; err != nil {
+		return nil, fmt.Errorf("统计评论数失败: %w", err)
+	}
+
+	// 分页查询
+	page := dto.PageVO{PageNum: commentVO.Current, PageSize: commentVO.Size}
+	offset := page.GetOffset()
+
+	if err := baseQuery.
+		Preload("UserInfo").
+		Preload("ReplyUser").
+		Where("parent_id = 0"). // 只查询父评论
+		Order("create_time DESC").
+		Limit(page.PageSize).
+		Offset(offset).
+		Find(&comments).Error; err != nil {
+		return nil, fmt.Errorf("查询评论列表失败: %w", err)
+	}
+
+	// 批量查询子评论
+	if len(comments) > 0 {
+		parentIDs := make([]uint, len(comments))
+		for i, c := range comments {
+			parentIDs[i] = c.ID
+		}
+		var replies []model.Comment
+		s.db.WithContext(ctx).
+			Where("parent_id IN ? AND is_review = 1", parentIDs).
+			Preload("UserInfo").
+			Preload("ReplyUser").
+			Order("create_time ASC").
+			Find(&replies)
+
+		// 构建评论树
+		tree := s.buildCommentTreeWithReplies(comments, replies)
+
+		return &dto.PageResultDTO{
+			List:     tree,
+			Count:    count,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
+	}
+
+	return &dto.PageResultDTO{
+		List:     []dto.CommentTreeDTO{},
+		Count:    count,
+		PageNum:  page.PageNum,
+		PageSize: page.PageSize,
+	}, nil
+}
+
+// buildCommentTreeWithReplies 构建带子评论的树形结构
+func (s *CommentService) buildCommentTreeWithReplies(parents []model.Comment, replies []model.Comment) []dto.CommentTreeDTO {
+	replyMap := make(map[uint][]model.Comment)
+	for _, r := range replies {
+		replyMap[r.ParentID] = append(replyMap[r.ParentID], r)
+	}
+
+	tree := make([]dto.CommentTreeDTO, len(parents))
+	for i, p := range parents {
+		tree[i] = dto.CommentTreeDTO{
+			CommentDTO: s.toCommentDTO(&p),
+			Replies:    s.convertToTreeDTOs(replyMap[p.ID]),
+		}
+	}
+	return tree
+}
+
+// convertToTreeDTOs 将 Comment 列表转换为 CommentTreeDTO 列表（一层深度）
+func (s *CommentService) convertToTreeDTOs(comments []model.Comment) []dto.CommentTreeDTO {
+	if len(comments) == 0 {
+		return []dto.CommentTreeDTO{}
+	}
+	result := make([]dto.CommentTreeDTO, len(comments))
+	for i, c := range comments {
+		result[i] = dto.CommentTreeDTO{
+			CommentDTO: s.toCommentDTO(&c),
+			Replies:    []dto.CommentTreeDTO{}, // 子评论不递归，只展示一层
+		}
+	}
+	return result
 }
 
 // ListAdminComments 后台管理分页查询评论

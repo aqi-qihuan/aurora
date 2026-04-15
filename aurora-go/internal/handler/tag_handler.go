@@ -65,9 +65,10 @@ func (h *TagHandler) GetTagById(c *gin.Context) {
 }
 
 // SearchTags 搜索标签（模糊匹配，用于编辑器自动补全）
-// GET /api/tags/search?keyword=go
+// GET /api/tags/search?keywords=go
 func (h *TagHandler) SearchTags(c *gin.Context) {
-	keyword := c.DefaultQuery("keyword", "")
+	// 兼容前端传 keywords（复数）
+	keyword := c.DefaultQuery("keywords", c.DefaultQuery("keyword", ""))
 	list, err := h.svc.SearchTags(c.Request.Context(), keyword)
 	if err != nil {
 		util.ResponseError(c, err)

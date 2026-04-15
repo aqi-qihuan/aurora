@@ -25,20 +25,24 @@ func NewCommentHandler(svc *service.CommentService) *CommentHandler {
 	return &CommentHandler{svc: svc}
 }
 
-// ListComments 获取文章评论列表（前台）
-// GET /api/articles/:id/comments
+// ListComments 获取评论列表（前台，分页，对标 Java getComments）
+// GET /api/comments?type=5&topicId=123&current=1&size=7
 func (h *CommentHandler) ListComments(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
-		return
+	// 对标Java: CommentVO commentVO 作为Query参数绑定
+	var commentVO vo.CommentVO
+	if err := c.ShouldBindQuery(&commentVO); err != nil {
+		// Query参数可能为空，给默认值
+		commentVO.Type = 1
+		commentVO.Current = 1
+		commentVO.Size = 10
 	}
-	list, err := h.svc.GetCommentsByArticle(c.Request.Context(), uint(id))
+
+	result, err := h.svc.ListComments(c.Request.Context(), commentVO)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, list)
+	util.ResponseSuccess(c, result)
 }
 
 // AddComment 发表评论/回复
@@ -215,17 +219,13 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	util.SuccessWithMessage(c, "评论已删除", nil)
 }
 
-// ListTopSixComments 获取前6条评论
+// ListTopSixComments 获取前6条最新评论（用于侧边栏）
 // GET /api/comments/topSix
 func (h *CommentHandler) ListTopSixComments(c *gin.Context) {
-	// 复用ListComments获取热门评论
-	list, err := h.svc.GetCommentsByArticle(c.Request.Context(), 0)
+	list, err := h.svc.GetLatestComments(c.Request.Context(), 6)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
-	}
-	if len(list) > 6 {
-		list = list[:6]
 	}
 	util.ResponseSuccess(c, list)
 }

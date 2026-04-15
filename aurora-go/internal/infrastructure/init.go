@@ -201,6 +201,11 @@ func GetES() *search.ESClient {
 	return search.Client
 }
 
+// GetEmailService 获取邮件服务实例
+func GetEmailService() interface{} {
+	return email.GetEmailService()
+}
+
 // HealthCheck 健康检查（返回各中间件连接状态）
 // 用于: /api/actuator/health 接口
 type HealthStatus map[string]string

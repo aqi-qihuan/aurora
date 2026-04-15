@@ -7,10 +7,11 @@ import (
 )
 
 // WebsiteConfig 网站配置实体 (对应 t_website_config 表)
-// 对标Java: config字段存储JSON字符串，包含所有配置信息
+// 对标Java版: 仅存储JSON字符串到config字段
+// Java: private String config;
 type WebsiteConfig struct {
 	ID         uint      `gorm:"primarykey" json:"id"`
-	Config     string    `gorm:"type:varchar(2000)" json:"config"` // 配置信息（JSON格式）
+	Config     string    `gorm:"type:text" json:"config"` // JSON格式的网站配置
 	CreateTime time.Time `json:"createTime"`
 	UpdateTime time.Time `json:"updateTime"`
 }

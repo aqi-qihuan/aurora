@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -10,11 +10,12 @@ import (
 // AuroraInfoHandler 首页/后台信息聚合处理器
 // 对标 Java AuroraInfoController + BlogInfoController
 type AuroraInfoHandler struct {
-	svc *service.AuroraInfoService
+	svc          *service.AuroraInfoService
+	statsService *service.RedisStatsService
 }
 
-func NewAuroraInfoHandler(svc *service.AuroraInfoService) *AuroraInfoHandler {
-	return &AuroraInfoHandler{svc: svc}
+func NewAuroraInfoHandler(svc *service.AuroraInfoService, statsService *service.RedisStatsService) *AuroraInfoHandler {
+	return &AuroraInfoHandler{svc: svc, statsService: statsService}
 }
 
 // GetHomeInfo 获取前台首页数据聚合（文章/分类/标签/友链/统计）
@@ -41,6 +42,17 @@ func (h *AuroraInfoHandler) GetAdminInfo(c *gin.Context) {
 
 // Report 上报访客信息
 // POST /api/report
+// 对标 Java AuroraInfoController.report (记录IP到Redis)
 func (h *AuroraInfoHandler) Report(c *gin.Context) {
+	// 获取客户端IP
+	ip := util.GetClientIP(c)
+	
+	// 记录独立访客到 Redis
+	if h.statsService != nil {
+		go func() {
+			_ = h.statsService.RecordUniqueVisitor(c.Request.Context(), ip)
+		}()
+	}
+	
 	util.ResponseSuccess(c, nil)
 }

@@ -87,14 +87,17 @@ type MenuVO struct {
 // ===== 评论 VO =====
 
 type CommentVO struct {
-	ArticleID    uint   `json:"articleId,omitempty"`    // 文章评论时传
-	TalkID       uint   `json:"talkId,omitempty"`       // 说说评论时传
-	FriendLinkID uint   `json:"friendLinkId,omitempty"` // 友链评论时传
-	AboutID      uint   `json:"aboutId,omitempty"`      // 关于页评论时传
-	Type         int8   `json:"type" binding:"required,oneof=1 2 3 4 5"`
-	ParentID     uint   `json:"parentId"`               // 回复的父评论ID(0=顶级)
-	ReplyUserID  *uint  `json:"replyUserId,omitempty"`   // 被回复用户ID
-	Content      string `json:"content" binding:"required,max=2000"`
+	TopicID      *uint  `json:"topicId,omitempty" form:"topicId"`       // 主题ID（文章/说说等）
+	ArticleID    uint   `json:"articleId,omitempty" form:"articleId"`   // 文章ID（type=1时使用）
+	TalkID       uint   `json:"talkId,omitempty" form:"talkId"`         // 说说ID（type=5时使用）
+	FriendLinkID uint   `json:"friendLinkId,omitempty" form:"friendLinkId"` // 友链ID（type=4时使用）
+	AboutID      uint   `json:"aboutId,omitempty" form:"aboutId"`       // 关于页ID（type=3时使用）
+	Type         int8   `json:"type" binding:"required,oneof=1 2 3 4 5" form:"type"`
+	Current      int    `json:"current,omitempty" form:"current"`       // 当前页（对标Java MyBatis-Plus分页）
+	Size         int    `json:"size,omitempty" form:"size"`             // 每页大小
+	ParentID     uint   `json:"parentId" form:"parentId"`               // 回复的父评论ID(0=顶级)
+	ReplyUserID  *uint  `json:"replyUserId,omitempty" form:"replyUserId"` // 被回复用户ID
+	Content      string `json:"content" form:"content"`                  // 评论内容
 }
 
 // ===== 定时任务 VO =====

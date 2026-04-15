@@ -16,19 +16,21 @@ import (
 // AuroraInfoService 首页信息聚合服务 (对标 Java AuroraInfoController + BlogInfoService)
 // 使用 goroutine + sync.WaitGroup 并发查询6大数据模块
 type AuroraInfoService struct {
-	db           *gorm.DB
-	statsService *RedisStatsService // Redis 统计服务
+	db                  *gorm.DB
+	statsService        *RedisStatsService // Redis 统计服务
+	websiteConfigService *WebsiteConfigService // 网站配置服务
 }
 
-func NewAuroraInfoService(db *gorm.DB, statsService *RedisStatsService) *AuroraInfoService {
+func NewAuroraInfoService(db *gorm.DB, statsService *RedisStatsService, websiteConfigService *WebsiteConfigService) *AuroraInfoService {
 	return &AuroraInfoService{
-		db:           db,
-		statsService: statsService,
+		db:                  db,
+		statsService:        statsService,
+		websiteConfigService: websiteConfigService,
 	}
 }
 
 // GetHomeInfo 获取首页聚合数据 (前台首页, 对标 /api/home/info)
-// 并发查询: 文章列表/置顶推荐/分类列表/标签云/友链/说说
+// 对标Java版 getAuroraHomeInfo()，并发查询: 文章列表/置顶推荐/分类列表/标签云/友链/说说/网站配置/统计数据
 func (s *AuroraInfoService) GetHomeInfo(ctx context.Context) (*dto.HomeInfoDTO, error) {
 	var info dto.HomeInfoDTO
 	var wg sync.WaitGroup
@@ -105,6 +107,64 @@ func (s *AuroraInfoService) GetHomeInfo(ctx context.Context) (*dto.HomeInfoDTO, 
 		info.Talks = talks
 	}()
 
+	// 7. 网站配置（对标Java getWebsiteConfig）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		config, err := s.getWebsiteConfig(ctx)
+		if err != nil {
+			slog.Warn("获取网站配置失败", "error", err.Error())
+			return
+		}
+		info.WebsiteConfig = config
+	}()
+
+	// 8. 文章总数（is_delete=0，对标Java第97行）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var count int64
+		s.db.WithContext(ctx).Model(&model.Article{}).Where("is_delete = 0").Count(&count)
+		info.ArticleCount = int(count)
+	}()
+
+	// 9. 分类总数（对标Java第104行）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var count int64
+		s.db.WithContext(ctx).Model(&model.Category{}).Count(&count)
+		info.CategoryCount = int(count)
+	}()
+
+	// 10. 标签总数（对标Java第111行）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var count int64
+		s.db.WithContext(ctx).Model(&model.Tag{}).Count(&count)
+		info.TagCount = int(count)
+	}()
+
+	// 11. 说说总数（对标Java第118行）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var count int64
+		s.db.WithContext(ctx).Model(&model.Talk{}).Count(&count)
+		info.TalkCount = int(count)
+	}()
+
+	// 12. 总浏览量（从 Redis 获取，对标Java第132-133行）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if s.statsService != nil {
+			views, _ := s.statsService.GetTotalViews(ctx)
+			info.ViewCount = int(views)
+		}
+	}()
+
 	wg.Wait()
 
 	return &info, nil
@@ -154,28 +214,55 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 		info.ArticleCount = int(count)
 	}()
 
-	// 5. 独立访客统计 (最近7天，从数据库 t_unique_view 获取)
+	// 5. 独立访客统计 (最近7天，对标 Java UniqueViewServiceImpl.listUniqueViews())
+	// 问题: UniqueViewJob每天0点执行，今天的数据还在Redis中，数据库只有历史数据
+	// 解决: 生成完整7天日期，数据库没有的从 Redis 补查
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// 对标 Java UniqueViewServiceImpl.listUniqueViews()
-		// 查询最近7天的数据
+		
+		// 生成最近7天的完整日期列表（包括今天）
+		allDates := make([]string, 7)
+		for i := 6; i >= 0; i-- {
+			allDates[6-i] = time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		}
+		
+		// 从数据库查询已有数据
 		startTime := time.Now().AddDate(0, 0, -7)
 		endTime := time.Now()
-		
 		var uniqueViews []model.UniqueView
 		s.db.WithContext(ctx).
 			Where("create_time >= ? AND create_time <= ?", startTime, endTime).
 			Order("create_time ASC").
 			Find(&uniqueViews)
 		
-		info.UniqueViewDTOs = make([]dto.UniqueViewDTO, len(uniqueViews))
-		for i, uv := range uniqueViews {
-			info.UniqueViewDTOs[i] = dto.UniqueViewDTO{
-				Day:        uv.CreateTime.Format("2006-01-02"),
-				ViewsCount: uv.ViewsCount,
+		// 构建 date -> viewsCount 映射
+		viewMap := make(map[string]int)
+		for _, uv := range uniqueViews {
+			day := uv.CreateTime.Format("2006-01-02")
+			viewMap[day] = uv.ViewsCount
+		}
+		
+		// 填充完整的7天数据（数据库为0时也从 Redis 补查，因为数据库的0可能是错误数据）
+		result := make([]dto.UniqueViewDTO, 7)
+		for i, day := range allDates {
+			viewsCount := viewMap[day]
+			
+			// 总是尝试从 Redis 获取（因为数据库的0可能是定时任务用错key写入的错误数据）
+			// 如果 Redis 有数据，优先使用 Redis 的数据
+			if s.statsService != nil {
+				count, err := s.statsService.GetUniqueVisitorsByDate(ctx, day)
+				if err == nil && count > 0 {
+					viewsCount = int(count)
+				}
+			}
+			
+			result[i] = dto.UniqueViewDTO{
+				Day:        day,
+				ViewsCount: viewsCount,
 			}
 		}
+		info.UniqueViewDTOs = result
 	}()
 
 	// 6. 文章统计 (按日期分组，对标 Java 第160行)
@@ -300,6 +387,14 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 	}
 
 	return &info, nil
+}
+
+// getWebsiteConfig 获取网站配置（对标Java getWebsiteConfig）
+func (s *AuroraInfoService) getWebsiteConfig(ctx context.Context) (*dto.WebsiteConfigDTO, error) {
+	if s.websiteConfigService == nil {
+		return nil, fmt.Errorf("网站配置服务未初始化")
+	}
+	return s.websiteConfigService.GetConfig(ctx)
 }
 
 // ===== 私有并发查询方法 =====
@@ -430,23 +525,37 @@ func (s *AuroraInfoService) getTalks(ctx context.Context) ([]dto.TalkDTO, error)
 	return list, err
 }
 
-// 辅助转换函数 (避免循环引用)
+// 辅助转换函数 (避免循环引用) - 对标Java版 ArticleCardDTO结构
 func toSimpleArticleCard(a *model.Article) dto.ArticleCardDTO {
 	card := dto.ArticleCardDTO{
-		ID:           a.ID,
-		ArticleTitle: a.ArticleTitle,
-		ArticleCover: a.ArticleCover,
-		IsTop:        a.IsTop,
-		IsFeatured:   a.IsFeatured,
-		Status:       a.Status,
-		ViewCount:    0, // TODO: 需要从外部传入 statsService 或改为方法
-		CreateTime:   a.CreateTime,
+		ID:             a.ID,
+		ArticleCover:   a.ArticleCover,
+		ArticleTitle:   a.ArticleTitle,
+		ArticleContent: a.ArticleContent,
+		IsTop:          a.IsTop,
+		IsFeatured:     a.IsFeatured,
+		Status:         a.Status,
+		CreateTime:     a.CreateTime,
 	}
 	if a.Category != nil {
 		card.CategoryName = a.Category.CategoryName
 	}
+	// 构建 Author 嵌套对象（对标Java UserInfo author）
 	if a.UserInfo != nil {
-		card.Nickname = a.UserInfo.Nickname
+		card.Author = &dto.UserInfoInCard{
+			Nickname: a.UserInfo.Nickname,
+			Website:  a.UserInfo.Website,
+			Avatar:   a.UserInfo.Avatar,
+		}
+	}
+	// 构建 Tags 数组
+	if len(a.Tags) > 0 {
+		card.Tags = make([]dto.TagInCard, len(a.Tags))
+		for i, t := range a.Tags {
+			card.Tags[i] = dto.TagInCard{
+				TagName: t.TagName,
+			}
+		}
 	}
 	return card
 }

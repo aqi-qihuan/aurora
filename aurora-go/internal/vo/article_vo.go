@@ -17,9 +17,10 @@ type ArticleVO struct {
 	Password        string   `json:"password,omitempty" binding:"omitempty,max=64"` // 密码保护文章
 }
 
-// ArticleTopFeaturedVO 置顶/推荐操作
+// ArticleTopFeaturedVO 置顶/推荐操作（对标Java ArticleTopFeaturedVO）
+// 注意: 使用指针类型 *int8，对标Java Integer（对象类型），避免 required 验证将0视为空值
 type ArticleTopFeaturedVO struct {
-	ID       uint `json:"id" binding:"required"`
-	IsTop    int8 `json:"isTop" binding:"required,oneof=0 1"`
-	IsFeatured int8 `json:"isFeatured" binding:"required,oneof=0 1"`
+	ID         uint   `json:"id" binding:"required"`
+	IsTop      *int8  `json:"isTop" binding:"required,oneof=0 1"`       // 指针类型，对标Java Integer
+	IsFeatured *int8  `json:"isFeatured" binding:"required,oneof=0 1"` // 指针类型，对标Java Integer
 }

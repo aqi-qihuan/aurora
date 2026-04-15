@@ -214,7 +214,18 @@ func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	// TODO: 校验验证码后重置密码
+	
+	// 调用 Service 层重置密码
+	if err := h.registry.UserAuth.ResetPassword(
+		c.Request.Context(),
+		resetVO.Email,
+		resetVO.Code,
+		resetVO.NewPassword,
+	); err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	
 	util.ResponseSuccess(c, "密码重置成功")
 }
 

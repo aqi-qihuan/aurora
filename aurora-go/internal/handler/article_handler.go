@@ -2,6 +2,7 @@ package handler
 
 import (
 	"io"
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -89,26 +90,43 @@ func (h *ArticleHandler) TopAndFeaturedArticles(c *gin.Context) {
 		util.ResponseError(c, err)
 		return
 	}
-	// 分离置顶和推荐
-	var topArticles, featuredArticles []dto.ArticleCardDTO
-	for _, a := range list {
-		if a.IsTop == 1 {
-			topArticles = append(topArticles, a)
-		}
-		if a.IsFeatured == 1 {
-			featuredArticles = append(featuredArticles, a)
-		}
+
+	// 对标Java版：如果没有文章，返回空结构
+	if len(list) == 0 {
+		util.ResponseSuccess(c, map[string]interface{}{
+			"topArticle":       nil,
+			"featuredArticles": []dto.ArticleCardDTO{},
+		})
+		return
 	}
+
+	// 对标Java版：最多取3篇文章
+	if len(list) > 3 {
+		list = list[:3]
+	}
+
+	// 第一篇文章作为置顶文章（单数对象）
+	topArticle := list[0]
+	// 剩余文章作为推荐文章
+	var featuredArticles []dto.ArticleCardDTO
+	if len(list) > 1 {
+		featuredArticles = list[1:]
+	}
+
 	util.ResponseSuccess(c, map[string]interface{}{
-		"topArticles":      topArticles,
+		"topArticle":       topArticle,
 		"featuredArticles": featuredArticles,
 	})
 }
 
-// GetArchives 获取文章归档列表
-// GET /api/articles/archives
+// GetArchives 获取文章归档列表（分页，对标Java listArchives）
+// GET /api/articles/archives?current=1&size=12
 func (h *ArticleHandler) GetArchives(c *gin.Context) {
-	archives, err := h.svc.GetArchives(c.Request.Context())
+	// 获取分页参数
+	current, _ := util.ParseInt(c.DefaultQuery("current", "1"), 1)
+	size, _ := util.ParseInt(c.DefaultQuery("size", "12"), 12)
+
+	archives, err := h.svc.GetArchives(c.Request.Context(), current, size)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -195,31 +213,49 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	util.ResponseSuccess(c, "文章已彻底删除")
 }
 
-// ImportArticle 导入Markdown文件为文章
+// ImportArticle 批量导入Markdown文件为文章
 // POST /api/admin/articles/import
 func (h *ArticleHandler) ImportArticle(c *gin.Context) {
-	file, _, err := c.Request.FormFile("file")
+	// 获取所有上传的文件（支持批量）
+	form, err := c.MultipartForm()
 	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("文件上传失败"))
+		return
+	}
+	files := form.File["file"]
+	if len(files) == 0 {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("请选择要导入的Markdown文件"))
 		return
 	}
-	defer file.Close()
 
-	content, err := io.ReadAll(file)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("读取文件失败"))
-		return
-	}
-
-	userID, _ := c.Get("user_id")
+	userIDD, _ := c.Get("user_id")
 	uid := uint(0)
-	if id, ok := userID.(uint); ok {
+	if id, ok := userIDD.(uint); ok {
 		uid = id
 	}
 
-	contents := map[string]string{
-		"imported.md": string(content),
+	// 读取所有文件内容
+	contents := make(map[string]string)
+	for _, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			slog.Warn("打开文件失败", "filename", fileHeader.Filename, "error", err)
+			continue
+		}
+		content, err := io.ReadAll(file)
+		file.Close()
+		if err != nil {
+			slog.Warn("读取文件失败", "filename", fileHeader.Filename, "error", err)
+			continue
+		}
+		contents[fileHeader.Filename] = string(content)
 	}
+
+	if len(contents) == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("没有成功读取到文件内容"))
+		return
+	}
+
 	success, failures := h.svc.ImportArticles(c.Request.Context(), uid, contents)
 	util.ResponseSuccess(c, map[string]interface{}{
 		"success":  success,
@@ -401,7 +437,7 @@ func (h *ArticleHandler) GetAdminArticleById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ExportArticle 批量导出文章
+// ExportArticle 批量导出文章（对标Java exportArticles）
 // POST /api/admin/articles/export
 func (h *ArticleHandler) ExportArticle(c *gin.Context) {
 	var ids []uint
@@ -409,8 +445,14 @@ func (h *ArticleHandler) ExportArticle(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	// TODO: 批量导出Markdown
-	util.ResponseSuccess(c, ids)
+	
+	// 调用Service层导出Markdown文件
+	urls, err := h.svc.ExportArticles(c.Request.Context(), ids)
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, urls)
 }
 
 // ptrUint 辅助函数: 返回uint指针

@@ -155,28 +155,17 @@ func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 // PUT /api/admin/photos/album
 func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
 	var body struct {
-		AlbumIDRaw interface{} `json:"albumId" binding:"required"`
-		PhotoIDs   []uint      `json:"photoIds" binding:"required"`
+		AlbumIDStr string   `json:"albumId" binding:"required"`
+		PhotoIDs   []uint   `json:"photoIds" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 
-	// 兼容前端传数字或字符串类型
-	var albumId uint64
-	switch v := body.AlbumIDRaw.(type) {
-	case string:
-		var err error
-		albumId, err = strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID格式"))
-			return
-		}
-	case float64:
-		albumId = uint64(v)
-	default:
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID类型"))
+	albumId, err := strconv.ParseUint(body.AlbumIDStr, 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的相册ID格式"))
 		return
 	}
 
@@ -192,20 +181,13 @@ func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
 func (h *PhotoHandler) UpdatePhotoDelete(c *gin.Context) {
 	var body struct {
 		IDs      []uint `json:"ids" binding:"required"`
-		IsDelete *int8  `json:"isDelete"` // 改为指针，去掉 required 校验，兼容前端传 0 的情况
+		IsDelete int8   `json:"isDelete" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-
-	// 默认值为 1（删除），恢复时前端传 0
-	isDelete := int8(1)
-	if body.IsDelete != nil {
-		isDelete = *body.IsDelete
-	}
-
-	if err := h.svc.UpdatePhotoDelete(c.Request.Context(), body.IDs, isDelete); err != nil {
+	if err := h.svc.UpdatePhotoDelete(c.Request.Context(), body.IDs, body.IsDelete); err != nil {
 		util.ResponseError(c, err)
 		return
 	}

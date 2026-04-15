@@ -22,12 +22,18 @@ import (
 
 // UserAuthService 用户认证业务逻辑 (对标 Java UserAuthServiceImpl + UserServiceImpl)
 type UserAuthService struct {
-	db  *gorm.DB
-	rdb *redis.Client
+	db           *gorm.DB
+	rdb          *redis.Client
+	emailService interface{} // EmailService（延迟注入，避免循环依赖）
 }
 
 func NewUserAuthService(db *gorm.DB, rdb *redis.Client) *UserAuthService {
 	return &UserAuthService{db: db, rdb: rdb}
+}
+
+// SetEmailService 设置邮件服务（延迟注入，避免循环依赖）
+func (s *UserAuthService) SetEmailService(emailService interface{}) {
+	s.emailService = emailService
 }
 
 // cleanIPAddress 清理 IP 地址中的特殊字符
@@ -293,6 +299,62 @@ func (s *UserAuthService) ChangePassword(ctx context.Context, id uint, vo vo.Pas
 	}
 
 	slog.Info("密码修改成功", "user_info_id", id)
+	return nil
+}
+
+// ResetPassword 通过邮箱验证码重置密码（对标Java UserAuthServiceImpl.updatePassword）
+// 流程: 校验验证码 → 验证邮箱是否存在 → 更新密码
+func (s *UserAuthService) ResetPassword(ctx context.Context, email string, code string, newPassword string) error {
+	// 1. 从 Redis 获取验证码
+	if s.rdb == nil {
+		return errors.ErrInternalServer.WithMsg("系统异常")
+	}
+
+	redisKey := constant.UserAuthCode + email
+	storedCode, err := s.rdb.Get(ctx, redisKey).Result()
+	if err != nil {
+		if errors.IsStd(err, redis.Nil) {
+			return errors.ErrInvalidParams.WithMsg("验证码已过期或不存在")
+		}
+		slog.Error("读取验证码失败", "error", err)
+		return errors.ErrInternalServer.WithMsg("系统异常")
+	}
+
+	// 2. 校验验证码
+	if storedCode != code {
+		return errors.ErrInvalidParams.WithMsg("验证码错误")
+	}
+
+	// 3. 删除已使用的验证码（一次性有效）
+	s.rdb.Del(ctx, redisKey)
+
+	// 4. 查找用户（通过邮箱）
+	var userInfo model.UserInfo
+	if err := s.db.WithContext(ctx).Where("email = ?", email).First(&userInfo).Error; err != nil {
+		if errors.IsStd(err, gorm.ErrRecordNotFound) {
+			return errors.ErrUserNotFound
+		}
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 5. 查找对应的 UserAuth 记录
+	var userAuth model.UserAuth
+	if err := s.db.WithContext(ctx).Where("user_info_id = ?", userInfo.ID).First(&userAuth).Error; err != nil {
+		return fmt.Errorf("查询认证信息失败: %w", err)
+	}
+
+	// 6. BCrypt加密新密码
+	hashedPwd, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	// 7. 更新密码
+	if err := s.db.WithContext(ctx).Model(&userAuth).Update("password", string(hashedPwd)).Error; err != nil {
+		return fmt.Errorf("修改密码失败: %w", err)
+	}
+
+	slog.Info("密码重置成功", "email", email, "user_id", userInfo.ID)
 	return nil
 }
 
@@ -573,16 +635,47 @@ func (s *UserAuthService) QQLoginOrRegister(ctx context.Context, qqInfo vo.QQLog
 }
 
 // SendVerificationCode 发送验证码 (邮箱验证码)
+// 对标 Java UserAuthServiceImpl.sendCode
 func (s *UserAuthService) SendVerificationCode(ctx context.Context, email string) error {
+	// 1. 生成6位随机验证码
 	code := util.GenerateCode(6)
 
-	// TODO: 存入Redis并设置5分钟TTL
-	// redis.SetEX(constant.UserAuthCode+email, 5*time.Minute, code)
+	// 2. 存入 Redis，设置5分钟TTL（对标Java redisService.setEX(USER_AUTH_CODE + email, 5, code)）
+	if s.rdb != nil {
+		redisKey := constant.UserAuthCode + email
+		if err := s.rdb.SetEx(ctx, redisKey, code, 5*time.Minute).Err(); err != nil {
+			slog.Error("验证码存入Redis失败", "email", email, "error", err)
+			return errors.ErrInternalServer.WithMsg("验证码存储失败")
+		}
+	} else {
+		slog.Warn("Redis未初始化，无法存储验证码")
+		return errors.ErrInternalServer.WithMsg("系统异常")
+	}
 
-	// TODO: P0-7 调用 EmailService.SendVerificationEmail(email, code)
-	_ = code // 占位, 待集成邮件服务
+	// 3. 调用 EmailService 发送邮件
+	if s.emailService != nil {
+		// 类型断言获取 SendVerificationCode 函数
+		type EmailServiceInterface interface {
+			SendVerificationCode(toEmail string, code string) error
+		}
+		if emailSvc, ok := s.emailService.(EmailServiceInterface); ok {
+			if err := emailSvc.SendVerificationCode(email, code); err != nil {
+				slog.Error("发送验证码邮件失败", "email", email, "error", err)
+				// 删除 Redis 中的验证码（避免脏数据）
+				s.rdb.Del(ctx, constant.UserAuthCode+email)
+				return errors.ErrInternalServer.WithMsg("邮件发送失败，请稍后重试")
+			}
+		} else {
+			slog.Warn("EmailService 接口不匹配")
+			return errors.ErrInternalServer.WithMsg("邮件服务异常")
+		}
+	} else {
+		slog.Warn("EmailService 未注入，跳过邮件发送")
+		// 开发环境可以返回成功，生产环境应报错
+		return errors.ErrInternalServer.WithMsg("邮件服务未配置")
+	}
 
-	slog.Info("发送验证码", "email", email)
+	slog.Info("验证码发送成功", "email", email)
 	return nil
 }
 

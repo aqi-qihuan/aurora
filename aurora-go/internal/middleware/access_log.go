@@ -138,21 +138,8 @@ func AccessLog(registry *service.Registry, logger *slog.Logger) gin.HandlerFunc 
 			}
 
 			userID := GetUserID(c)
-
-			// 1. 匹配路由元数据 (支持 QueryString 的模糊匹配)
-			var meta OptLogMeta
+			// 构建路由键（提前定义，供后续使用）
 			routeKey := method + " " + path
-			meta = OptLogRegistry[routeKey]
-
-			// 如果精确匹配失败，尝试忽略 QueryString 再次匹配
-			if meta.Module == "" {
-				baseKey := method + " " + strings.Split(path, "?")[0]
-				meta = OptLogRegistry[baseKey]
-				if meta.Module == "" {
-					// 使用 Info 级别确保能看到调试日志（日志级别为 Info）
-					logger.Info("[操作日志] 未匹配到路由元数据", "routeKey", routeKey, "baseKey", baseKey)
-				}
-			}
 
 			// 文件上传接口不记录原始请求体（含二进制数据）
 			bodyStr := "[文件上传]"
@@ -163,6 +150,20 @@ func AccessLog(registry *service.Registry, logger *slog.Logger) gin.HandlerFunc 
 				bodyStr = string(body)
 				if len(bodyStr) > 1000 {
 					bodyStr = bodyStr[:1000] + "...(truncated)"
+				}
+			}
+
+			// 1. 匹配路由元数据 (支持 QueryString 的模糊匹配)
+			var meta OptLogMeta
+			meta = OptLogRegistry[routeKey]
+
+			// 如果精确匹配失败，尝试忽略 QueryString 再次匹配
+			if meta.Module == "" {
+				baseKey := method + " " + strings.Split(path, "?")[0]
+				meta = OptLogRegistry[baseKey]
+				if meta.Module == "" {
+					// 使用 Info 级别确保能看到调试日志（日志级别为 Info）
+					logger.Info("[操作日志] 未匹配到路由元数据", "routeKey", routeKey, "baseKey", baseKey)
 				}
 			}
 
