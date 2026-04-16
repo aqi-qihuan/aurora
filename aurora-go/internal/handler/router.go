@@ -115,6 +115,7 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	rg.POST("/users/login", r.UserAuthHandler.Login)
 	rg.POST("/users/register", r.UserAuthHandler.Register)
 	rg.GET("/users/code", r.UserAuthHandler.SendVerificationCode)
+	rg.PUT("/users/password", r.UserAuthHandler.UpdatePassword) // 公开接口：内部通过code区分重置/修改
 	rg.POST("/users/oauth/qq", r.UserAuthHandler.QQLogin)
 	rg.POST("/users/password/reset", r.UserAuthHandler.ResetPassword)
 	// --- 评论（CommentController） ---
@@ -161,7 +162,6 @@ func (r *Router) registerProtectedRoutes(rg *gin.RouterGroup) {
 	rg.POST("/users/avatar", r.UserAuthHandler.UpdateUserAvatar)
 	rg.PUT("/users/email", r.UserAuthHandler.BindUserEmail)
 	rg.PUT("/users/subscribe", r.UserAuthHandler.UpdateUserSubscribe)
-	rg.PUT("/users/password", r.UserAuthHandler.UpdatePassword)
 	rg.POST("/users/logout", r.UserAuthHandler.Logout)
 	rg.GET("/users/info/:id", r.UserAuthHandler.GetUserInfoById)
 }

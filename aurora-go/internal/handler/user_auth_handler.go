@@ -163,46 +163,47 @@ func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 }
 
 // SendVerificationCode 发送邮箱验证码
-// POST /api/auth/code
+// GET /api/users/code?username=xxx@xx.com
+// 对标 Java UserAuthController.sendCode(String username)
 func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
-	var emailVO dto.EmailVO
-	if err := c.ShouldBindJSON(&emailVO); err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
+	email := c.Query("username")  // 前端传参名是 username（实际是邮箱）
+	if email == "" {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("邮箱不能为空"))
 		return
 	}
-	if err := h.registry.UserAuth.SendVerificationCode(c.Request.Context(), emailVO.Email); err != nil {
+	if err := h.registry.UserAuth.SendVerificationCode(c.Request.Context(), email); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
 	util.ResponseSuccess(c, "验证码已发送，请查收邮件")
 }
 
-// UpdatePassword 修改密码
-// PUT /api/user/password
+// UpdatePassword 修改/重置密码
+// PUT /api/users/password
+// 对标 Java UserAuthController.updatePassword (公开接口，无需登录)
+// 前端传参: username(邮箱), code(验证码), password(新密码)
 func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
-	var passwordVO vo.PasswordVO
-	if err := c.ShouldBindJSON(&passwordVO); err != nil {
+	var userVO struct {
+		Username string `json:"username" binding:"required"`
+		Code     string `json:"code" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&userVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
-	userID, _ := c.Get("user_id")
-	var uid uint
-	switch v := userID.(type) {
-	case uint:
-		uid = v
-	case uint64:
-		uid = uint(v)
-	case float64:
-		uid = uint(v)
-	default:
-		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
-		return
-	}
-	if err := h.registry.UserAuth.ChangePassword(c.Request.Context(), uid, passwordVO); err != nil {
+
+	// 调用 Service 层重置密码 (对标Java userAuthService.updatePassword)
+	if err := h.registry.UserAuth.ResetPassword(
+		c.Request.Context(),
+		userVO.Username,
+		userVO.Code,
+		userVO.Password,
+	); err != nil {
 		util.ResponseError(c, err)
 		return
 	}
+
 	util.ResponseSuccess(c, "密码修改成功")
 }
 

@@ -354,7 +354,7 @@ type HomeInfoDTO struct {
 	Tags           []TagDTO          `json:"tags"`
 	FriendLinks    []FriendLinkDTO   `json:"friendLinks"`
 	Talks          []TalkDTO         `json:"talks"`
-	WebsiteConfig  *WebsiteConfigDTO `json:"websiteConfig,omitempty"` // 网站配置（对标Java websiteConfigDTO）
+	WebsiteConfig  *WebsiteConfigDTO `json:"websiteConfigDTO,omitempty"` // 网站配置（对标Java websiteConfigDTO）
 	ViewCount      int               `json:"viewCount"`               // 总浏览量（对标Java viewCount）
 	ArticleCount   int               `json:"articleCount"`            // 文章总数（对标Java articleCount）
 	CategoryCount  int               `json:"categoryCount"`           // 分类总数（对标Java categoryCount）

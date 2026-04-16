@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -49,8 +50,8 @@ func InitEmailService(cfg *config.EmailConfig) {
 
 // SendCommentNotification 发送评论通知邮件
 // 对标 Java 版 EmailConsumer: 评论邮件异步通知
-func SendCommentNotification(toEmail string, subject string, data CommentNotifyData) error {
-	if emailService == nil || !emailService.cfg.Enabled {
+func (s *EmailService) SendCommentNotification(toEmail string, subject string, data CommentNotifyData) error {
+	if s == nil || !s.cfg.Enabled {
 		return fmt.Errorf("email service not enabled")
 	}
 
@@ -59,13 +60,13 @@ func SendCommentNotification(toEmail string, subject string, data CommentNotifyD
 		return err
 	}
 
-	return send(toEmail, "[Aurora] "+subject, body)
+	return s.send(toEmail, "[Aurora] "+subject, body)
 }
 
 // SendSubscribeNotification 发送文章订阅通知邮件
 // 对标 Java 版 SubscribeConsumer: 新文章订阅推送
-func SendSubscribeNotification(toEmail string, subject string, data SubscribeNotifyData) error {
-	if emailService == nil || !emailService.cfg.Enabled {
+func (s *EmailService) SendSubscribeNotification(toEmail string, subject string, data SubscribeNotifyData) error {
+	if s == nil || !s.cfg.Enabled {
 		return fmt.Errorf("email service not enabled")
 	}
 
@@ -74,31 +75,32 @@ func SendSubscribeNotification(toEmail string, subject string, data SubscribeNot
 		return err
 	}
 
-	return send(toEmail, "[Aurora] "+subject, body)
+	return s.send(toEmail, "[Aurora] "+subject, body)
 }
 
 // SendVerificationCode 发送验证码邮件（注册/OAuth绑定邮箱）
-func SendVerificationCode(toEmail string, code string) error {
-	if emailService == nil || !emailService.cfg.Enabled {
+func (s *EmailService) SendVerificationCode(toEmail string, code string) error {
+	if s == nil || !s.cfg.Enabled {
 		return fmt.Errorf("email service not enabled")
 	}
 
 	data := VerificationCodeData{
 		Code:      code,
-		ExpireMin: time.Duration(emailService.cfg.VerifyCodeExpire) * time.Minute,
+		ExpireMin: time.Duration(s.cfg.VerifyCodeExpire) * time.Minute,
 	}
 	body, err := renderTemplate(verificationCodeTmpl, data)
 	if err != nil {
 		return err
 	}
 
-	return send(toEmail, "[Aurora] 邮箱验证码 - 请勿泄露给他人", body)
+	return s.send(toEmail, "[Aurora] 邮箱验证码 - 请勿泄露给他人", body)
 }
 
 // send 底层SMTP发送方法
-func send(toEmail string, subject string, htmlBody string) error {
+// 对标 Java Spring Mail: 支持 SSL（端口465）和 STARTTLS（端口587/25）
+func (s *EmailService) send(toEmail string, subject string, htmlBody string) error {
 	headers := make(map[string]string)
-	headers["From"] = emailService.from
+	headers["From"] = s.from
 	headers["To"] = toEmail
 	headers["Subject"] = subject
 	headers["MIME-Version"] = "1.0"
@@ -115,7 +117,15 @@ func send(toEmail string, subject string, htmlBody string) error {
 	msg.WriteString("\r\n") // header/body分隔符
 	msg.WriteString(htmlBody)
 
-	err := smtp.SendMail(emailService.addr, emailService.auth, emailService.cfg.Username, []string{toEmail}, msg.Bytes())
+	var err error
+	if s.cfg.IsSSL {
+		// 端口465：隐式SSL连接（对标Java SSLSocketFactory）
+		err = s.sendWithSSL(toEmail, msg.Bytes())
+	} else {
+		// 端口587/25：STARTTLS（标准库支持）
+		err = smtp.SendMail(s.addr, s.auth, s.cfg.Username, []string{toEmail}, msg.Bytes())
+	}
+
 	if err != nil {
 		slog.Error("Failed to send email",
 			"to", toEmail,
@@ -125,8 +135,62 @@ func send(toEmail string, subject string, htmlBody string) error {
 		return err
 	}
 
-	slog.Debug("Email sent successfully", "to", toEmail, "subject", subject)
+	slog.Info("Email sent successfully", "to", toEmail, "subject", subject)
 	return nil
+}
+
+// sendWithSSL 通过SSL连接发送邮件（端口465）
+// 对标 Java: mail.smtp.socketFactory.class=javax.net.ssl.SSLSocketFactory
+func (s *EmailService) sendWithSSL(toEmail string, msgBytes []byte) error {
+	// 1. 建立SSL/TLS连接
+	tlsConfig := &tls.Config{
+		ServerName: s.cfg.Host, // SNI 验证
+	}
+
+	conn, err := tls.Dial("tcp", s.addr, tlsConfig)
+	if err != nil {
+		return fmt.Errorf("SSL dial failed: %w", err)
+	}
+	defer conn.Close()
+
+	// 2. 创建SMTP客户端
+	client, err := smtp.NewClient(conn, s.cfg.Host)
+	if err != nil {
+		return fmt.Errorf("SMTP client failed: %w", err)
+	}
+	defer client.Close()
+
+	// 3. 认证
+	if err := client.Auth(s.auth); err != nil {
+		return fmt.Errorf("SMTP auth failed: %w", err)
+	}
+
+	// 4. 设置发件人
+	if err := client.Mail(s.cfg.Username); err != nil {
+		return fmt.Errorf("SMTP mail from failed: %w", err)
+	}
+
+	// 5. 设置收件人
+	if err := client.Rcpt(toEmail); err != nil {
+		return fmt.Errorf("SMTP rcpt to failed: %w", err)
+	}
+
+	// 6. 发送邮件内容
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("SMTP data failed: %w", err)
+	}
+	_, err = w.Write(msgBytes)
+	if err != nil {
+		return fmt.Errorf("SMTP write failed: %w", err)
+	}
+	err = w.Close()
+	if err != nil {
+		return fmt.Errorf("SMTP data close failed: %w", err)
+	}
+
+	// 7. 退出
+	return client.Quit()
 }
 
 // renderTemplate 渲染HTML邮件模板

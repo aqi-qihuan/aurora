@@ -303,7 +303,7 @@ func (s *UserAuthService) ChangePassword(ctx context.Context, id uint, vo vo.Pas
 }
 
 // ResetPassword 通过邮箱验证码重置密码（对标Java UserAuthServiceImpl.updatePassword）
-// 流程: 校验验证码 → 验证邮箱是否存在 → 更新密码
+// Java 流程: 校验验证码 → 检查邮箱是否存在(t_user_auth.username) → 直接更新密码
 func (s *UserAuthService) ResetPassword(ctx context.Context, email string, code string, newPassword string) error {
 	// 1. 从 Redis 获取验证码
 	if s.rdb == nil {
@@ -328,33 +328,33 @@ func (s *UserAuthService) ResetPassword(ctx context.Context, email string, code 
 	// 3. 删除已使用的验证码（一次性有效）
 	s.rdb.Del(ctx, redisKey)
 
-	// 4. 查找用户（通过邮箱）
-	var userInfo model.UserInfo
-	if err := s.db.WithContext(ctx).Where("email = ?", email).First(&userInfo).Error; err != nil {
+	// 4. 检查邮箱是否已注册（对标Java checkUser: t_user_auth.username = email）
+	var auth model.UserAuth
+	if err := s.db.WithContext(ctx).
+		Select("id").
+		Where("username = ? AND login_type = 1", email).
+		First(&auth).Error; err != nil {
 		if errors.IsStd(err, gorm.ErrRecordNotFound) {
-			return errors.ErrUserNotFound
+			return errors.ErrInvalidParams.WithMsg("邮箱尚未注册")
 		}
 		return fmt.Errorf("查询用户失败: %w", err)
 	}
 
-	// 5. 查找对应的 UserAuth 记录
-	var userAuth model.UserAuth
-	if err := s.db.WithContext(ctx).Where("user_info_id = ?", userInfo.ID).First(&userAuth).Error; err != nil {
-		return fmt.Errorf("查询认证信息失败: %w", err)
-	}
-
-	// 6. BCrypt加密新密码
+	// 5. BCrypt加密新密码
 	hashedPwd, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	// 7. 更新密码
-	if err := s.db.WithContext(ctx).Model(&userAuth).Update("password", string(hashedPwd)).Error; err != nil {
+	// 6. 直接更新密码（对标Java: userAuthMapper.update WHERE username = email）
+	if err := s.db.WithContext(ctx).
+		Model(&model.UserAuth{}).
+		Where("username = ?", email).
+		Update("password", string(hashedPwd)).Error; err != nil {
 		return fmt.Errorf("修改密码失败: %w", err)
 	}
 
-	slog.Info("密码重置成功", "email", email, "user_id", userInfo.ID)
+	slog.Info("密码重置成功", "email", email, "user_auth_id", auth.ID)
 	return nil
 }
 

@@ -84,7 +84,7 @@ log:
   output_path: ""
 
 email:
-  enabled: false          # 通过 AURORA_EMAIL_ENABLED 覆盖
+  enabled: true          # 启用邮件服务（发送验证码、评论通知、订阅通知）
   host: smtp.qq.com
   port: 465
   username: "a4i.icu@qq.com"            # 通过 AURORA_EMAIL_USERNAME 注入
