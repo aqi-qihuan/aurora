@@ -1,4 +1,4 @@
-﻿package strategy
+package strategy
 
 import (
 	"context"
@@ -7,9 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/aurora-go/aurora/internal/config"
-	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
-	"github.com/aurora-go/aurora/internal/infrastructure/search"
 
 	"gorm.io/gorm"
 )
@@ -57,20 +55,20 @@ type SearchContext struct {
 // NewSearchContext 创建搜索策略上下文（根据模式自动选择实现）
 //
 // 选择逻辑:
-//  - elasticsearch: 使用 ESSearchStrategy (需要ES客户端不为nil)
+//  - elasticsearch: 使用 EsSearchStrategy (需要ES服务不为nil)
 //  - mysql: 使用 MySQLSearchStrategy
 //  - 默认: 如果ES可用优先ES，否则降级到MySQL
 //
 // Go增强点:
 //  - ES不可用时自动降级到MySQL（Java版会NPE）
 //  - 支持运行时动态切换模式
-func NewSearchContext(mode string, esClient *search.ESClient, db *gorm.DB) (*SearchContext, error) {
+func NewSearchContext(mode string, esClient ESClientInterface, db *gorm.DB) (*SearchContext, error) {
 	var strat SearchStrategy
 	actualMode := mode
 
 	switch mode {
 	case SearchModeElasticsearch:
-		// ES模式: 需要ES客户端初始化成功
+		// ES模式: 需要ES服务初始化成功
 		if esClient == nil {
 			slog.Warn("Elasticsearch requested but not available, falling back to MySQL",
 				"mode", mode,
@@ -78,7 +76,7 @@ func NewSearchContext(mode string, esClient *search.ESClient, db *gorm.DB) (*Sea
 			strat = NewMySQLSearchStrategy(db)
 			actualMode = SearchModeMySQL
 		} else {
-			strat = NewESSearchStrategy(esClient)
+			strat = NewEsSearchStrategy(esClient)
 		}
 	case SearchModeMySQL, "":
 		strat = NewMySQLSearchStrategy(db)
@@ -93,11 +91,11 @@ func NewSearchContext(mode string, esClient *search.ESClient, db *gorm.DB) (*Sea
 }
 
 // ExecuteSearch 执行搜索（委托给当前策略） (对标Java executeSearchStrategy)
-func (ctx *SearchContext) ExecuteSearch(c context.Context, keywords string) ([]dto.ArticleSearchDTO, error) {
+func (ctx *SearchContext) ExecuteSearch(c context.Context, keywords string, current, size int) ([]map[string]interface{}, int, error) {
 	if ctx.strategy == nil {
-		return []dto.ArticleSearchDTO{}, fmt.Errorf("search strategy not initialized")
+		return []map[string]interface{}{}, 0, fmt.Errorf("search strategy not initialized")
 	}
-	return ctx.strategy.SearchArticle(c, keywords)
+	return ctx.strategy.SearchArticles(c, keywords, current, size)
 }
 
 // GetMode 获取当前搜索模式

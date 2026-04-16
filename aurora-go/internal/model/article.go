@@ -13,6 +13,7 @@ type Article struct {
 	CategoryID     *uint          `gorm:"index" json:"categoryId"`
 	ArticleCover   string         `gorm:"size:1024" json:"articleCover"`
 	ArticleTitle   string         `gorm:"size:50;not null;index" json:"articleTitle"`
+	ArticleAbstract string        `gorm:"size:500" json:"articleAbstract"` // 文章摘要
 	ArticleContent string         `gorm:"type:longtext;not null" json:"articleContent"`
 	IsTop          int8           `gorm:"default:0;index" json:"isTop"`       // 0否 1是
 	IsFeatured     int8           `gorm:"default:0;index" json:"isFeatured"`   // 是否推荐

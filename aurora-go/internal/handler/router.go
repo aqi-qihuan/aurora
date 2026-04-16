@@ -188,10 +188,12 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 
 	// --- 文章管理（ArticleController） ---
 	rg.GET("/articles", r.ArticleHandler.ListAdminArticles)
-	rg.POST("/articles", r.ArticleHandler.SaveArticle)
+	rg.POST("/articles", r.ArticleHandler.SaveArticle)             // 统一入口（对标Java：通过id区分新增/更新）
+	rg.POST("/articles/save", r.ArticleHandler.SaveArticle)       // 新增文章（兼容Vue3前端）
+	rg.POST("/articles/update", r.ArticleHandler.SaveArticle)     // 更新文章（兼容Vue3前端）
 	rg.PUT("/articles/topAndFeatured", r.ArticleHandler.UpdateArticleTopAndFeatured)
 	rg.PUT("/articles", r.ArticleHandler.UpdateArticleDelete)
-	rg.DELETE("/articles/delete", r.ArticleHandler.DeleteArticle)  // 彻底删除（物理删除）
+	rg.DELETE("/articles/delete", r.ArticleHandler.DeleteArticle) // 彻底删除（物理删除）
 	rg.POST("/articles/images", r.ArticleHandler.UploadArticleImage)
 	rg.GET("/articles/:id", r.ArticleHandler.GetAdminArticleById)
 	rg.POST("/articles/import", r.ArticleHandler.ImportArticle)

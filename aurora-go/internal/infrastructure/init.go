@@ -59,13 +59,9 @@ func Bootstrap(cfg *config.Config) {
 		slog.Warn("[4/10] RabbitMQ not configured, skipping")
 	}
 
-	// 5. Elasticsearch 全文搜索（可选）
+	// 5. Elasticsearch 全文搜索（可选）- 延迟到 main.go 中初始化以避免循环依赖
 	if len(cfg.ES.URLs) > 0 {
-		if err := search.InitElasticsearch(&cfg.ES); err != nil {
-			slog.Warn("[5/10] Elasticsearch connection failed (falling back to MySQL search)", "error", err)
-		} else {
-			slog.Info("[5/10] Elasticsearch connected")
-		}
+		slog.Info("[5/10] Elasticsearch configured, will initialize in main.go")
 	} else {
 		slog.Warn("[5/10] Elasticsearch not configured, falling back to MySQL search")
 	}

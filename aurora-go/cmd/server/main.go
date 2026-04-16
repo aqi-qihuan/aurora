@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -17,6 +18,7 @@ import (
 	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/service"
+	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -55,6 +57,36 @@ func main() {
 
 	// 2. 初始化所有基础设施（按顺序: Logger → DB → Redis → MQ → ES → MinIO → Email）
 	infrastructure.Bootstrap(cfg)
+
+	// 2.1 初始化 Elasticsearch（避免循环依赖，在此处初始化）
+	if len(cfg.ES.URLs) > 0 {
+		slog.Info("🚀 开始初始化 Elasticsearch...")
+		esService, err := service.NewESService(cfg.ES.URLs, cfg.ES.Username, cfg.ES.Password, cfg.ES.IndexName)
+		if err != nil {
+			slog.Warn("Elasticsearch 连接失败，将使用 MySQL 搜索", "error", err)
+		} else {
+			// 设置全局 ES 服务实例
+			service.SetGlobalESService(esService)
+			slog.Info("✅ Elasticsearch 连接成功")
+
+			// 初始化索引并同步数据
+			db := infrastructure.GetDB()
+			if db != nil {
+				initializer := service.NewESIndexInitializer(esService, db)
+				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				defer cancel()
+				if err := initializer.Initialize(ctx); err != nil {
+					slog.Error("ES 索引初始化失败", "error", err)
+				}
+			}
+
+			// 重新初始化搜索策略（使用新的 ES 客户端）
+			strategy.SetGlobalESClient(esService)
+			slog.Info("✅ ES 搜索策略已更新（等待 Registry 创建后重新注入）")
+		}
+	} else {
+		slog.Warn("Elasticsearch 未配置，将使用 MySQL 搜索")
+	}
 
 	// 2.1 初始化 IP2Region (IP归属地查询)
 	if cfg.IP2Region.Enabled {

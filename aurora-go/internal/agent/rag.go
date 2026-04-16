@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"sort"
 	"strings"
 
 	"github.com/aurora-go/aurora/internal/dto"
@@ -87,7 +86,7 @@ func (p *RAGPipeline) esHybridSearch(ctx context.Context, req *dto.SearchRequest
 		return nil, fmt.Errorf("search service unavailable")
 	}
 
-	rawResults, err := searchCtx.ExecuteSearch(ctx, req.Query)
+	rawResults, total, err := searchCtx.ExecuteSearch(ctx, req.Query, 1, req.TopK)
 	if err != nil {
 		return nil, err
 	}
@@ -95,23 +94,16 @@ func (p *RAGPipeline) esHybridSearch(ctx context.Context, req *dto.SearchRequest
 	// 转换为AgentSearchResult格式
 	results := make([]dto.AgentSearchResult, 0, len(rawResults))
 	for _, item := range rawResults {
-		highlightStr := ""
-		if len(item.Highlight) > 0 {
-			highlightStr = item.Highlight[0]
-		}
 		result := dto.AgentSearchResult{
-			ID:        item.ID,
-			Title:     item.ArticleTitle,
-			Summary:   truncateText(item.ArticleContent, 150),
-			Relevance: calculateRelevance(item.Score, highlightStr),
-			Highlight: highlightStr,
-			URL:       fmt.Sprintf("/articles/%d", item.ID),
+			ID:      uint(item["id"].(float64)),
+			Title:   item["articleTitle"].(string),
+			Summary: truncateText(item["articleContent"].(string), 150),
+			URL:     fmt.Sprintf("/articles/%d", uint(item["id"].(float64))),
 		}
 		results = append(results, result)
 	}
 
-	// 按相关度排序
-	sort.Slice(results, func(i, j int) bool { return results[i].Relevance > results[j].Relevance })
+	_ = total // 保留总数供后续使用
 
 	topK := req.TopK
 	if topK <= 0 {

@@ -249,13 +249,13 @@ func executeSearchArticles(ctx context.Context, params map[string]interface{}) (
 		return map[string]interface{}{"error": "search service unavailable"}, nil
 	}
 
-	results, err := searchCtx.ExecuteSearch(ctx, keywords)
+	results, _, err := searchCtx.ExecuteSearch(ctx, keywords, 1, 10)
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
 
 	return map[string]interface{}{
-		"results": results,
+		"results":  results,
 		"keywords": keywords,
 	}, nil
 }

@@ -40,6 +40,7 @@ func (s *ArticleService) SetSearchContext(searchCtx interface{}) {
 }
 
 // CreateArticle 发布文章 (事务操作: 文章+分类+标签关联, 对齐Java版实现)
+// 返回完整的 Article 对象，含预加载的关联数据 (对标Java BeanCopyUtil返回ArticleAdminViewDTO)
 func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.ArticleVO) (*model.Article, error) {
 	var article model.Article
 
@@ -68,6 +69,7 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 			ArticleTitle:   vo.ArticleTitle,
 			ArticleContent: vo.ArticleContent,
 			ArticleCover:   vo.ArticleCover,
+			ArticleAbstract: vo.ArticleAbstract, // 文章摘要
 			Type:           1, // 默认原创
 			Status:         1, // 默认公开
 		}
@@ -138,6 +140,11 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 		// 3. 更新分类文章计数（使用 Redis）
 		if categoryID != nil && s.statsService != nil {
 			s.statsService.IncrementCategoryArticleCount(ctx, *categoryID)
+		}
+
+		// 4. 重新加载关联数据 (Tags, Category, UserInfo) - 对标Java getArticleByIdAdmin
+		if err := tx.Preload("Tags").Preload("Category").Preload("UserInfo").First(&article, article.ID).Error; err != nil {
+			return fmt.Errorf("重新加载文章关联数据失败: %w", err)
 		}
 
 		slog.Info("文章发布成功",
@@ -400,6 +407,11 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 			if s.statsService != nil {
 				s.statsService.DecrementCategoryArticleCount(ctx, *oldCategoryID)
 			}
+		}
+
+		// 4. 重新加载关联数据 (Tags, Category, UserInfo) - 对标Java getArticleByIdAdmin
+		if err := tx.Preload("Tags").Preload("Category").Preload("UserInfo").First(&article, article.ID).Error; err != nil {
+			return fmt.Errorf("重新加载文章关联数据失败: %w", err)
 		}
 
 		slog.Info("文章更新成功", "article_id", article.ID, "title", article.ArticleTitle)
@@ -681,28 +693,79 @@ func (s *ArticleService) GetArchives(ctx context.Context, current, size int) (*d
 	}, nil
 }
 
-// SearchArticles 搜索文章 (关键词搜索, 对标 EsSearchStrategyImpl)
+// SearchArticles 搜索文章（对标Java: listArticlesBySearch）
 // 优先使用 ES 全文搜索，ES 不可用时降级到 MySQL LIKE 查询
-func (s *ArticleService) SearchArticles(ctx context.Context, keywords string, page dto.PageVO) (*dto.PageResultDTO, error) {
+// Java版本返回: List<ArticleSearchDTO> 扁平数组，不分页，不查数据库
+func (s *ArticleService) SearchArticles(ctx context.Context, keywords string) ([]dto.ArticleSearchDTO, error) {
 	// 尝试使用 ES 搜索策略（如果已注入）
 	if s.searchCtx != nil {
-		// 类型断言获取 SearchContext
 		type SearchContextInterface interface {
-			ExecuteSearch(ctx context.Context, keywords string) ([]dto.ArticleSearchDTO, error)
+			ExecuteSearch(ctx context.Context, keywords string, current, size int) ([]map[string]interface{}, int, error)
 		}
 		if searchCtx, ok := s.searchCtx.(SearchContextInterface); ok {
-			results, err := searchCtx.ExecuteSearch(ctx, keywords)
-			if err == nil && len(results) > 0 {
-				// ES 搜索成功，转换为 ArticleCardDTO
-				return s.convertESSearchResults(ctx, results, page)
+			// 对标Java: ES查询不指定size，使用默认10条
+			esResults, total, err := searchCtx.ExecuteSearch(ctx, keywords, 1, 10)
+			if err != nil {
+				slog.Warn("ES search failed, falling back to MySQL", "keywords", keywords, "error", err)
+			} else if len(esResults) > 0 {
+				slog.Info("ES search success", "keywords", keywords, "total", total, "returned", len(esResults))
+				return s.convertESResultsToSearchDTO(esResults), nil
+			} else {
+				slog.Debug("ES search returned no results, falling back to MySQL", "keywords", keywords)
 			}
-			// ES 搜索失败或无结果，降级到 MySQL
-			slog.Debug("ES search failed or no results, falling back to MySQL", "keywords", keywords, "error", err)
 		}
 	}
 
-	// 降级方案: MySQL LIKE 查询
-	return s.searchArticlesByMySQL(ctx, keywords, page)
+	// 降级方案: MySQL LIKE 查询（对标Java: 不分页，最多10条）
+	slog.Info("Using MySQL LIKE search", "keywords", keywords)
+	return s.searchArticlesByMySQLDTO(ctx, keywords)
+}
+
+// searchArticlesByMySQLDTO MySQL LIKE 搜索（降级方案，返回 ArticleSearchDTO，对标Java）
+func (s *ArticleService) searchArticlesByMySQLDTO(ctx context.Context, keywords string) ([]dto.ArticleSearchDTO, error) {
+	var articles []model.Article
+
+	searchPattern := "%" + keywords + "%"
+
+	err := s.db.WithContext(ctx).
+		Select("id, article_title, article_content").
+		Where("is_delete = 0 AND status = 1").
+		Where("article_title LIKE ? OR article_content LIKE ?", searchPattern, searchPattern).
+		Order("create_time DESC").
+		Limit(10).
+		Find(&articles).Error
+	if err != nil {
+		return nil, fmt.Errorf("搜索文章失败: %w", err)
+	}
+
+	list := make([]dto.ArticleSearchDTO, len(articles))
+	for i, a := range articles {
+		list[i] = dto.ArticleSearchDTO{
+			ID:             a.ID,
+			ArticleTitle:   a.ArticleTitle,
+			ArticleContent: a.ArticleContent,
+		}
+	}
+	return list, nil
+}
+
+// convertESResultsToSearchDTO 将 ES 结果直接转换为 ArticleSearchDTO（对标Java，不查数据库）
+func (s *ArticleService) convertESResultsToSearchDTO(esResults []map[string]interface{}) []dto.ArticleSearchDTO {
+	list := make([]dto.ArticleSearchDTO, 0, len(esResults))
+	for _, r := range esResults {
+		item := dto.ArticleSearchDTO{}
+		if id, ok := r["id"].(float64); ok {
+			item.ID = uint(id)
+		}
+		if title, ok := r["articleTitle"].(string); ok {
+			item.ArticleTitle = title
+		}
+		if content, ok := r["articleContent"].(string); ok {
+			item.ArticleContent = content // 已包含 <em> 高亮标签
+		}
+		list = append(list, item)
+	}
+	return list
 }
 
 // searchArticlesByMySQL MySQL LIKE 搜索（降级方案）
@@ -745,7 +808,7 @@ func (s *ArticleService) searchArticlesByMySQL(ctx context.Context, keywords str
 	}, nil
 }
 
-// convertESSearchResults 将 ES 搜索结果转换为 PageResultDTO
+// convertESSearchResults 将 ES 搜索结果转换为 PageResultDTO（旧版，保留兼容）
 func (s *ArticleService) convertESSearchResults(ctx context.Context, esResults []dto.ArticleSearchDTO, page dto.PageVO) (*dto.PageResultDTO, error) {
 	// ES 返回的结果已经是全部匹配数据，需要手动分页
 	total := int64(len(esResults))
@@ -802,6 +865,107 @@ func (s *ArticleService) convertESSearchResults(ctx context.Context, esResults [
 				card.ArticleContent = r.ArticleContent
 			}
 			list = append(list, card)
+		}
+	}
+
+	return &dto.PageResultDTO{
+		List:     list,
+		Count:    total,
+		PageNum:  page.PageNum,
+		PageSize: page.PageSize,
+	}, nil
+}
+
+// convertESSearchResultsFromMap 将 ES 搜索结果（map格式）转换为 PageResultDTO（对标 Java EsSearchStrategyImpl）
+func (s *ArticleService) convertESSearchResultsFromMap(ctx context.Context, esResults []map[string]interface{}, total int64, page dto.PageVO) (*dto.PageResultDTO, error) {
+	// ES 返回的结果已经是全部匹配数据，需要手动分页
+	offset := page.GetOffset()
+	end := offset + page.PageSize
+
+	// 边界检查
+	if offset >= len(esResults) {
+		return &dto.PageResultDTO{
+			List:     []dto.ArticleCardDTO{},
+			Count:    total,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
+	}
+
+	if end > len(esResults) {
+		end = len(esResults)
+	}
+
+	// 提取当前页的 ID 列表
+	var articleIDs []uint
+	for _, r := range esResults[offset:end] {
+		if id, ok := r["id"].(float64); ok {
+			articleIDs = append(articleIDs, uint(id))
+		}
+	}
+
+	if len(articleIDs) == 0 {
+		return &dto.PageResultDTO{
+			List:     []dto.ArticleCardDTO{},
+			Count:    total,
+			PageNum:  page.PageNum,
+			PageSize: page.PageSize,
+		}, nil
+	}
+
+	// 从数据库查询完整的文章信息（含分类、作者、标签）
+	var articles []model.Article
+	if err := s.db.WithContext(ctx).
+		Where("id IN ?", articleIDs).
+		Preload("Category").
+		Preload("UserInfo").
+		Preload("Tags").
+		Find(&articles).Error; err != nil {
+		return nil, fmt.Errorf("查询文章详情失败: %w", err)
+	}
+
+	// 构建 ID -> (Article, highlight) 映射
+	type articleWithHighlight struct {
+		article *model.Article
+		highlightTitle   string
+		highlightContent string
+	}
+	articleMap := make(map[uint]*articleWithHighlight)
+	for i := range articles {
+		articleMap[articles[i].ID] = &articleWithHighlight{article: &articles[i]}
+	}
+
+	// 将高亮信息填入映射（对标 Java 版处理高亮）
+	for _, r := range esResults[offset:end] {
+		if id, ok := r["id"].(float64); ok {
+			uid := uint(id)
+			if entry, exists := articleMap[uid]; exists {
+				if title, ok := r["articleTitle"].(string); ok && title != "" {
+					entry.highlightTitle = title
+				}
+				if content, ok := r["articleContent"].(string); ok && content != "" {
+					entry.highlightContent = content
+				}
+			}
+		}
+	}
+
+	// 按 ES 搜索结果的顺序构建返回列表
+	list := make([]dto.ArticleCardDTO, 0, len(articleIDs))
+	for _, r := range esResults[offset:end] {
+		if id, ok := r["id"].(float64); ok {
+			uid := uint(id)
+			if entry, exists := articleMap[uid]; exists {
+				card := s.toArticleCardDTO(entry.article)
+				// 用 ES 高亮内容覆盖原始内容（对标 Java 版）
+				if entry.highlightTitle != "" {
+					card.ArticleTitle = entry.highlightTitle
+				}
+				if entry.highlightContent != "" {
+					card.ArticleContent = entry.highlightContent
+				}
+				list = append(list, card)
+			}
 		}
 	}
 

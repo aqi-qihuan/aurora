@@ -1,11 +1,10 @@
-﻿package strategy
+package strategy
 
 import (
 	"fmt"
 	"log/slog"
 
 	"github.com/aurora-go/aurora/internal/config"
-	"github.com/aurora-go/aurora/internal/infrastructure/search"
 
 	"gorm.io/gorm"
 )
@@ -18,6 +17,9 @@ var (
 
 	// GlobalUploadContext 全局上传策略上下文（单例）
 	GlobalUploadContext *UploadContext
+
+	// globalESClient 全局 ES 客户端（用于避免循环导入）
+	globalESClient ESClientInterface
 )
 
 // InitStrategies 初始化所有策略上下文 (对标Java Spring自动注入)
@@ -60,13 +62,29 @@ func InitStrategies(cfg *config.Config, db *gorm.DB) error {
 func initSearchStrategy(cfg *config.Config, db *gorm.DB) (*SearchContext, error) {
 	mode := cfg.Search.Mode
 
-	// ES客户端指针（如果ES未启用则为nil）
-	var esClient *search.ESClient
-	if cfg.Search.Mode == SearchModeElasticsearch && search.Client != nil {
-		esClient = search.Client
+	// ES 服务指针（如果 ES 未启用则为 nil）
+	var esClient ESClientInterface
+	if mode == SearchModeElasticsearch {
+		// 从全局获取 ES 服务（通过接口避免循环导入）
+		esClient = getGlobalESClient()
 	}
 
 	return NewSearchContext(mode, esClient, db)
+}
+
+// getGlobalESClient 获取全局 ES 客户端（延迟加载，避免循环导入）
+func getGlobalESClient() ESClientInterface {
+	return globalESClient
+}
+
+// SetGlobalESClient 设置全局 ES 客户端（在 main.go 中调用）
+func SetGlobalESClient(client ESClientInterface) {
+	globalESClient = client
+}
+
+// GetGlobalESClient 获取全局 ES 客户端（对外暴露，供 main.go 等使用）
+func GetGlobalESClient() ESClientInterface {
+	return globalESClient
 }
 
 // initUploadStrategy 初始化上传策略

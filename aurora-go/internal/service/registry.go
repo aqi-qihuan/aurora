@@ -104,7 +104,12 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	if searchMode == "" {
 		searchMode = "mysql" // 默认 MySQL
 	}
-	searchCtx, err := strategy.NewSearchContext(searchMode, infrastructure.GetES(), db)
+	// ES 客户端从全局获取（已在 main.go 中通过 strategy.SetGlobalESClient 设置）
+	esClient := strategy.GetGlobalESClient()
+	if searchMode == "elasticsearch" && esClient == nil {
+		logger.Warn("Elasticsearch 搜索模式已配置，但 ES 客户端未初始化，将降级到 MySQL")
+	}
+	searchCtx, err := strategy.NewSearchContext(searchMode, esClient, db)
 	if err != nil {
 		logger.Warn("搜索策略上下文初始化失败，将使用 MySQL 降级方案", "error", err)
 	} else {

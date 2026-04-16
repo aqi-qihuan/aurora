@@ -63,18 +63,19 @@ func (h *ArticleHandler) GetArticleById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SearchArticles 搜索文章
-// GET /api/articles/search?keyword=xxx
+// SearchArticles 搜索文章（对标Java: listArticlesBySearch）
+// GET /api/articles/search?keywords=xxx
+// Java版本返回: ResultVO<List<ArticleSearchDTO>> 扁平数组，不分页
 func (h *ArticleHandler) SearchArticles(c *gin.Context) {
-	keyword := c.DefaultQuery("keyword", "")
+	// 兼容 keywords 和 keyword 两种参数名
+	keyword := c.DefaultQuery("keywords", c.DefaultQuery("keyword", ""))
 	if keyword == "" {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("搜索关键词不能为空"))
 		return
 	}
-	pageNum, pageSize := util.PageQuery(c)
-	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
 
-	result, err := h.svc.SearchArticles(c.Request.Context(), keyword, page)
+	// 对标Java: 不分页，最多返回10条
+	result, err := h.svc.SearchArticles(c.Request.Context(), keyword)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -138,6 +139,8 @@ func (h *ArticleHandler) GetArchives(c *gin.Context) {
 
 // SaveArticle 新增/更新文章 (对标Java版: 前端统一POST /admin/articles, 通过articleVO.id区分新增/更新)
 // POST /api/admin/articles
+// POST /api/admin/articles/save (兼容Vue3前端)
+// POST /api/admin/articles/update (兼容Vue3前端)
 func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 	var articleVO vo.ArticleVO
 	if err := c.ShouldBindJSON(&articleVO); err != nil {
@@ -145,9 +148,10 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	// 使用 user_info_id（对标Java UserUtil.getUserDetailsDTO().getUserInfoId()）
+	userInfoID, _ := c.Get("user_info_id")
 	uid := uint(0)
-	if id, ok := userID.(uint); ok {
+	if id, ok := userInfoID.(uint); ok {
 		uid = id
 	}
 
@@ -228,9 +232,10 @@ func (h *ArticleHandler) ImportArticle(c *gin.Context) {
 		return
 	}
 
-	userIDD, _ := c.Get("user_id")
+	// 使用 user_info_id（对标Java UserUtil.getUserDetailsDTO().getUserInfoId()）
+	userInfoIDD, _ := c.Get("user_info_id")
 	uid := uint(0)
-	if id, ok := userIDD.(uint); ok {
+	if id, ok := userInfoIDD.(uint); ok {
 		uid = id
 	}
 
