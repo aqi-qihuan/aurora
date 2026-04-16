@@ -1,4 +1,4 @@
-﻿package scheduler
+package scheduler
 
 import (
 	"context"
@@ -40,7 +40,7 @@ const (
 )
 
 // Run 执行ES全量同步
-func (j *ESSyncJob) Run(ctx context.Context) error {
+func (j *ESSyncJob) Run(ctx context.Context, params ...interface{}) error {
 	// Step 0: 检查ES是否可用 (对标Java elasticsearchClient==null)
 	if search.Client == nil {
 		slog.Warn("Elasticsearch客户端未启用, 跳过ES全量同步")

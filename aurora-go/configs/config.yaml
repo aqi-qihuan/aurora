@@ -13,6 +13,7 @@ server:
   port: 8080
   mode: release
   site_url: https://www.aqi125.cn
+  enable_scheduler: true  # 是否启用定时任务调度器
 
 mysql:
   host: 134.175.206.158

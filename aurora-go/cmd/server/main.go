@@ -114,6 +114,20 @@ func main() {
 	service.SetGlobalRegistry(registry)
 	slog.Info("Service registry initialized", "services", 24)
 
+	// 4.1 初始化定时任务调度器（对标Java @PostConstruct init()）
+	if cfg.Server.EnableScheduler {
+		slog.Info("🚀 开始初始化定时任务调度器...")
+		scheduler := infrastructure.GetScheduler()
+		if scheduler != nil {
+			scheduler.Start()
+			slog.Info("✅ 定时任务调度器已启动")
+		} else {
+			slog.Warn("⚠️ 调度器未初始化，跳过定时任务")
+		}
+	} else {
+		slog.Info("定时任务调度器已禁用")
+	}
+
 	// 4.1 初始化默认网站配置（如果数据库中不存在）
 	if err := initDefaultWebsiteConfig(db); err != nil {
 		slog.Warn("初始化默认网站配置失败", "error", err)

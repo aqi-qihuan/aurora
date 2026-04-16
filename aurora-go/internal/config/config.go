@@ -50,10 +50,11 @@ func Load(path string) (*Config, error) {
 
 // ServerConfig HTTP服务配置
 type ServerConfig struct {
-	Port    int    `mapstructure:"port"`
-	Mode    string `mapstructure:"mode"` // debug/release
-	SiteURL string `mapstructure:"site_url"` // 网站访问URL (用于邮件中的链接)
-	TLS     TLSConfig `mapstructure:"tls"` // TLS/HTTPS 配置
+	Port            int    `mapstructure:"port"`
+	Mode            string `mapstructure:"mode"` // debug/release
+	SiteURL         string `mapstructure:"site_url"` // 网站访问URL (用于邮件中的链接)
+	EnableScheduler bool   `mapstructure:"enable_scheduler"` // 是否启用定时任务调度器（默认true）
+	TLS             TLSConfig `mapstructure:"tls"` // TLS/HTTPS 配置
 }
 
 // TLSConfig TLS/HTTPS 配置

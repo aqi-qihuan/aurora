@@ -40,7 +40,7 @@ func NewUserAreaJob(db *gorm.DB, rdb *redis.Client) *UserAreaJob {
 }
 
 // Run 执行地域统计任务
-func (j *UserAreaJob) Run(ctx context.Context) error {
+func (j *UserAreaJob) Run(ctx context.Context, params ...interface{}) error {
 	// Step 1: 查询所有用户的 IPSource (对标Java userAuthMapper.selectList(...select IpSource))
 	var userAuths []model.UserAuth
 	if err := j.db.WithContext(ctx).

@@ -31,7 +31,7 @@ func NewUniqueViewJob(db *gorm.DB, rdb *redis.Client) *UniqueViewJob {
 }
 
 // Run 执行统计任务 (实现 JobHandler 接口)
-func (j *UniqueViewJob) Run(ctx context.Context) error {
+func (j *UniqueViewJob) Run(ctx context.Context, params ...interface{}) error {
 	// Step 1: 构建昨天的日期 key（按天拆分，避免累积）
 	yesterday := time.Now().AddDate(0, 0, -1)
 	yesterdayStr := yesterday.Format("2006-01-02")

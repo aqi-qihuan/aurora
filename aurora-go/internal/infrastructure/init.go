@@ -127,6 +127,9 @@ func Shutdown() {
 	go func() {
 		defer close(done)
 
+		// 0. 停止定时任务调度器
+		StopScheduler()
+
 		// 1. 关闭邮件服务（无状态，无需关闭）
 
 		// 2. 关闭 RabbitMQ 连接

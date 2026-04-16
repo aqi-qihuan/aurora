@@ -156,8 +156,19 @@ func (s *JobService) ListJobs(ctx context.Context, cond dto.ConditionVO, page dt
 	}, nil
 }
 
-// ChangeJobStatus 切换任务状态(暂停/恢复)
+// ChangeJobStatus 切换任务状态(暂停/恢复)（对标Java JobServiceImpl.updateJobStatus）
 func (s *JobService) ChangeJobStatus(ctx context.Context, id uint, status int8) error {
+	var job model.Job
+	if err := s.db.WithContext(ctx).First(&job, id).Error; err != nil {
+		return errors.ErrJobNotFound
+	}
+
+	// 如果状态没有变化，直接返回
+	if job.Status == int(status) {
+		return nil
+	}
+
+	// 更新数据库状态
 	result := s.db.WithContext(ctx).
 		Model(&model.Job{}).
 		Where("id = ?", id).
@@ -170,11 +181,24 @@ func (s *JobService) ChangeJobStatus(ctx context.Context, id uint, status int8) 
 		return errors.ErrJobNotFound
 	}
 
+	// 更新调度器状态（对标Java scheduler.pauseJob/resumeJob）
+	var err error
+	if status == 0 { // 暂停
+		err = s.scheduler.PauseJob(job.JobName)
+	} else if status == 1 { // 恢复
+		err = s.scheduler.ResumeJob(job)
+	}
+
+	if err != nil {
+		slog.Error("更新调度器任务状态失败", "id", id, "error", err)
+		// 不返回错误，数据库已更新
+	}
+
 	action := "暂停"
 	if status == 1 {
 		action = "恢复"
 	}
-	slog.Info("任务状态变更", "id", id, "action", action)
+	slog.Info("任务状态变更", "id", id, "name", job.JobName, "action", action)
 	return nil
 }
 

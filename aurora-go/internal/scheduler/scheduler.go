@@ -163,6 +163,41 @@ func (s *Scheduler) AddJob(job model.Job) error {
 	return nil
 }
 
+// PauseJob 暂停定时任务（对标Java JobServiceImpl.updateJobStatus → scheduler.pauseJob）
+func (s *Scheduler) PauseJob(jobName string) error {
+	s.mu.RLock()
+	entryID, ok := s.entryIDs[jobName]
+	s.mu.RUnlock()
+
+	if !ok {
+		return fmt.Errorf("任务不存在: %s", jobName)
+	}
+
+	s.cron.Remove(entryID)
+	slog.Info("定时任务已暂停", "name", jobName)
+	return nil
+}
+
+// ResumeJob 恢复定时任务（对标Java JobServiceImpl.updateJobStatus → scheduler.resumeJob）
+func (s *Scheduler) ResumeJob(job model.Job) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 先移除旧任务
+	if entryID, ok := s.entryIDs[job.JobName]; ok {
+		s.cron.Remove(entryID)
+		delete(s.entryIDs, job.JobName)
+	}
+
+	// 重新添加任务
+	if err := s.addJobToScheduler(job); err != nil {
+		return err
+	}
+
+	slog.Info("定时任务已恢复", "id", job.ID, "name", job.JobName)
+	return nil
+}
+
 // UpdateJob 更新定时任务（对标Java JobServiceImpl.updateJob）
 func (s *Scheduler) UpdateJob(job model.Job) error {
 	s.mu.Lock()

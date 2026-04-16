@@ -1,4 +1,4 @@
-﻿package scheduler
+package scheduler
 
 import (
 	"bytes"
@@ -46,7 +46,7 @@ type BaiduSEOResponse struct {
 }
 
 // Run 执行百度SEO推送
-func (j *BaiduSeoJob) Run(ctx context.Context) error {
+func (j *BaiduSeoJob) Run(ctx context.Context, params ...interface{}) error {
 	// Step 1: 查询所有已发布文章的ID (对标Java articleService.list().stream().map(Article::getId))
 	var articles []model.Article
 	if err := j.db.WithContext(ctx).

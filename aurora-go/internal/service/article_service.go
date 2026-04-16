@@ -217,9 +217,16 @@ func (s *ArticleService) ListArticles(ctx context.Context, cond dto.ConditionVO,
 	// 分页查询 (含预加载)
 	offset := page.GetOffset()
 	if err := baseQuery.
-		Preload("Category").
-		Preload("UserInfo").
-		Preload("Tags").
+		Select("id, user_id, article_cover, article_title, article_content, is_top, is_featured, status, type, category_id, create_time, update_time").
+		Preload("Category", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, category_name")
+		}).
+		Preload("UserInfo", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, nickname, website, avatar")
+		}).
+		Preload("Tags", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, tag_name")
+		}).
 		Order(orderClause).
 		Limit(page.PageSize).
 		Offset(offset).
@@ -981,11 +988,19 @@ func (s *ArticleService) convertESSearchResultsFromMap(ctx context.Context, esRe
 func (s *ArticleService) GetTopArticles(ctx context.Context, limit int) ([]dto.ArticleCardDTO, error) {
 	var articles []model.Article
 
+	// 性能优化：只查询必要字段，避免 SELECT *
 	if err := s.db.WithContext(ctx).
+		Select("id, user_id, article_cover, article_title, article_content, is_top, is_featured, status, type, category_id, create_time, update_time").
 		Where("is_delete = 0 AND status IN (1, 2) AND (is_top = 1 OR is_featured = 1)").
-		Preload("Tags").
-		Preload("Category").
-		Preload("UserInfo").
+		Preload("Tags", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, tag_name") // 只加载标签名
+		}).
+		Preload("Category", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, category_name") // 只加载分类名
+		}).
+		Preload("UserInfo", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id, nickname, website, avatar") // 只加载用户信息
+		}).
 		Order("is_top DESC, is_featured DESC, create_time DESC").
 		Limit(limit).
 		Find(&articles).Error; err != nil {

@@ -27,7 +27,7 @@ func NewCleanLogJob(db *gorm.DB) *CleanLogJob {
 const defaultRetentionDays = 30 // 默认保留天数(对标Java版无参数调用cleanJobLogs)
 
 // Run 执行日志清理
-func (j *CleanLogJob) Run(ctx context.Context) error {
+func (j *CleanLogJob) Run(ctx context.Context, params ...interface{}) error {
 	// 执行删除操作 (对标Java jobLogMapper.delete(null) - 全表清理 或 带条件的部分清理)
 	// Go改进: 只清理超过保留期的日志，而非全表删除
 	result := j.db.WithContext(ctx).

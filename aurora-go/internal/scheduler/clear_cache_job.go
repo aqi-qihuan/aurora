@@ -27,7 +27,7 @@ func NewClearCacheJob(rdb *redis.Client) *ClearCacheJob {
 }
 
 // Run 执行缓存清理任务
-func (j *ClearCacheJob) Run(ctx context.Context) error {
+func (j *ClearCacheJob) Run(ctx context.Context, params ...interface{}) error {
 	// Step 1: 删除独立访客 Set (对标Java redisService.del(UNIQUE_VISITOR))
 	result1, err := j.rdb.Del(ctx,
 		constant.UniqueVisitor,
