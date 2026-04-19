@@ -11,6 +11,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/infrastructure/mq"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/vo"
 	"gorm.io/gorm"
@@ -156,6 +157,18 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 		)
 		return nil
 	})
+
+	// 5. 发送订阅通知 (对标Java: rabbitTemplate.convertAndSend(SUBSCRIBE_EXCHANGE, articleId))
+	// 注意: 在事务外发送, 避免事务回滚时消息已发出
+	if err == nil && article.Status == 1 {
+		// 异步发送, 不阻塞主流程
+		go func(articleID uint) {
+			time.Sleep(100 * time.Millisecond) // 短暂延迟, 确保ES已索引
+			if publishErr := mq.PublishSubscribe(articleID); publishErr != nil {
+				slog.Warn("发送订阅通知失败", "article_id", articleID, "error", publishErr)
+			}
+		}(article.ID)
+	}
 
 	return &article, err
 }
@@ -424,6 +437,18 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 		slog.Info("文章更新成功", "article_id", article.ID, "title", article.ArticleTitle)
 		return nil
 	})
+
+	// 5. 发送订阅通知 (对标Java: rabbitTemplate.convertAndSend(SUBSCRIBE_EXCHANGE, articleId))
+	// 注意: 在事务外发送, 避免事务回滚时消息已发出
+	if err == nil && article.Status == 1 {
+		// 异步发送, 不阻塞主流程
+		go func(articleID uint) {
+			time.Sleep(100 * time.Millisecond) // 短暂延迟, 确保ES已索引
+			if publishErr := mq.PublishSubscribe(articleID); publishErr != nil {
+				slog.Warn("发送订阅通知失败", "article_id", articleID, "error", publishErr)
+			}
+		}(article.ID)
+	}
 
 	return &article, err
 }

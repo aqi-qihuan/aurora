@@ -1,4 +1,4 @@
-﻿package consumer
+package consumer
 
 import (
 	"encoding/json"
@@ -96,7 +96,11 @@ func (c *EmailConsumer) processMessage(msg amqp.Delivery) error {
 	commentData := buildCommentNotifyData(emailDTO)
 
 	// 发送HTML邮件 (调用email基础设施层)
-	if err := email.SendCommentNotification(
+	es := email.GetEmailService()
+	if es == nil {
+		return fmt.Errorf("邮件服务未初始化")
+	}
+	if err := es.SendCommentNotification(
 		emailDTO.Email,
 		emailDTO.Subject,
 		commentData,

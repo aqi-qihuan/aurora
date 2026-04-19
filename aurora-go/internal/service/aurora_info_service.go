@@ -214,55 +214,35 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 		info.ArticleCount = int(count)
 	}()
 
-	// 5. 独立访客统计 (最近7天，对标 Java UniqueViewServiceImpl.listUniqueViews())
-	// 问题: UniqueViewJob每天0点执行，今天的数据还在Redis中，数据库只有历史数据
-	// 解决: 生成完整7天日期，数据库没有的从 Redis 补查
+	// 5. 独立访客统计 (最近7天，对标 Java UniqueViewServiceImpl.listUniqueViews)
+	// Java: uniqueViewService.listUniqueViews() → UniqueViewMapper.xml 直接查 t_unique_view 表
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		
-		// 生成最近7天的完整日期列表（包括今天）
-		allDates := make([]string, 7)
-		for i := 6; i >= 0; i-- {
-			allDates[6-i] = time.Now().AddDate(0, 0, -i).Format("2006-01-02")
-		}
-		
-		// 从数据库查询已有数据
+		// 对标 Java: DateUtil.beginOfDay(DateUtil.offsetDay(new Date(), -7)) ~ DateUtil.endOfDay(new Date())
 		startTime := time.Now().AddDate(0, 0, -7)
 		endTime := time.Now()
-		var uniqueViews []model.UniqueView
+		
+		type UniqueViewRow struct {
+			Day        string `gorm:"column:day"`
+			ViewsCount int    `gorm:"column:views_count"`
+		}
+		var rows []UniqueViewRow
 		s.db.WithContext(ctx).
-			Where("create_time >= ? AND create_time <= ?", startTime, endTime).
+			Table("t_unique_view").
+			Select(`DATE_FORMAT(create_time, "%Y-%m-%d") as day, views_count`).
+			Where("create_time > ? AND create_time <= ?", startTime, endTime).
 			Order("create_time ASC").
-			Find(&uniqueViews)
+			Find(&rows)
 		
-		// 构建 date -> viewsCount 映射
-		viewMap := make(map[string]int)
-		for _, uv := range uniqueViews {
-			day := uv.CreateTime.Format("2006-01-02")
-			viewMap[day] = uv.ViewsCount
-		}
-		
-		// 填充完整的7天数据（数据库为0时也从 Redis 补查，因为数据库的0可能是错误数据）
-		result := make([]dto.UniqueViewDTO, 7)
-		for i, day := range allDates {
-			viewsCount := viewMap[day]
-			
-			// 总是尝试从 Redis 获取（因为数据库的0可能是定时任务用错key写入的错误数据）
-			// 如果 Redis 有数据，优先使用 Redis 的数据
-			if s.statsService != nil {
-				count, err := s.statsService.GetUniqueVisitorsByDate(ctx, day)
-				if err == nil && count > 0 {
-					viewsCount = int(count)
-				}
-			}
-			
-			result[i] = dto.UniqueViewDTO{
-				Day:        day,
-				ViewsCount: viewsCount,
+		info.UniqueViewDTOs = make([]dto.UniqueViewDTO, len(rows))
+		for i, r := range rows {
+			info.UniqueViewDTOs[i] = dto.UniqueViewDTO{
+				Day:        r.Day,
+				ViewsCount: r.ViewsCount,
 			}
 		}
-		info.UniqueViewDTOs = result
 	}()
 
 	// 6. 文章统计 (按日期分组，对标 Java 第160行)
@@ -322,26 +302,40 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 		}
 	}()
 
-	// 8. 标签列表 (从 Redis 获取文章计数)
+	// 8. 标签列表 (对标Java TagMapper.xml listTags: SQL JOIN统计文章数)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		var tags []model.Tag
+		
+		// 对标Java: SELECT t.id, tag_name, COUNT(aat.article_id) AS count FROM t_tag t
+		// LEFT JOIN (SELECT a.id AS article_id, at.tag_id AS tag_id FROM t_article_tag at
+		// LEFT JOIN t_article a ON at.article_id = a.id WHERE a.is_delete = 0 AND a.STATUS in (1, 2)) aat
+		// ON t.id = aat.tag_id GROUP BY t.id
+		type TagWithCount struct {
+			ID           uint   `gorm:"column:id"`
+			TagName      string `gorm:"column:tag_name"`
+			ArticleCount int    `gorm:"column:count"`
+		}
+		
+		var tags []TagWithCount
 		s.db.WithContext(ctx).
-			Select("id, tag_name").
-			Order("create_time DESC").
-			Limit(20).
+			Table("t_tag t").
+			Select(`t.id, t.tag_name, COUNT(aat.article_id) AS count`).
+			Joins(`LEFT JOIN (
+				SELECT a.id AS article_id, at.tag_id AS tag_id
+				FROM t_article_tag at
+				LEFT JOIN t_article a ON at.article_id = a.id
+				WHERE a.is_delete = 0 AND a.status IN (1, 2)
+			) aat ON t.id = aat.tag_id`).
+			Group("t.id").
 			Find(&tags)
 
 		info.TagDTOs = make([]dto.TagDTO, len(tags))
 		for i, t := range tags {
-			// TODO: 如果需要标签文章计数，可以从 Redis 获取
-			// if s.statsService != nil {
-			// 	articleCount, _ = s.statsService.GetTagArticleCount(ctx, t.ID)
-			// }
 			info.TagDTOs[i] = dto.TagDTO{
-				ID:      t.ID,
-				TagName: t.TagName,
+				ID:           t.ID,
+				TagName:      t.TagName,
+				ArticleCount: t.ArticleCount,
 			}
 		}
 	}()
@@ -352,7 +346,7 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 	if s.statsService != nil {
 		topArticles, err := s.statsService.GetTopViewedArticles(ctx, 5)
 		if err == nil && len(topArticles) > 0 {
-			// 批量查询文章标题（避免 N+1 查询）
+			// 批量查询文章标题（避免 N+1 查询，过滤已删除的文章）
 			articleIDs := make([]uint, len(topArticles))
 			for i, item := range topArticles {
 				var articleID uint
@@ -361,7 +355,10 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 			}
 
 			var articles []model.Article
-			s.db.WithContext(ctx).Select("id, article_title").Where("id IN ?", articleIDs).Find(&articles)
+			s.db.WithContext(ctx).
+				Select("id, article_title").
+				Where("id IN ? AND is_delete = 0", articleIDs).
+				Find(&articles)
 
 			// 构建 ID -> Title 映射
 			titleMap := make(map[uint]string)
@@ -369,16 +366,21 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 				titleMap[a.ID] = a.ArticleTitle
 			}
 
-			info.ArticleRankDTOs = make([]dto.ArticleRankDTO, len(topArticles))
-			for i, item := range topArticles {
+			// 只保留数据库中存在的文章（过滤已删除的）
+			validRanks := make([]dto.ArticleRankDTO, 0, len(topArticles))
+			for _, item := range topArticles {
 				var articleID uint
 				fmt.Sscanf(item.Member.(string), "%d", &articleID)
 				
-				info.ArticleRankDTOs[i] = dto.ArticleRankDTO{
-					ArticleTitle: titleMap[articleID],
-					ViewsCount:   int(item.Score),
+				if title, ok := titleMap[articleID]; ok && title != "" {
+					validRanks = append(validRanks, dto.ArticleRankDTO{
+						ArticleTitle: title,
+						ViewsCount:   int(item.Score),
+					})
 				}
 			}
+			
+			info.ArticleRankDTOs = validRanks
 		} else {
 			info.ArticleRankDTOs = []dto.ArticleRankDTO{}
 		}

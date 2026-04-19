@@ -12,9 +12,11 @@ import (
 
 	"github.com/aurora-go/aurora/internal/agent"
 	"github.com/aurora-go/aurora/internal/config"
+	"github.com/aurora-go/aurora/internal/consumer"
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/handler"
 	"github.com/aurora-go/aurora/internal/infrastructure"
+	"github.com/aurora-go/aurora/internal/infrastructure/mq"
 	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/service"
@@ -114,7 +116,20 @@ func main() {
 	service.SetGlobalRegistry(registry)
 	slog.Info("Service registry initialized", "services", 24)
 
-	// 4.1 初始化定时任务调度器（对标Java @PostConstruct init()）
+	// 2.1 初始化 RabbitMQ 消费者（对标Java @RabbitListener 自动启动）
+	// 注意: 必须在 Bootstrap 后、HTTP Server 前启动
+	if mqChannel := mq.GetChannel(); mqChannel != nil {
+		siteURL := cfg.Server.GetSiteURL()
+		if siteURL == "" {
+			siteURL = "https://www.aurora.blog"
+		}
+		consumerMgr := consumer.NewConsumerManager(mqChannel, db, nil, *cfg, slog.Default())
+		if err := consumerMgr.StartAll(); err != nil {
+			slog.Warn("⚠️ RabbitMQ消费者启动失败，异步消息功能将不可用", "error", err)
+		}
+	} else {
+		slog.Info("RabbitMQ 未连接，跳过消费者启动")
+	}
 	if cfg.Server.EnableScheduler {
 		slog.Info("🚀 开始初始化定时任务调度器...")
 		scheduler := infrastructure.GetScheduler()

@@ -9,6 +9,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/constant"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
@@ -690,19 +691,31 @@ func (h *UserAuthHandler) BindUserEmail(c *gin.Context) {
 func (h *UserAuthHandler) UpdateUserSubscribe(c *gin.Context) {
 	var body struct {
 		UserID      uint `json:"userId" binding:"required"`
-		IsSubscribe int8 `json:"isSubscribe" binding:"required"`
+		IsSubscribe int8 `json:"isSubscribe"` // 移除 required,允许 0 值(对标Java Integer类型)
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
 
+	// 校验 IsSubscribe 值范围 (对标Java: 0或1)
+	if body.IsSubscribe != 0 && body.IsSubscribe != 1 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("订阅状态值无效，必须为0或1"))
+		return
+	}
+
 	ctx := c.Request.Context()
 
-	// Step 1: 检查用户是否绑定邮箱（对标Java StringUtils.isEmpty(temp.getEmail())）
+	// Step 1: 检查用户是否存在并获取邮箱（对标Java userInfoMapper.selectOne）
 	var email string
-	if err := h.registry.DB.WithContext(ctx).Select("email").Where("id = ?", body.UserID).Table("t_user_info").First(&email).Error; err != nil {
-		util.ResponseError(c, errors.ErrUserNotFound)
+	err := h.registry.DB.WithContext(ctx).Model(&model.UserInfo{}).Select("email").Where("id = ?", body.UserID).First(&email).Error
+	if err != nil {
+		// 区分记录不存在和其他错误
+		if err == gorm.ErrRecordNotFound {
+			util.ResponseError(c, errors.ErrUserNotFound.WithMsg(fmt.Sprintf("用户ID %d 不存在", body.UserID)))
+		} else {
+			util.ResponseError(c, errors.ErrInternalServer.WithMsg("查询用户信息失败"))
+		}
 		return
 	}
 	if email == "" {

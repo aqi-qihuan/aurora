@@ -5,8 +5,9 @@ package constant
 
 const (
 	// Exchange 交换机
-	ExchangeDirect = "aurora.direct"   // 直连交换机: 邮件通知/订阅通知
-	ExchangeTopic  = "aurora.topic"    // Topic交换机: Maxwell ES数据同步
+	ExchangeDirect      = "aurora.direct"      // 直连交换机: 邮件通知
+	ExchangeTopic       = "aurora.topic"       // Topic交换机: Maxwell ES数据同步
+	ExchangeSubscribe   = "aurora.subscribe"   // 广播交换机: 文章订阅通知 (对标Java SUBSCRIBE_EXCHANGE)
 
 	// Queue 队列名
 	QueueEmailNotify    = "aurora.email.notify"     // 评论邮件通知队列

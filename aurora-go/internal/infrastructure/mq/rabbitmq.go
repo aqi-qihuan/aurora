@@ -1,4 +1,4 @@
-﻿package mq
+package mq
 
 import (
 	"fmt"
@@ -48,6 +48,16 @@ func InitRabbitMQ(cfg *config.RabbitMQConfig) error {
 		return err
 	}
 
+	// 声明订阅广播交换机 (对标Java FanoutExchange: subscribe_exchange)
+	err = Channel.ExchangeDeclare(
+		constant.ExchangeSubscribe, "fanout",
+		true, false, false, false, nil,
+	)
+	if err != nil {
+		slog.Error("Failed to declare subscribe exchange", "error", err)
+		return err
+	}
+
 	// 设置QoS
 	err = Channel.Qos(cfg.PrefetchCount, 0, false)
 	if err != nil {
@@ -89,4 +99,32 @@ func DeclareQueue(queueName, routingKey, exchange string) (amqp.Queue, error) {
 
 	err = Channel.QueueBind(queueName, routingKey, exchange, false, nil)
 	return queue, err
+}
+
+// PublishSubscribe 发布订阅通知消息 (对标Java rabbitTemplate.convertAndSend)
+// 对标Java: ArticleServiceImpl.saveOrUpdateArticle() → rabbitTemplate.convertAndSend(SUBSCRIBE_EXCHANGE, "*", message)
+func PublishSubscribe(articleID uint) error {
+	if Channel == nil {
+		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	// 构建消息体 (对标Java: JSON.toJSONBytes(article.getId()))
+	msgBody := fmt.Sprintf(`{"articleId":%d}`, articleID)
+
+	err := Channel.Publish(
+		constant.ExchangeSubscribe, // 订阅广播交换机
+		"",                          // FanoutExchange 忽略 routing key
+		false, false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        []byte(msgBody),
+			MessageId:   fmt.Sprintf("sub-%d", articleID),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("publish subscribe notification failed: %w", err)
+	}
+
+	slog.Info("📢 已发送文章订阅通知", "article_id", articleID)
+	return nil
 }

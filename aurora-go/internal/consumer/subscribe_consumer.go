@@ -1,4 +1,4 @@
-﻿package consumer
+package consumer
 
 import (
 	"context"
@@ -43,7 +43,8 @@ func NewSubscribeConsumer(ch *amqp.Channel, db *gorm.DB, siteURL string, logger 
 
 // Start 启动消费循环 (阻塞运行在goroutine中)
 func (c *SubscribeConsumer) Start() error {
-	queue, err := mq.DeclareQueue(constant.QueueSubscribeNotify, constant.RoutingKeySubscribe, constant.ExchangeDirect)
+	// 对标Java: FanoutExchange 不需要 routing key (使用空字符串)
+	queue, err := mq.DeclareQueue(constant.QueueSubscribeNotify, "", constant.ExchangeSubscribe)
 	if err != nil {
 		return fmt.Errorf("declare subscribe notify queue failed: %w", err)
 	}
@@ -61,7 +62,8 @@ func (c *SubscribeConsumer) Start() error {
 
 	c.logger.Info("✅ 文章订阅通知消费者已启动",
 		"queue", constant.QueueSubscribeNotify,
-		"exchange", constant.ExchangeDirect,
+		"exchange", constant.ExchangeSubscribe,
+		"type", "fanout",
 	)
 
 	go func() {
@@ -119,10 +121,10 @@ func (c *SubscribeConsumer) processMessage(msg amqp.Delivery) error {
 		return nil
 	}
 
-	// Step 2: 查询所有已订阅用户 (对标Java isSubscribe=TRUE)
+	// Step 2: 查询所有已订阅用户 (对标Java: UserInfo::getIsSubscribe = TRUE)
 	var subscribers []model.UserInfo
 	err = c.db.WithContext(ctx).
-		Where("is_subscribe = ? AND email != '' AND is_delete = ?", 1, 0).
+		Where("is_subscribe = ? AND email != ''", 1).
 		Find(&subscribers).Error
 	if err != nil {
 		return fmt.Errorf("查询订阅用户失败: %w", err)
@@ -155,7 +157,13 @@ func (c *SubscribeConsumer) processMessage(msg amqp.Delivery) error {
 			subject = "🔄 文章更新通知"
 		}
 
-		if err := email.SendSubscribeNotification(user.Email, subject, subscribeData); err != nil {
+		es := email.GetEmailService()
+		if es == nil {
+			c.logger.Warn("邮件服务未初始化", "article_id", articleID)
+			failCount += len(subscribers)
+			return nil
+		}
+		if err := es.SendSubscribeNotification(user.Email, subject, subscribeData); err != nil {
 			c.logger.Warn("订阅邮件发送失败",
 				"email", user.Email,
 				"article_id", articleID,
