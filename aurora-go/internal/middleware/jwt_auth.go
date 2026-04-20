@@ -199,8 +199,26 @@ func setUserContext(c *gin.Context, user *dto.UserDetailsDTO) {
 }
 
 // GetUserID 从Gin Context获取当前用户ID (0=未登录)
+// 返回的是 t_user_auth.id (认证表主键)
 func GetUserID(c *gin.Context) uint {
 	if uid, exists := c.Get("user_id"); exists {
+		switch v := uid.(type) {
+		case float64:
+			return uint(v)
+		case int64:
+			return uint(v)
+		case int:
+			return uint(v)
+		case uint:
+			return v
+		}
+	}
+	return 0
+}
+
+// GetUserInfoID 从Gin Context获取用户信息ID (t_user_info.id，用于关联查询)
+func GetUserInfoID(c *gin.Context) uint {
+	if uid, exists := c.Get("user_info_id"); exists {
 		switch v := uid.(type) {
 		case float64:
 			return uint(v)

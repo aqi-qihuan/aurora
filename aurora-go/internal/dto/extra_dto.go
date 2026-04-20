@@ -443,10 +443,12 @@ type CommentDTO struct {
 	UserID        uint      `json:"userId"`
 	Nickname      string    `json:"nickname,omitempty"`
 	Avatar        string    `json:"avatar,omitempty"`
-	Content       string    `json:"content"`
+	Content       string    `json:"commentContent"`        // 前端用 commentContent
 	Type          int8      `json:"type"`
 	ParentID      uint      `json:"parentId"`
+	ReplyUserID   *uint     `json:"replyUserId,omitempty"` // 前端用 replyUserId（回复目标用户ID）
 	ReplyNickname string    `json:"replyNickname,omitempty"`
+	ReplyWebsite  string    `json:"replyWebsite,omitempty"` // 前端用 replyWebsite（回复目标用户网站）
 	LikeCount     int64     `json:"likeCount"`
 	IsReview      int8      `json:"isReview"`
 	Location      string    `json:"location,omitempty"`
@@ -455,7 +457,7 @@ type CommentDTO struct {
 
 type CommentTreeDTO struct {
 	CommentDTO
-	Replies []CommentTreeDTO `json:"replies"`
+	Replies []CommentTreeDTO `json:"replyDTOs"` // 前端用 replyDTOs
 }
 
 type CommentAdminDTO struct {

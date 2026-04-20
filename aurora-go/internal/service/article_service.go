@@ -1068,7 +1068,7 @@ func (s *ArticleService) toArticleDTO(a *model.Article) *dto.ArticleDTO {
 		likeCount, _ = s.statsService.GetArticleLikeCount(ctx, a.ID)
 	}
 
-	dto := &dto.ArticleDTO{
+	articleDTO := &dto.ArticleDTO{
 		ID:             a.ID,
 		UserID:         a.UserID,
 		ArticleCover:   a.ArticleCover,
@@ -1086,13 +1086,20 @@ func (s *ArticleService) toArticleDTO(a *model.Article) *dto.ArticleDTO {
 	}
 
 	if a.Category != nil {
-		dto.CategoryName = a.Category.CategoryName
+		articleDTO.CategoryName = a.Category.CategoryName
 	}
 	if a.UserInfo != nil {
-		dto.Nickname = a.UserInfo.Nickname
-		dto.Avatar = a.UserInfo.Avatar
+		articleDTO.Nickname = a.UserInfo.Nickname
+		articleDTO.Avatar = a.UserInfo.Avatar
+		// 构建嵌套的 author 对象（前端详情页使用 article.author.nickname/avatar）
+		articleDTO.Author = &dto.UserInfoInCard{
+			ID:       a.UserInfo.ID,
+			Nickname: a.UserInfo.Nickname,
+			Website:  a.UserInfo.Website,
+			Avatar:   a.UserInfo.Avatar,
+		}
 	}
-	return dto
+	return articleDTO
 }
 
 func (s *ArticleService) toArticleCardDTO(a *model.Article) dto.ArticleCardDTO {

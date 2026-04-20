@@ -17,13 +17,13 @@ type Comment struct {
 	ParentID       uint      `gorm:"default:0;index" json:"parentId"`
 	Type           int8      `gorm:"not null;index" json:"type"` // 1文章 2留言 3关于我 4友链 5说说
 	IsDelete       int8      `gorm:"default:0" json:"isDelete"`
-	IsReview       int8      `gorm:"default:1;index" json:"isReview"`
+	IsReview       int8      `gorm:"index" json:"isReview"` // 不设default，由代码控制值（避免GORM零值覆盖问题）
 	CreateTime     time.Time `json:"createTime"`
 	UpdateTime     *time.Time `json:"updateTime"`
 
 	// 关联
-	UserInfo  *UserInfo `gorm:"foreignKey:UserID" json:"userInfo,omitempty"`
-	ReplyUser *UserInfo `gorm:"foreignKey:ReplyUserID" json:"replyUser,omitempty"`
+	UserInfo  *UserInfo `gorm:"foreignKey:UserID;references:ID" json:"userInfo,omitempty"`
+	ReplyUser *UserInfo `gorm:"foreignKey:ReplyUserID;references:ID" json:"replyUser,omitempty"`
 }
 
 func (Comment) TableName() string { return "t_comment" }

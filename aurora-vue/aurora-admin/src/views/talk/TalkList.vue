@@ -80,7 +80,11 @@ export default {
       this.talkId = arr[1]
       switch (arr[0]) {
         case '1':
-          this.$router.push({ path: '/talks/' + this.talkId })
+          // 跳转到"发布说说"页面（复用编辑功能），通过路由参数传递 talkId
+          this.$router.push({
+            name: '发布说说',
+            params: { talkId: this.talkId }
+          })
           break
         case '2':
           this.isdelete = true

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/service"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
@@ -36,6 +37,16 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 		commentVO.Current = 1
 		commentVO.Size = 10
 	}
+	
+	// 兼容前端传字符串类型的topicId
+	topicIdStr := c.Query("topicId")
+	if topicIdStr != "" {
+		if topicID, err := strconv.ParseUint(topicIdStr, 10, 64); err == nil {
+			uid := uint(topicID)
+			commentVO.TopicID = &uid
+			slog.Info("查询评论列表，解析 topicId 成功", "type", commentVO.Type, "topicId", uid)
+		}
+	}
 
 	result, err := h.svc.ListComments(c.Request.Context(), commentVO)
 	if err != nil {
@@ -46,22 +57,44 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 }
 
 // AddComment 发表评论/回复
-// POST /api/articles/:id/comments
+// POST /api/comments/save
 func (h *CommentHandler) AddComment(c *gin.Context) {
+	// 检查是否登录
+	if !middleware.RequireLogin(c) {
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("请先登录"))
+		return
+	}
+
 	var commentVO vo.CommentVO
 	if err := c.ShouldBindJSON(&commentVO); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	// 从上下文中获取用户ID
-	userID, _ := c.Get("user_id")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	
+	slog.Info("收到评论请求", "type", commentVO.Type, "topicIdStr", commentVO.TopicIDStr, "topicId", commentVO.TopicID, "content", commentVO.Content[:min(30, len(commentVO.Content))])
+	
+	// 兼容前端传字符串类型的topicId (对标Java前端 arr[2] 从URL解析的是字符串)
+	// 修复问题2和3：正确处理 topicId
+	if commentVO.TopicIDStr != "" {
+		if topicID, err := strconv.ParseUint(commentVO.TopicIDStr, 10, 64); err == nil {
+			uid := uint(topicID)
+			commentVO.TopicID = &uid
+			slog.Info("解析 topicId 成功", "topicId", uid)
+		}
+	}
+	
+	// 从上下文中获取用户信息ID (优先 user_info_id = t_user_info.id，用于关联查询)
+	userID := middleware.GetUserInfoID(c)
+	if userID == 0 {
+		userID = middleware.GetUserID(c)
+	}
+	if userID == 0 {
+		util.ResponseError(c, errors.ErrUnauthorized.WithMsg("未获取到用户信息"))
+		return
 	}
 	clientIP := c.ClientIP()
 
-	result, err := h.svc.CreateComment(c.Request.Context(), uid, commentVO, clientIP)
+	result, err := h.svc.CreateComment(c.Request.Context(), userID, commentVO, clientIP)
 	if err != nil {
 		util.ResponseError(c, err)
 		return
@@ -77,17 +110,26 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	userID, _ := c.Get("user_id")
-	uid := uint(0)
-	if id, ok := userID.(uint); ok {
-		uid = id
+	
+	// 兼容前端传字符串类型的topicId
+	if replyVO.TopicIDStr != "" {
+		if topicID, err := strconv.ParseUint(replyVO.TopicIDStr, 10, 64); err == nil {
+			uid := uint(topicID)
+			replyVO.TopicID = &uid
+		}
+	}
+	
+	// 优先使用 user_info_id（t_user_info.id，用于关联查询），回退到 auth id
+	userID := middleware.GetUserInfoID(c)
+	if userID == 0 {
+		userID = middleware.GetUserID(c)
 	}
 	if parentID, err := strconv.ParseUint(c.Param("id"), 10, 64); err == nil {
 		replyVO.ParentID = uint(parentID)
 	}
 	clientIP := c.ClientIP()
 
-	result, err := h.svc.CreateComment(c.Request.Context(), uid, replyVO, clientIP)
+	result, err := h.svc.CreateComment(c.Request.Context(), userID, replyVO, clientIP)
 	if err != nil {
 		util.ResponseError(c, err)
 		return

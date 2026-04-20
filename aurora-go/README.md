@@ -145,3 +145,6 @@ BenchmarkAgent_Chat_LLM         12000  ops/sec   85ms/op    12 allocs  (SSEÊµÅÂº
 ## License
 
 Apache 2.0
+
+cd aurora-go
+$env:CGO_ENABLED="0"; $env:GOOS="linux"; $env:GOARCH="amd64"; go build -ldflags="-w -s" -o aurora-server ./cmd/server

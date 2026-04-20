@@ -120,8 +120,6 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	rg.POST("/users/password/reset", r.UserAuthHandler.ResetPassword)
 	// --- 评论（CommentController） ---
 	rg.GET("/comments", r.CommentHandler.ListComments)
-	rg.POST("/comments/save", r.CommentHandler.AddComment)
-	rg.GET("/comments/:id/replies", r.CommentHandler.ReplyComment)
 	rg.GET("/comments/topSix", r.CommentHandler.ListTopSixComments)
 
 	// --- 分类（CategoryController） ---
@@ -157,6 +155,11 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 
 // registerProtectedRoutes 受保护路由（需JWT登录）
 func (r *Router) registerProtectedRoutes(rg *gin.RouterGroup) {
+	// --- 评论（需登录） ---
+	rg.POST("/comments/save", r.CommentHandler.AddComment)
+	rg.POST("/comments/:id/reply", r.CommentHandler.ReplyComment)
+	rg.POST("/comments/:id/like", r.CommentHandler.LikeComment)
+
 	// --- 用户信息（UserInfoController） ---
 	rg.PUT("/users/info", r.UserAuthHandler.UpdateUserInfo)
 	rg.POST("/users/avatar", r.UserAuthHandler.UpdateUserAvatar)

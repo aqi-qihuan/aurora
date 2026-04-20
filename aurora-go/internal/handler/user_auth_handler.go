@@ -72,21 +72,21 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		userAgent := c.GetHeader("User-Agent")
 		browser := util.ParseBrowser(userAgent)
 		os := util.ParseOS(userAgent)
-		
+
 		// 获取客户端IP
 		clientIP := util.GetClientIP(c)
-		
+
 		// 计算IP归属地（对标Java IpUtil.getIpSource(ipAddress)）
 		// 注意：不是用数据库中存的IPSource，而是根据当前登录IP实时计算
 		ipSource := util.GetIPRegion(clientIP)
-		
+
 		// 构造完整的UserDetailsDTO（对标Java版）
 		// 关键：ID字段必须使用UserAuth.id（登录认证ID），不是UserInfo.id
 		// Java版TokenServiceImpl.createToken()中userId = userDetailsDTO.getId() = UserAuth.id
 		// 下线时delLoginUser(userId)也是用UserAuth.id删除，必须一致
 		userDetail := &dto.UserDetailsDTO{
-			ID:            result.ID,          // UserAuth.id (登录认证ID, 不是UserInfo.id)
-			UserInfoID:    result.UserInfoID,  // UserInfo.id
+			ID:            result.ID,         // UserAuth.id (登录认证ID, 不是UserInfo.id)
+			UserInfoID:    result.UserInfoID, // UserInfo.id
 			Email:         result.Email,
 			LoginType:     result.LoginType, // int类型
 			Username:      result.Username,
@@ -96,21 +96,21 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 			Website:       result.Website,
 			IsSubscribe:   result.IsSubscribe,
 			IPAddress:     clientIP,
-			IPSource:      ipSource,  // 使用实时计算的IP归属地，不是数据库中的旧值
-			IsDisable:     0, // 默认不禁用
+			IPSource:      ipSource, // 使用实时计算的IP归属地，不是数据库中的旧值
+			IsDisable:     0,        // 默认不禁用
 			Browser:       browser,
 			OS:            os,
-			LastLoginTime: time.Now(), // 记录登录时间
+			LastLoginTime: time.Now(),        // 记录登录时间
 			Roles:         []string{"admin"}, // TODO: 从数据库查询实际角色
 		}
-		
+
 		tokenString, err := h.registry.TokenSvc.CreateToken(userDetail)
 		if err != nil {
 			slog.Error("生成JWT Token失败", "error", err)
 			util.ResponseError(c, errors.ErrInternalServer.WithMsg("Token生成失败"))
 			return
 		}
-		
+
 		// 更新返回结果中的Token
 		result.Token = tokenString
 		slog.Debug("JWT Token生成成功", "user_id", result.UserInfoID, "browser", browser, "os", os, "ip", clientIP)
@@ -167,7 +167,7 @@ func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 // GET /api/users/code?username=xxx@xx.com
 // 对标 Java UserAuthController.sendCode(String username)
 func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
-	email := c.Query("username")  // 前端传参名是 username（实际是邮箱）
+	email := c.Query("username") // 前端传参名是 username（实际是邮箱）
 	if email == "" {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("邮箱不能为空"))
 		return
@@ -216,7 +216,7 @@ func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	
+
 	// 调用 Service 层重置密码
 	if err := h.registry.UserAuth.ResetPassword(
 		c.Request.Context(),
@@ -227,7 +227,7 @@ func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 		util.ResponseError(c, err)
 		return
 	}
-	
+
 	util.ResponseSuccess(c, "密码重置成功")
 }
 
@@ -284,26 +284,26 @@ func (h *UserAuthHandler) ListUsers(c *gin.Context) {
 func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
-	
+
 	rdb := h.registry.RDB
 	if rdb == nil {
 		util.ResponseSuccess(c, []interface{}{})
 		return
 	}
-	
+
 	ctx := c.Request.Context()
-	
+
 	// 根据 type 参数选择不同的数据源 (对标Java switch getUserAreaType(conditionVO.getType()))
 	// type=1: 用户 - 从 user_area (String JSON) 读取
 	// type=2: 游客 - 从 visitor_area (Hash) 读取
 	var result []map[string]interface{}
-	
+
 	// 处理指针类型，默认为 1（用户）
 	areaType := int8(1)
 	if condition.Type != nil {
 		areaType = *condition.Type
 	}
-	
+
 	switch areaType {
 	case 1: // 用户
 		data, err := rdb.Get(ctx, constant.UserArea).Bytes()
@@ -316,9 +316,9 @@ func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 			util.ResponseSuccess(c, []interface{}{})
 			return
 		}
-		
+
 		slog.Info("Redis中user_area原始数据", "data", string(data))
-		
+
 		// 解析 JSON 数组
 		var areaList []struct {
 			Name  string `json:"name"`
@@ -329,9 +329,9 @@ func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 			util.ResponseSuccess(c, []interface{}{})
 			return
 		}
-		
+
 		slog.Info("解析用户地域分布成功", "count", len(areaList))
-		
+
 		// 转换为前端需要的格式: {province: "北京", count: 5}
 		result = make([]map[string]interface{}, len(areaList))
 		for i, item := range areaList {
@@ -340,7 +340,7 @@ func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 				"count":    item.Value,
 			}
 		}
-		
+
 	case 2: // 游客
 		// 从 Hash 读取所有字段 (对标Java redisService.hGetAll(VISITOR_AREA))
 		visitorArea, err := rdb.HGetAll(ctx, constant.VisitorArea).Result()
@@ -349,7 +349,7 @@ func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 			util.ResponseSuccess(c, []interface{}{})
 			return
 		}
-		
+
 		// 转换为前端需要的格式
 		result = make([]map[string]interface{}, 0, len(visitorArea))
 		for province, countStr := range visitorArea {
@@ -366,12 +366,12 @@ func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 				"count":    count,
 			})
 		}
-		
+
 	default:
 		util.ResponseSuccess(c, []interface{}{})
 		return
 	}
-	
+
 	util.ResponseSuccess(c, result)
 }
 
@@ -382,16 +382,16 @@ func (h *UserAuthHandler) TriggerUserAreaStats(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInternalServer.WithMsg("Redis或数据库未初始化"))
 		return
 	}
-	
+
 	ctx := c.Request.Context()
 	job := scheduler.NewUserAreaJob(h.registry.DB, h.registry.RDB)
-	
+
 	if err := job.Run(ctx); err != nil {
 		slog.Error("手动触发用户地域统计失败", "error", err.Error())
 		util.ResponseError(c, errors.ErrInternalServer.WithMsg(err.Error()))
 		return
 	}
-	
+
 	util.ResponseSuccess(c, "用户地域统计已更新")
 }
 

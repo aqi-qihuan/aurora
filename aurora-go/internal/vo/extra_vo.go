@@ -87,7 +87,8 @@ type MenuVO struct {
 // ===== 评论 VO =====
 
 type CommentVO struct {
-	TopicID      *uint  `json:"topicId,omitempty" form:"topicId"`       // 主题ID（文章/说说等）
+	TopicIDStr   string `json:"topicId,omitempty" form:"topicId"`       // 主题ID（前端传字符串，对标Java topicId）
+	TopicID      *uint  `json:"-" form:"-"`                            // 内部使用：转换后的uint值
 	ArticleID    uint   `json:"articleId,omitempty" form:"articleId"`   // 文章ID（type=1时使用）
 	TalkID       uint   `json:"talkId,omitempty" form:"talkId"`         // 说说ID（type=5时使用）
 	FriendLinkID uint   `json:"friendLinkId,omitempty" form:"friendLinkId"` // 友链ID（type=4时使用）
@@ -97,7 +98,7 @@ type CommentVO struct {
 	Size         int    `json:"size,omitempty" form:"size"`             // 每页大小
 	ParentID     uint   `json:"parentId" form:"parentId"`               // 回复的父评论ID(0=顶级)
 	ReplyUserID  *uint  `json:"replyUserId,omitempty" form:"replyUserId"` // 被回复用户ID
-	Content      string `json:"content" form:"content"`                  // 评论内容
+	Content      string `json:"commentContent" form:"commentContent"`    // 评论内容（兼容前端 commentContent 字段名）
 }
 
 // ===== 定时任务 VO =====

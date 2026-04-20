@@ -111,6 +111,7 @@ func (s *MenuService) GetMenuTree(ctx context.Context) ([]dto.MenuTreeDTO, error
 }
 
 // GetUserMenus 获取用户的菜单树 (动态路由用，对标Java convertUserMenuList)
+// 注意：不过滤 is_hidden，因为编辑页面等隐藏菜单也需要作为动态路由
 func (s *MenuService) GetUserMenus(ctx context.Context, userID uint) ([]dto.MenuTreeDTO, error) {
 	var menus []model.Menu
 
@@ -118,7 +119,7 @@ func (s *MenuService) GetUserMenus(ctx context.Context, userID uint) ([]dto.Menu
 		Distinct().
 		Joins("JOIN t_role_menu ON t_role_menu.menu_id = t_menu.id").
 		Joins("JOIN t_user_role ON t_user_role.role_id = t_role_menu.role_id").
-		Where("t_user_role.user_id = ? AND t_menu.is_hidden = 0", userID).
+		Where("t_user_role.user_id = ?", userID).
 		Order("order_num ASC").
 		Find(&menus).Error
 

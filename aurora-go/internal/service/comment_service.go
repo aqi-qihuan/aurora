@@ -2,12 +2,17 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
+	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/aurora-go/aurora/internal/constant"
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/infrastructure/mq"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
@@ -27,8 +32,33 @@ func NewCommentService(db *gorm.DB, statsService *RedisStatsService) *CommentSer
 	}
 }
 
-// CreateComment 发表评论 (含IP归属地解析 + 敏感词过滤 + MQ通知)
+// CreateComment 发表评论 (含IP归属地解析 + 敏感词过滤 + MQ通知 + 审核逻辑)
 func (s *CommentService) CreateComment(ctx context.Context, userID uint, vo vo.CommentVO, clientIP string) (*model.Comment, error) {
+	if userID == 0 {
+		return nil, errors.ErrUnauthorized.WithMsg("请先登录")
+	}
+
+	// 读取网站配置（对标Java: WebsiteConfigDTO websiteConfig = auroraInfoService.getWebsiteConfig()）
+	var configModel model.WebsiteConfig
+	s.db.WithContext(ctx).First(&configModel, 1) // 明确指定ID=1
+	
+	// 解析JSON配置（对标Java: JSON.parseObject(config.getConfig(), WebsiteConfigDTO.class)）
+	websiteConfig := &dto.WebsiteConfigDTO{}
+	if configModel.Config != "" {
+		if err := json.Unmarshal([]byte(configModel.Config), websiteConfig); err != nil {
+			slog.Warn("解析评论审核配置失败，默认不审核", "error", err)
+		}
+	}
+	
+	// 判断是否需要审核（对标Java: isCommentReview == TRUE ? FALSE : TRUE）
+	isReview := int8(1) // 默认通过
+	if websiteConfig.IsCommentReview != nil && *websiteConfig.IsCommentReview == 1 {
+		isReview = 0 // 需要审核
+		slog.Info("评论审核已开启", "isReview", isReview)
+	} else {
+		slog.Info("评论审核未开启或配置缺失", "isCommentReview", websiteConfig.IsCommentReview, "isReview", isReview)
+	}
+
 	var comment model.Comment
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -37,23 +67,48 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uint, vo vo.C
 			Type:           vo.Type,
 			ParentID:       vo.ParentID,
 			CommentContent: vo.Content,
-			TopicID:        nil, // 通过 type 区分，统一使用 topic_id
+			IsReview:       isReview,
+			TopicID:        nil,
 		}
 		
 		// 设置关联ID (统一使用 topic_id)
+		// 优先级: type-specific字段 > TopicID(前端统一传参)
+		// 修复问题3：确保正确绑定 topicId
 		switch vo.Type {
 		case 1: // 文章评论
 			topicID := vo.ArticleID
-			comment.TopicID = &topicID
+			if topicID == 0 && vo.TopicID != nil {
+				topicID = *vo.TopicID // 兼容前端 topicId 统一传参
+			}
+			if topicID > 0 {
+				comment.TopicID = &topicID
+			}
 		case 5: // 说说评论
 			topicID := vo.TalkID
-			comment.TopicID = &topicID
+			if topicID == 0 && vo.TopicID != nil {
+				topicID = *vo.TopicID
+			}
+			if topicID > 0 {
+				comment.TopicID = &topicID
+			}
 		case 4: // 友链评论
 			topicID := vo.FriendLinkID
-			comment.TopicID = &topicID
+			if topicID == 0 && vo.TopicID != nil {
+				topicID = *vo.TopicID
+			}
+			if topicID > 0 {
+				comment.TopicID = &topicID
+			}
 		case 3: // 关于页评论
 			topicID := vo.AboutID
-			comment.TopicID = &topicID
+			if topicID == 0 && vo.TopicID != nil {
+				topicID = *vo.TopicID
+			}
+			if topicID > 0 {
+				comment.TopicID = &topicID
+			}
+		case 2: // 留言板评论
+			// 留言板不需要 topicId，保持为 nil
 		}
 
 		// 回复时记录被回复用户
@@ -74,18 +129,210 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uint, vo vo.C
 		// IP归属地解析 (异步不影响主流程)
 		// TODO: 添加 IP 和 Location 字段到数据库或去掉此逻辑
 
-		// TODO: P0-7 发布MQ消息 → 邮件通知 + 订阅通知
-		// mq.Publish(constant.ExchangeDirect, constant.RoutingKeyEmail, commentMsg)
-
-		slog.Info("评论发表成功",
-			"comment_id", comment.ID,
-			"type", commentTypeStr(vo.Type),
-			"user_id", userID,
-		)
 		return nil
 	})
 
+	// 发送评论通知 (对标Java: CompletableFuture.runAsync(() -> notice(comment, fromNickname)))
+	// 在事务外异步发送, 避免阻塞主流程
+	if err == nil {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := s.SendCommentNotification(ctx, &comment, userID); err != nil {
+				slog.Warn("发送评论通知失败", "comment_id", comment.ID, "error", err)
+			}
+		}()
+	}
+
 	return &comment, err
+}
+
+// SendCommentNotification 发送评论通知邮件 (对标Java CommentServiceImpl.notice)
+// 通知逻辑:
+// 1. @提醒通知: 回复时@了其他人
+// 2. 评论通知: 通知父评论作者 或 文章/说说作者
+func (s *CommentService) SendCommentNotification(ctx context.Context, comment *model.Comment, userID uint) error {
+	// 查询评论者信息
+	var commenter model.UserInfo
+	if err := s.db.WithContext(ctx).Select("nickname").Where("id = ?", userID).First(&commenter).Error; err != nil {
+		return fmt.Errorf("查询评论者失败: %w", err)
+	}
+	fromNickname := commenter.Nickname
+
+	// 1. @提醒通知 (对标Java: 第221-241行)
+	if comment.ParentID > 0 && comment.ReplyUserID != nil && *comment.ReplyUserID != userID {
+		var parentComment model.Comment
+		if err := s.db.WithContext(ctx).First(&parentComment, comment.ParentID).Error; err != nil {
+			return fmt.Errorf("查询父评论失败: %w", err)
+		}
+
+		// 判断是否需要发送@提醒
+		if *comment.ReplyUserID != parentComment.UserID && *comment.ReplyUserID != comment.UserID {
+			var replyUser model.UserInfo
+			if err := s.db.WithContext(ctx).Select("email, nickname").Where("id = ?", *comment.ReplyUserID).First(&replyUser).Error; err != nil {
+				return fmt.Errorf("查询被回复用户失败: %w", err)
+			}
+
+			if replyUser.Email != "" {
+				// 构建@提醒邮件
+				topicID := ""
+				if comment.TopicID != nil {
+					topicID = fmt.Sprintf("%d", *comment.TopicID)
+				}
+				commentType := commentTypeStr(comment.Type)
+				url := fmt.Sprintf("%s/%s/%s", getSiteURL(), getCommentPath(comment.Type), topicID)
+
+				emailDTO := dto.EmailDTO{
+					Email:   replyUser.Email,
+					Subject: "@提醒",
+					CommentMap: map[string]interface{}{
+						"content": fmt.Sprintf("%s在%s的评论区@了你，<a style=\"text-decoration:none;color:#12addb\" href=\"%s\">点击查看</a>",
+							fromNickname, commentType, url),
+					},
+				}
+
+				if err := publishCommentEmail(emailDTO); err != nil {
+					return fmt.Errorf("发送@提醒邮件失败: %w", err)
+				}
+				slog.Info("📧 已发送@提醒邮件", "to", replyUser.Email, "comment_id", comment.ID)
+			}
+		}
+	}
+
+	// 2. 评论通知 (对标Java: 第246-272行)
+	// 确定通知对象: 父评论作者 或 文章/说说作者
+	var notifyUserID uint
+	topicID := ""
+	if comment.TopicID != nil {
+		topicID = fmt.Sprintf("%d", *comment.TopicID)
+	}
+
+	if comment.ReplyUserID != nil {
+		notifyUserID = *comment.ReplyUserID
+	} else {
+		// 查询文章/说说的作者
+		switch comment.Type {
+		case 1: // 文章评论
+			var article model.Article
+			if comment.TopicID != nil {
+				if err := s.db.WithContext(ctx).Select("user_id, article_title").Where("id = ?", *comment.TopicID).First(&article).Error; err == nil {
+					notifyUserID = article.UserID
+				}
+			}
+		case 5: // 说说评论
+			notifyUserID = 1 // 默认博主ID
+		default:
+			notifyUserID = 1 // 默认博主ID
+		}
+	}
+
+	// 查询通知对象邮箱
+	if notifyUserID > 0 {
+		var notifyUser model.UserInfo
+		if err := s.db.WithContext(ctx).Select("email, nickname").Where("id = ?", notifyUserID).First(&notifyUser).Error; err == nil && notifyUser.Email != "" {
+			// 不通知自己
+			if notifyUserID != userID {
+				// 构建评论通知邮件
+				commentType := commentTypeStr(comment.Type)
+				var title string
+				if comment.Type == 1 && comment.TopicID != nil {
+					var article model.Article
+					if err := s.db.WithContext(ctx).Select("article_title").Where("id = ?", *comment.TopicID).First(&article).Error; err == nil {
+						title = article.ArticleTitle
+					}
+				} else {
+					title = commentType
+				}
+
+				url := fmt.Sprintf("%s/%s/%s", getSiteURL(), getCommentPath(comment.Type), topicID)
+
+				commentMap := map[string]interface{}{
+					"nickname": fromNickname,
+					"content":  comment.CommentContent,
+					"title":    title,
+					"url":      url,
+				}
+
+				// 如果有父评论，添加回复相关信息
+				if comment.ParentID > 0 {
+					var parentComment model.Comment
+					if err := s.db.WithContext(ctx).Select("user_id, comment_content, create_time").Where("id = ?", comment.ParentID).First(&parentComment).Error; err == nil {
+						var parentUser model.UserInfo
+						if err := s.db.WithContext(ctx).Select("nickname").Where("id = ?", parentComment.UserID).First(&parentUser).Error; err == nil {
+							commentMap["parentComment"] = parentComment.CommentContent
+							commentMap["toUser"] = parentUser.Nickname
+							commentMap["time"] = parentComment.CreateTime.Format("2006-01-02 15:04")
+						}
+					}
+				} else {
+					commentMap["time"] = comment.CreateTime.Format("2006-01-02 15:04")
+				}
+
+				emailDTO := dto.EmailDTO{
+					Email:      notifyUser.Email,
+					Subject:    "评论通知",
+					CommentMap: commentMap,
+				}
+
+				if err := publishCommentEmail(emailDTO); err != nil {
+					slog.Warn("发送评论通知邮件失败", "to", notifyUser.Email, "error", err)
+				} else {
+					slog.Info("📧 已发送评论通知邮件", "to", notifyUser.Email, "comment_id", comment.ID)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// getSiteURL 获取网站URL (TODO: 从配置读取)
+func getSiteURL() string {
+	return "https://www.aurora.blog"
+}
+
+// getCommentPath 根据评论类型获取URL路径 (对标Java getCommentPath)
+func getCommentPath(commentType int8) string {
+	switch commentType {
+	case 1:
+		return "articles"
+	case 5:
+		return "talks"
+	case 4:
+		return "links"
+	case 3:
+		return "about"
+	default:
+		return ""
+	}
+}
+
+// publishCommentEmail 发布评论邮件通知到RabbitMQ
+func publishCommentEmail(emailDTO dto.EmailDTO) error {
+	if mq.GetChannel() == nil {
+		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	msgBody, err := json.Marshal(emailDTO)
+	if err != nil {
+		return fmt.Errorf("序列化EmailDTO失败: %w", err)
+	}
+
+	err = mq.GetChannel().Publish(
+		constant.ExchangeDirect,
+		constant.RoutingKeyEmail,
+		false, false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        msgBody,
+			MessageId:   fmt.Sprintf("comment-%d", time.Now().UnixNano()),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("发布评论邮件消息失败: %w", err)
+	}
+
+	return nil
 }
 
 // GetCommentsByArticle 获取文章评论列表 (嵌套树形结构)
@@ -240,9 +487,17 @@ func (s *CommentService) ListComments(ctx context.Context, commentVO vo.CommentV
 		for i, c := range comments {
 			parentIDs[i] = c.ID
 		}
+		// 修复问题3：子评论也需要按照同样的 type 和 topic_id 筛选
+		replyQuery := s.db.WithContext(ctx).
+			Where("parent_id IN ? AND is_review = 1", parentIDs)
+		if commentVO.Type > 0 {
+			replyQuery = replyQuery.Where("type = ?", commentVO.Type)
+		}
+		if commentVO.TopicID != nil && *commentVO.TopicID > 0 {
+			replyQuery = replyQuery.Where("topic_id = ?", *commentVO.TopicID)
+		}
 		var replies []model.Comment
-		s.db.WithContext(ctx).
-			Where("parent_id IN ? AND is_review = 1", parentIDs).
+		replyQuery.
 			Preload("UserInfo").
 			Preload("ReplyUser").
 			Order("create_time ASC").
@@ -326,50 +581,13 @@ func (s *CommentService) ListAdminComments(ctx context.Context, cond dto.Conditi
 
 	offset := page.GetOffset()
 	if err := baseQuery.
+		Preload("UserInfo").
+		Preload("ReplyUser").
 		Order("create_time DESC").
 		Limit(page.PageSize).
 		Offset(offset).
 		Find(&comments).Error; err != nil {
 		return nil, fmt.Errorf("查询评论列表失败: %w", err)
-	}
-
-	// 批量预加载 UserInfo 和 ReplyUser（避免 N+1 查询）
-	if len(comments) > 0 {
-		// 收集所有用户ID
-		userIDs := make(map[uint]bool)
-		for _, c := range comments {
-			userIDs[c.UserID] = true
-			if c.ReplyUserID != nil {
-				userIDs[*c.ReplyUserID] = true
-			}
-		}
-
-		// 批量查询用户信息
-		ids := make([]uint, 0, len(userIDs))
-		for id := range userIDs {
-			ids = append(ids, id)
-		}
-
-		var users []model.UserInfo
-		s.db.WithContext(ctx).Where("id IN ?", ids).Find(&users)
-
-		// 构建用户映射
-		userMap := make(map[uint]*model.UserInfo)
-		for i := range users {
-			userMap[users[i].ID] = &users[i]
-		}
-
-		// 填充用户信息
-		for i := range comments {
-			if u, ok := userMap[comments[i].UserID]; ok {
-				comments[i].UserInfo = u
-			}
-			if comments[i].ReplyUserID != nil {
-				if u, ok := userMap[*comments[i].ReplyUserID]; ok {
-					comments[i].ReplyUser = u
-				}
-			}
-		}
 	}
 
 	list := make([]dto.CommentAdminDTO, len(comments))
@@ -589,34 +807,14 @@ func (s *CommentService) GetCommentStats(ctx context.Context) (*CommentStats, er
 
 // ===== 内部方法 =====
 
+// incrementCommentCount 评论计数增加（当前数据库无 comment_count 列，预留接口）
 func (s *CommentService) incrementCommentCount(tx *gorm.DB, commentType int8, topicID *uint) {
-	if topicID == nil || *topicID == 0 {
-		return
-	}
-	switch commentType {
-	case 1: // 文章
-		tx.Exec("UPDATE t_article SET comment_count = COALESCE(comment_count, 0) + 1 WHERE id = ?", *topicID)
-	case 5: // 说说
-		tx.Exec("UPDATE t_talk SET comment_count = COALESCE(comment_count, 0) + 1 WHERE id = ?", *topicID)
-	case 4: // 友链
-		tx.Exec("UPDATE t_friend_link SET comment_count = COALESCE(comment_count, 0) + 1 WHERE id = ?", *topicID)
-	case 3: // 关于
-		// t_about 可能没有 comment_count 字段，视情况处理
-	}
+	// t_article/t_talk/t_friend_link 表无 comment_count 列，跳过
 }
 
+// decrementCommentCount 评论计数减少（当前数据库无 comment_count 列，预留接口）
 func (s *CommentService) decrementCommentCount(tx *gorm.DB, commentType int8, topicID *uint, count int) {
-	if topicID == nil || *topicID == 0 {
-		return
-	}
-	switch commentType {
-	case 1: // 文章
-		tx.Exec("UPDATE t_article SET comment_count = GREATEST(COALESCE(comment_count, 0) - ?, 0) WHERE id = ?", count, *topicID)
-	case 5: // 说说
-		tx.Exec("UPDATE t_talk SET comment_count = GREATEST(COALESCE(comment_count, 0) - ?, 0) WHERE id = ?", count, *topicID)
-	case 4: // 友链
-		tx.Exec("UPDATE t_friend_link SET comment_count = GREATEST(COALESCE(comment_count, 0) - ?, 0) WHERE id = ?", count, *topicID)
-	}
+	// t_article/t_talk/t_friend_link 表无 comment_count 列，跳过
 }
 
 func (s *CommentService) buildCommentTree(comments []model.Comment) []dto.CommentTreeDTO {

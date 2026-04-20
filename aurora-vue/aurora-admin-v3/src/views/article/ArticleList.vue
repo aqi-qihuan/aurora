@@ -387,14 +387,17 @@ const deleteArticles = (id) => {
 const exportArticles = (id) => {
   const param = id ? [id] : articleIds.value
   request.post('/admin/articles/export', param).then(({ data }) => {
-    if (data.flag) {
-      ElNotification.success({ title: '成功', message: data.message })
-      data.data.forEach((item) => {
-        downloadFile(item)
-      })
+    if (data.code === 200 && data.flag) {
+      ElNotification.success({ title: '成功', message: '导出成功，开始下载文件...' })
+      // 延迟100ms触发下载，确保通知先显示
+      setTimeout(() => {
+        data.data.forEach((item) => {
+          downloadFile(item)
+        })
+      }, 100)
       listArticles()
     } else {
-      ElNotification.error({ title: '失败', message: data.message })
+      ElNotification.error({ title: '失败', message: data.message || '导出失败' })
     }
     exportDialog.value = false
   }).catch(error => {
@@ -403,15 +406,35 @@ const exportArticles = (id) => {
   })
 }
 
-const downloadFile = (url) => {
-  const iframe = document.createElement('iframe')
-  iframe.style.display = 'none'
-  iframe.style.height = 0
-  iframe.src = url
-  document.body.appendChild(iframe)
-  setTimeout(() => {
-    iframe.remove()
-  }, 30000)
+const downloadFile = async (url) => {
+  try {
+    // 跨域 URL 使用 fetch + blob 方式强制下载
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.status}`)
+    }
+    const blob = await response.blob()
+    
+    // 提取文件名
+    const fileName = url.substring(url.lastIndexOf('/') + 1) || 'article.md'
+    
+    // 创建 blob URL 并触发下载
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = decodeURIComponent(fileName)
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    // 释放 blob URL
+    window.URL.revokeObjectURL(downloadUrl)
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    // 降级方案: 新窗口打开
+    window.open(url, '_blank')
+  }
 }
 
 const uploadArticle = (data) => {
