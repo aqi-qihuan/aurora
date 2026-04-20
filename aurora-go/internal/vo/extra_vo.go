@@ -3,10 +3,10 @@ package vo
 // ===== 用户相关 VO =====
 
 type RegisterVO struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Email    string `json:"email" binding:"required,email,max=50"`
+	Username string `json:"username" binding:"required,email,max=50"` // 前端用username传邮箱
+	Email    string `json:"email,omitempty" binding:"omitempty,email,max=50"` // 可选，为空时用username代替
 	Password string `json:"password" binding:"required,min=6,max=100"`
-	Nickname string `json:"nickname" binding:"required,min=1,max=30"`
+	Nickname string `json:"nickname,omitempty" binding:"omitempty,max=30"` // 可选，为空时自动从邮箱生成
 }
 
 // LoginVO 登录请求VO (对标Java LoginVO)

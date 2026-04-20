@@ -187,8 +187,8 @@ func ParseOS(userAgent string) string {
 	ua := strings.ToLower(userAgent)
 	
 	// Windows 系列
-	if strings.Contains(ua, "windows nt 10.0") {
-		return "Windows 10"
+	if strings.Contains(ua, "windows nt 10.0") || strings.Contains(ua, "windows 10") {
+		return "Windows 10/11"
 	} else if strings.Contains(ua, "windows nt 6.3") {
 		return "Windows 8.1"
 	} else if strings.Contains(ua, "windows nt 6.2") {
@@ -208,16 +208,33 @@ func ParseOS(userAgent string) string {
 		return "macOS"
 	}
 	
-	// Linux 系列
-	if strings.Contains(ua, "linux") && strings.Contains(ua, "android") {
+	// iOS / iPadOS (在 Android 之前检测)
+	if strings.Contains(ua, "iphone") {
+		return "iOS"
+	} else if strings.Contains(ua, "ipad") {
+		return "iPadOS"
+	} else if strings.Contains(ua, "ipod") {
+		return "iOS"
+	}
+	
+	// Android 系列
+	if strings.Contains(ua, "android") {
 		return "Android"
-	} else if strings.Contains(ua, "linux") {
+	}
+	
+	// Linux 系列
+	if strings.Contains(ua, "linux") {
 		return "Linux"
 	}
 	
-	// iOS / iPadOS
-	if strings.Contains(ua, "iphone") || strings.Contains(ua, "ipad") || strings.Contains(ua, "ipod") {
-		return "iOS"
+	// Chrome OS
+	if strings.Contains(ua, "cros") || strings.Contains(ua, "chromebook") {
+		return "Chrome OS"
+	}
+	
+	// HarmonyOS (鸿蒙系统)
+	if strings.Contains(ua, "harmonyos") || strings.Contains(ua, "hmrios") {
+		return "HarmonyOS"
 	}
 	
 	return "其他"

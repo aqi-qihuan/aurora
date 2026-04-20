@@ -57,8 +57,8 @@ func (u *UserDetailsDTO) IsAdmin() bool {
 
 // QQLoginVO QQ登录请求VO (前端传accessToken+openID)
 type QQLoginVO struct {
-	AccessToken string `json:"access_token" binding:"required"` // QQ OAuth access_token
-	OpenID      string `json:"open_id" binding:"required"`      // QQ用户唯一标识
+	AccessToken string `json:"accessToken" binding:"required"` // QQ OAuth access_token
+	OpenID      string `json:"openId" binding:"required"`      // QQ用户唯一标识
 }
 
 // QQUserInfoDTO QQ用户信息响应 (对标Java QQUserInfoDTO)

@@ -72,43 +72,56 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uint, vo vo.C
 		}
 		
 		// 设置关联ID (统一使用 topic_id)
-		// 优先级: type-specific字段 > TopicID(前端统一传参)
-		// 修复问题3：确保正确绑定 topicId
-		switch vo.Type {
-		case 1: // 文章评论
-			topicID := vo.ArticleID
-			if topicID == 0 && vo.TopicID != nil {
-				topicID = *vo.TopicID // 兼容前端 topicId 统一传参
+		// 二级回复时，从父评论继承 topicId（对标Java: 回复的topicId与父评论一致）
+		if vo.ParentID > 0 {
+			var parentComment model.Comment
+			if err := tx.Select("id", "type", "topic_id").First(&parentComment, vo.ParentID).Error; err == nil {
+				comment.Type = parentComment.Type      // 继承父评论类型
+				comment.TopicID = parentComment.TopicID // 继承父评论 topicId
+				slog.Info("二级回复：从父评论继承 topicId", "parent_id", vo.ParentID, "topic_id", parentComment.TopicID, "type", parentComment.Type)
+			} else {
+				slog.Warn("查询父评论失败", "parent_id", vo.ParentID, "error", err)
+				return fmt.Errorf("父评论不存在: %w", err)
 			}
-			if topicID > 0 {
-				comment.TopicID = &topicID
+		} else {
+			// 顶级评论：从请求参数获取 topicId
+			// 优先级: type-specific字段 > TopicID(前端统一传参)
+			switch vo.Type {
+			case 1: // 文章评论
+				topicID := vo.ArticleID
+				if topicID == 0 && vo.TopicID != nil {
+					topicID = *vo.TopicID // 兼容前端 topicId 统一传参
+				}
+				if topicID > 0 {
+					comment.TopicID = &topicID
+				}
+			case 5: // 说说评论
+				topicID := vo.TalkID
+				if topicID == 0 && vo.TopicID != nil {
+					topicID = *vo.TopicID
+				}
+				if topicID > 0 {
+					comment.TopicID = &topicID
+				}
+			case 4: // 友链评论
+				topicID := vo.FriendLinkID
+				if topicID == 0 && vo.TopicID != nil {
+					topicID = *vo.TopicID
+				}
+				if topicID > 0 {
+					comment.TopicID = &topicID
+				}
+			case 3: // 关于页评论
+				topicID := vo.AboutID
+				if topicID == 0 && vo.TopicID != nil {
+					topicID = *vo.TopicID
+				}
+				if topicID > 0 {
+					comment.TopicID = &topicID
+				}
+			case 2: // 留言板评论
+				// 留言板不需要 topicId，保持为 nil
 			}
-		case 5: // 说说评论
-			topicID := vo.TalkID
-			if topicID == 0 && vo.TopicID != nil {
-				topicID = *vo.TopicID
-			}
-			if topicID > 0 {
-				comment.TopicID = &topicID
-			}
-		case 4: // 友链评论
-			topicID := vo.FriendLinkID
-			if topicID == 0 && vo.TopicID != nil {
-				topicID = *vo.TopicID
-			}
-			if topicID > 0 {
-				comment.TopicID = &topicID
-			}
-		case 3: // 关于页评论
-			topicID := vo.AboutID
-			if topicID == 0 && vo.TopicID != nil {
-				topicID = *vo.TopicID
-			}
-			if topicID > 0 {
-				comment.TopicID = &topicID
-			}
-		case 2: // 留言板评论
-			// 留言板不需要 topicId，保持为 nil
 		}
 
 		// 回复时记录被回复用户

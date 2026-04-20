@@ -72,14 +72,21 @@ func (s *UserAuthService) Register(ctx context.Context, reg vo.RegisterVO) (*dto
 	var auth model.UserAuth
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 检查用户名是否已存在
+		// 前端用username传邮箱地址，email字段留空
+		// 统一使用username作为邮箱地址
+		email := reg.Email
+		if email == "" {
+			email = reg.Username
+		}
+		
+		// 检查用户名(邮箱)是否已存在
 		var count int64
-		if tx.Model(&model.UserAuth{}).Where("username = ?", reg.Username).Count(&count); count > 0 {
+		if tx.Model(&model.UserAuth{}).Where("username = ?", email).Count(&count); count > 0 {
 			return errors.ErrUsernameExists
 		}
 		
 		// 检查邮箱
-		if tx.Model(&model.UserInfo{}).Where("email = ?", reg.Email).Count(&count); count > 0 {
+		if tx.Model(&model.UserInfo{}).Where("email = ?", email).Count(&count); count > 0 {
 			return errors.ErrEmailExists
 		}
 
@@ -89,10 +96,22 @@ func (s *UserAuthService) Register(ctx context.Context, reg vo.RegisterVO) (*dto
 			return fmt.Errorf("密码加密失败: %w", err)
 		}
 
+		// 如果昵称为空，自动从邮箱生成 (对标Java版前端无昵称输入框)
+		nickname := reg.Nickname
+		if nickname == "" {
+			// 从邮箱提取用户名部分作为昵称
+			atIdx := strings.Index(email, "@")
+			if atIdx > 0 {
+				nickname = email[:atIdx]
+			} else {
+				nickname = "用户" + fmt.Sprintf("%d", time.Now().UnixNano()%10000)
+			}
+		}
+
 		// 创建用户信息
 		user = model.UserInfo{
-			Email:    reg.Email,
-			Nickname: reg.Nickname,
+			Email:    email,
+			Nickname: nickname,
 		}
 		if err := tx.Create(&user).Error; err != nil {
 			return fmt.Errorf("创建用户信息失败: %w", err)
@@ -101,7 +120,7 @@ func (s *UserAuthService) Register(ctx context.Context, reg vo.RegisterVO) (*dto
 		// 创建认证信息
 		auth = model.UserAuth{
 			UserID:   user.ID,
-			Username: reg.Username,
+			Username: email,
 			Password: string(hashedPwd),
 			LoginType: 1, // 邮箱登录
 		}
@@ -697,12 +716,13 @@ func (s *UserAuthService) FindOrCreateBySocialLogin(
 	var userAuth model.UserAuth
 
 	// Step 1: 查找已有账号
+	// 先仅按 openID 查找（不限制 login_type），因为 username 有唯一索引
 	err := s.db.WithContext(ctx).
-		Where("username = ? AND login_type = ?", openID, loginType).
+		Where("username = ?", openID).
 		First(&userAuth).Error
 
 	if err == nil {
-		// 已有账号 → 更新登录时间并返回
+		// 已有该 OpenID 的认证记录 → 更新登录时间并返回
 		now := time.Now()
 		s.db.WithContext(ctx).Model(&userAuth).Updates(map[string]interface{}{
 			"last_login_time": now,
@@ -717,6 +737,10 @@ func (s *UserAuthService) FindOrCreateBySocialLogin(
 			Nickname: userInfo.Nickname,
 			Avatar:   userInfo.Avatar,
 		}, nil
+	}
+
+	if !errors.IsStd(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("查询UserAuth失败: %w", err)
 	}
 
 	// Step 2: 新用户 → 自动注册 (事务)

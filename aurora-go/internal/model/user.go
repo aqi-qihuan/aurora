@@ -58,13 +58,26 @@ func (UserRole) TableName() string { return "t_user_role" }
 
 // BeforeCreate GORM钩子
 func (u *UserInfo) BeforeCreate(tx *gorm.DB) error {
- now := time.Now()
- u.CreateTime = now
- u.UpdateTime = now
- return nil
+	now := time.Now()
+	u.CreateTime = now
+	u.UpdateTime = now
+	return nil
 }
 
 func (u *UserInfo) BeforeUpdate(tx *gorm.DB) error {
- u.UpdateTime = time.Now()
- return nil
+	u.UpdateTime = time.Now()
+	return nil
+}
+
+// UserAuth GORM钩子 (对标UserInfo，自动设置时间字段)
+func (u *UserAuth) BeforeCreate(tx *gorm.DB) error {
+	now := time.Now()
+	u.CreateTime = now
+	u.UpdateTime = now
+	return nil
+}
+
+func (u *UserAuth) BeforeUpdate(tx *gorm.DB) error {
+	u.UpdateTime = time.Now()
+	return nil
 }

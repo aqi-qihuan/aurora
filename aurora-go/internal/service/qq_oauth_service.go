@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/aurora-go/aurora/internal/config"
@@ -124,27 +126,78 @@ func (s *QQOAuthService) Login(ctx context.Context, req *dto.QQLoginVO) (*dto.Us
 
 // checkAccessToken 验证AccessToken+OpenID是否匹配 (对标Java checkQQToken)
 func (s *QQOAuthService) checkAccessToken(accessToken, openID string) error {
-	checkURL := fmt.Sprintf("%s?%s",
-		s.qqCfg.CheckTokenURL,
-		url.Values{"access_token": {accessToken}}.Encode(),
-	)
+	// QQ API URL包含占位符，需要替换
+	checkURL := strings.ReplaceAll(s.qqCfg.CheckTokenURL, "{access_token}", accessToken)
 
 	resp, err := s.client.Get(checkURL)
 	if err != nil {
-		return fmt.Errorf("请求QQ API失败: %w", err)
+		return fmt.Errorf("请求QQ API失败: %w, url=%s", err, checkURL)
 	}
 	defer resp.Body.Close()
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return fmt.Errorf("解析QQ响应失败: %w", err)
+	// 读取响应内容
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("读取QQ响应失败: %w", err)
 	}
 
-	// QQ API返回格式: callback( {"client_id":"xxx","openid":"xxx"} );
+	bodyStr := string(bodyBytes)
+	slog.Debug("QQ Token校验原始响应", "response", bodyStr)
+
+	// QQ API返回JSONP格式: callback( {"client_id":"xxx","openid":"xxx"} );
+	// 需要提取括号内的JSON部分
+	startIdx := strings.Index(bodyStr, "(")
+	endIdx := strings.LastIndex(bodyStr, ")")
+	
+	if startIdx == -1 || endIdx == -1 || startIdx >= endIdx {
+		// 如果不是JSONP格式，尝试直接解析JSON
+		var result map[string]interface{}
+		if err := json.Unmarshal(bodyBytes, &result); err != nil {
+			return fmt.Errorf("解析QQ响应失败(JSON/JSONP): %w, response=%s", err, bodyStr)
+		}
+		
+		// 打印完整响应以便调试
+		slog.Debug("QQ Token校验解析结果(非JSONP)", "result", result)
+		
+		// 检查是否有错误信息
+		if errMsg, ok := result["error"].(string); ok {
+			return fmt.Errorf("QQ API返回错误: %s, error_description=%v", errMsg, result["error_description"])
+		}
+		
+		respOpenID, ok := result["openid"].(string)
+		if !ok {
+			return fmt.Errorf("OpenID字段不存在或类型错误: expected=string, got=%T, full_result=%v", result["openid"], result)
+		}
+		if respOpenID != openID {
+			return fmt.Errorf("OpenID不匹配: expected=%s, got=%s, client_id=%v", openID, respOpenID, result["client_id"])
+		}
+		return nil
+	}
+
+	// 提取JSON部分
+	jsonStr := bodyStr[startIdx+1 : endIdx]
+	jsonStr = strings.TrimSpace(jsonStr)
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return fmt.Errorf("解析QQ JSON响应失败: %w, json=%s", err, jsonStr)
+	}
+
+	// 打印完整响应以便调试
+	slog.Debug("QQ Token校验解析结果", "result", result)
+
+	// 检查是否有错误信息
+	if errMsg, ok := result["error"].(string); ok {
+		return fmt.Errorf("QQ API返回错误: %s, error_description=%v", errMsg, result["error_description"])
+	}
+
 	// 检查返回的openId是否与传入的一致
 	respOpenID, ok := result["openid"].(string)
-	if !ok || respOpenID != openID {
-		return fmt.Errorf("OpenID不匹配: expected=%s, got=%s", openID, respOpenID)
+	if !ok {
+		return fmt.Errorf("OpenID字段不存在或类型错误: expected=string, got=%T, full_result=%v", result["openid"], result)
+	}
+	if respOpenID != openID {
+		return fmt.Errorf("OpenID不匹配: expected=%s, got=%s, client_id=%v", openID, respOpenID, result["client_id"])
 	}
 
 	return nil
@@ -152,15 +205,11 @@ func (s *QQOAuthService) checkAccessToken(accessToken, openID string) error {
 
 // getQQUserInfo 获取QQ用户信息 (对标Java getSocialUserInfo)
 func (s *QQOAuthService) getQQUserInfo(accessToken, openID string) (*dto.QQUserInfoDTO, error) {
-	userInfoURL := fmt.Sprintf(
-		"%s?%s",
-		s.qqCfg.UserInfoURL,
-		url.Values{
-			"oauth_consumer_key": {s.qqCfg.AppID},
-			"openid":             {openID},
-			"access_token":       {accessToken},
-		}.Encode(),
-	)
+	// QQ API URL包含占位符，需要替换
+	userInfoURL := s.qqCfg.UserInfoURL
+	userInfoURL = strings.ReplaceAll(userInfoURL, "{oauth_consumer_key}", s.qqCfg.AppID)
+	userInfoURL = strings.ReplaceAll(userInfoURL, "{openid}", openID)
+	userInfoURL = strings.ReplaceAll(userInfoURL, "{access_token}", accessToken)
 
 	resp, err := s.client.Get(userInfoURL)
 	if err != nil {
@@ -168,9 +217,34 @@ func (s *QQOAuthService) getQQUserInfo(accessToken, openID string) (*dto.QQUserI
 	}
 	defer resp.Body.Close()
 
+	// 读取响应内容
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取QQ用户信息响应失败: %w", err)
+	}
+
+	bodyStr := string(bodyBytes)
+	slog.Debug("QQ用户信息原始响应", "response", bodyStr)
+
+	// QQ API可能返回JSONP格式: callback( {...} );
+	// 需要提取括号内的JSON部分
+	startIdx := strings.Index(bodyStr, "(")
+	endIdx := strings.LastIndex(bodyStr, ")")
+	
+	var jsonBytes []byte
+	if startIdx != -1 && endIdx != -1 && startIdx < endIdx {
+		// JSONP格式，提取JSON部分
+		jsonStr := bodyStr[startIdx+1 : endIdx]
+		jsonStr = strings.TrimSpace(jsonStr)
+		jsonBytes = []byte(jsonStr)
+	} else {
+		// 纯JSON格式
+		jsonBytes = bodyBytes
+	}
+
 	var qqUser dto.QQUserInfoDTO
-	if err := json.NewDecoder(resp.Body).Decode(&qqUser); err != nil {
-		return nil, fmt.Errorf("解析QQ用户信息失败: %w", err)
+	if err := json.Unmarshal(jsonBytes, &qqUser); err != nil {
+		return nil, fmt.Errorf("解析QQ用户信息失败: %w, response=%s", err, bodyStr)
 	}
 
 	if qqUser.Nickname == "" {
