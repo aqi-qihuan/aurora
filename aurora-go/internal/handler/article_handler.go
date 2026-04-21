@@ -426,7 +426,7 @@ func (h *ArticleHandler) UploadArticleImage(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// GetAdminArticleById 后台根据ID获取文章详情
+// GetAdminArticleById 后台根据ID获取文章详情（对标Java getArticleBackById）
 // GET /api/admin/articles/:id
 func (h *ArticleHandler) GetAdminArticleById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -434,7 +434,7 @@ func (h *ArticleHandler) GetAdminArticleById(c *gin.Context) {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
-	result, err := h.svc.GetArticleByID(c.Request.Context(), uint(id))
+	result, err := h.svc.GetArticleByIDAdmin(c.Request.Context(), uint(id))
 	if err != nil {
 		util.ResponseError(c, err)
 		return

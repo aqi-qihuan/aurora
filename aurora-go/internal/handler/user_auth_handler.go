@@ -13,6 +13,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/errors"
+	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/scheduler"
 	"github.com/aurora-go/aurora/internal/service"
@@ -600,10 +601,25 @@ func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
-	userID, _ := c.Get("user_id")
+	// 获取 t_user_info.id (对标Java UserUtil.getUserDetailsDTO().getUserInfoId())
+	userInfoID, _ := c.Get("user_info_id")
+	if userInfoID == nil {
+		// 回退：从 Gin Context 获取 user_id (t_user_auth.id)，再查询 user_info_id
+		userID := middleware.GetUserID(c)
+		if userID == 0 {
+			util.ResponseError(c, errors.ErrUnauthorized.WithMsg("无法获取用户ID"))
+			return
+		}
+		var auth model.UserAuth
+		if err := h.registry.DB.Select("user_info_id").Where("id = ?", userID).First(&auth).Error; err != nil {
+			util.ResponseError(c, errors.ErrUserNotFound)
+			return
+		}
+		userInfoID = auth.UserID
+	}
+
 	var uid uint
-	switch v := userID.(type) {
+	switch v := userInfoID.(type) {
 	case uint:
 		uid = v
 	case uint64:
@@ -615,7 +631,7 @@ func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 		return
 	}
 
-	// 使用 FileService 上传头像 (对标Java版 uploadStrategyContext.executeUploadStrategy)
+	// 使用 FileService 上传头像 (对标Java uploadStrategyContext.executeUploadStrategy)
 	avatarURL, err := h.registry.File.UploadAvatar(c.Request.Context(), file, uid)
 	if err != nil {
 		util.ResponseError(c, err)

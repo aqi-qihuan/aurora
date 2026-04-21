@@ -1,0 +1,180 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0.32
+    container_name: aurora-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: aqi1015
+      MYSQL_DATABASE: aurora
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - /opt/aurora/mysql/data:/var/lib/mysql
+    networks:
+      - aurora-network
+    restart: always
+    command: --innodb_buffer_pool_size=128M --innodb_log_buffer_size=8M --innodb_flush_log_at_trx_commit=2 --sync_binlog=100 --max_connections=50 --table_open_cache=200 --thread_cache_size=10 --performance_schema=OFF --skip-name-resolve --tmp_table_size=8M --max_heap_table_size=8M --innodb_flush_method=O_DSYNC
+
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: aurora-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - /opt/aurora/redis/data:/data
+    networks:
+      - aurora-network
+    restart: always
+    command: redis-server --requirepass aqi1015 --maxmemory 32mb --maxmemory-policy allkeys-lru --save ""
+
+  rabbitmq:
+    image: rabbitmq:3.11.9-management
+    container_name: aurora-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: myroot
+      RABBITMQ_DEFAULT_PASS: myaqi1015
+      TZ: Asia/Shanghai
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - /opt/aurora/rabbitmq/data:/var/lib/rabbitmq
+    networks:
+      - aurora-network
+    restart: always
+
+  elasticsearch:
+    image: elasticsearch:8.17.2
+    container_name: aurora-elasticsearch
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms128m -Xmx160m"
+      TZ: Asia/Shanghai
+      # 内存优化参数
+      bootstrap.memory_lock: "true"
+      xpack.security.enabled: "false"
+      # Lucene 内存优化
+      indices.memory.index_buffer_size: "20%"
+      indices.fielddata.cache.size: "10%"
+      indices.breaker.total.limit: "60%"
+      http.max_content_length: "150mb"
+      indices.query.bool.max_clause_count: "1024"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - /opt/aurora/elasticsearch/data:/usr/share/elasticsearch/data
+    networks:
+      - aurora-network
+    restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  minio:
+    image: bitnami/minio:2023.12.7
+    container_name: aurora-minio
+    hostname: minio-server
+    environment:
+      MINIO_ROOT_USER: "aqi1015."
+      MINIO_ROOT_PASSWORD: "aqi1015."
+      MINIO_DEFAULT_BUCKETS: "aurora"
+      MINIO_SERVER_URL: "http://127.0.0.1:9000"
+      TZ: Asia/Shanghai
+      # MinIO 内存优化
+      MINIO_CACHE_DRIVES: /tmp/cache
+      MINIO_CACHE_EXPIRY: 90
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - /minio/data:/bitnami/minio/data
+    networks:
+      - aurora-network
+    restart: always
+
+  nginx:
+    image: nginx:1.23.3
+    container_name: aurora-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/aurora/nginx/conf:/etc/nginx
+      - /opt/aurora/nginx/html:/usr/share/nginx/html
+      - /opt/aurora/vue/blog:/usr/share/nginx/blog
+      - /opt/aurora/vue/admin:/usr/share/nginx/admin
+      - /opt/aurora/nginx/cert:/etc/nginx/cert
+    networks:
+      - aurora-network
+    restart: always
+
+  # ============================================
+  # Aurora Go 后端 (替代 springboot 服务)
+  # Go 编译为静态二进制，无需JRE/JDK运行时
+  # 镜像仅 ~5MB (alpine) vs Java ~80MB (JRE)
+  # ============================================
+  aurora-go:
+    image: alpine:3.20
+    container_name: aurora-go
+    environment:
+      TZ: Asia/Shanghai
+      # Docker网络内部服务名覆盖配置
+      AURORA_MYSQL_HOST: aurora-mysql
+      AURORA_MYSQL_PORT: "3306"
+      AURORA_MYSQL_USER: root
+      AURORA_MYSQL_PASSWORD: aqi1015
+      AURORA_MYSQL_DBNAME: aurora
+      AURORA_REDIS_HOST: aurora-redis
+      AURORA_REDIS_PORT: "6379"
+      AURORA_REDIS_PASSWORD: aqi1015
+      AURORA_RABBITMQ_HOST: aurora-rabbitmq
+      AURORA_RABBITMQ_PORT: "5672"
+      AURORA_RABBITMQ_USER: myroot
+      AURORA_RABBITMQ_PASSWORD: myaqi1015
+      AURORA_ELASTICSEARCH_USERNAME: ""
+      AURORA_ELASTICSEARCH_PASSWORD: ""
+      AURORA_MINIO_ACCESS_KEY: "aqi125"
+      AURORA_MINIO_SECRET_KEY: "aqi1015."
+      AURORA_MINIO_BUCKET: aurora
+      AURORA_JWT_SECRET: "YXVyb3JhLXNlY3JldC1rZXktZm9yLXNwcmluZy1ib290LTMtMi0xMg=="
+      AURORA_JWT_EXPIRE_TIME: "168"
+      AURORA_SERVER_MODE: release
+      AURORA_SEARCH_MODE: elasticsearch
+      AURORA_UPLOAD_MODE: minio
+    ports:
+      - "8080:8080"
+    volumes:
+      # 上传编译好的二进制文件 + 配置文件
+      - /opt/aurora/app/aurora-server:/app/aurora-server
+      - /opt/aurora/app/configs:/app/configs
+      - /opt/aurora/app/uploads:/app/uploads
+      - /opt/aurora/app/scripts:/app/scripts
+    networks:
+      - aurora-network
+    restart: always
+    working_dir: /app
+    command: >
+      /app/aurora-server --config configs/config.yaml
+
+  maxwell:
+    image: zendesk/maxwell:latest
+    container_name: aurora-maxwell
+    volumes:
+      - /opt/aurora/maxwell/config/config.properties:/app/config.properties
+    networks:
+      - aurora-network
+    restart: always
+    command: >
+      bin/maxwell --host=aurora-mysql --user=root --password=aqi1015
+        --producer=rabbitmq --rabbitmq_host=aurora-rabbitmq
+        --rabbitmq_user=myroot --rabbitmq_pass=myaqi1015
+        --rabbitmq_exchange=maxwell --rabbitmq_exchange_type=topic
+        --rabbitmq_routing_key_template=%{database}.%{table}
+        --client_id=maxwell_prod
+
+networks:
+  aurora-network:
+    external: true

@@ -87,3 +87,21 @@ type TagDTO struct {
 	ArticleCount int       `json:"articleCount,omitempty"`
 	CreateTime   time.Time `json:"createTime,omitempty"`
 }
+
+// ArticleAdminViewDTO 后台文章编辑详情DTO（对标Java ArticleAdminViewDTO）
+// 用于: GET /api/admin/articles/:id 编辑文章回显
+type ArticleAdminViewDTO struct {
+	ID              uint     `json:"id"`
+	ArticleTitle    string   `json:"articleTitle"`
+	ArticleAbstract string   `json:"articleAbstract,omitempty"`
+	ArticleContent  string   `json:"articleContent"`
+	ArticleCover    string   `json:"articleCover,omitempty"`
+	CategoryName    string   `json:"categoryName,omitempty"`
+	TagNames        []string `json:"tagNames"` // 对标Java: List<String> tagNames
+	IsTop           int8     `json:"isTop"`
+	IsFeatured      int8     `json:"isFeatured"`
+	Status          int8     `json:"status"`
+	Type            int8     `json:"type"`
+	OriginalURL     string   `json:"originalUrl,omitempty"`
+	Password        string   `json:"password,omitempty"`
+}

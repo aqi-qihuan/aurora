@@ -173,6 +173,52 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 	return &article, err
 }
 
+// GetArticleByIDAdmin 后台编辑文章详情（对标Java getArticleByIdAdmin）
+// 返回 ArticleAdminViewDTO，标签字段为 tagNames（字符串数组）
+func (s *ArticleService) GetArticleByIDAdmin(ctx context.Context, id uint) (*dto.ArticleAdminViewDTO, error) {
+	var article model.Article
+
+	if err := s.db.WithContext(ctx).First(&article, id).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.ErrArticleNotFound
+		}
+		return nil, fmt.Errorf("查询文章失败: %w", err)
+	}
+
+	// 获取分类名
+	categoryName := ""
+	if article.CategoryID != nil && *article.CategoryID > 0 {
+		var category model.Category
+		if err := s.db.WithContext(ctx).Select("category_name").Where("id = ?", *article.CategoryID).First(&category).Error; err == nil {
+			categoryName = category.CategoryName
+		}
+	}
+
+	// 获取标签名称列表（对标Java tagMapper.listTagNamesByArticleId）
+	var tagNames []string
+	s.db.WithContext(ctx).
+		Table("t_tag").
+		Joins("JOIN t_article_tag ON t_article_tag.tag_id = t_tag.id").
+		Where("t_article_tag.article_id = ?", id).
+		Pluck("t_tag.tag_name", &tagNames)
+
+	return &dto.ArticleAdminViewDTO{
+		ID:             article.ID,
+		ArticleTitle:   article.ArticleTitle,
+		ArticleAbstract: article.ArticleAbstract,
+		ArticleContent: article.ArticleContent,
+		ArticleCover:   article.ArticleCover,
+		CategoryName:   categoryName,
+		TagNames:       tagNames,
+		IsTop:          article.IsTop,
+		IsFeatured:     article.IsFeatured,
+		Status:         article.Status,
+		Type:           article.Type,
+		OriginalURL:    article.OriginalURL,
+		Password:       article.Password,
+	}, nil
+}
+
 // GetArticleByID 根据ID获取文章详情 (含分类+作者+标签)
 func (s *ArticleService) GetArticleByID(ctx context.Context, id uint) (*dto.ArticleDTO, error) {
 	var article model.Article
@@ -374,42 +420,44 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 		}
 
 		// 2. 处理标签关联 (根据名称查找或创建)
-		if vo.TagNames != nil {
-			if len(vo.TagNames) > 0 {
-				// 查询已存在的标签
-				var existTags []model.Tag
-				if err := tx.Where("tag_name IN ?", vo.TagNames).Find(&existTags).Error; err != nil {
+		// 先清理旧关联，再重新插入（防止 t_article_tag 表重复记录）
+		if err := tx.Model(&article).Association("Tags").Clear(); err != nil {
+			return fmt.Errorf("清理旧标签关联失败: %w", err)
+		}
+		if len(vo.TagNames) > 0 {
+			// 查询已存在的标签
+			var existTags []model.Tag
+			if err := tx.Where("tag_name IN ?", vo.TagNames).Find(&existTags).Error; err != nil {
+				return fmt.Errorf("查询标签失败: %w", err)
+			}
+
+			existTagNames := make(map[string]bool)
+			var tagIDs []uint
+			for _, t := range existTags {
+				existTagNames[t.TagName] = true
+				tagIDs = append(tagIDs, t.ID)
+			}
+
+			// 创建不存在的标签
+			for _, tagName := range vo.TagNames {
+				if !existTagNames[tagName] {
+					newTag := model.Tag{TagName: tagName}
+					if err := tx.Create(&newTag).Error; err != nil {
+						return fmt.Errorf("创建标签失败: %w", err)
+					}
+					tagIDs = append(tagIDs, newTag.ID)
+				}
+			}
+
+			// 关联标签（因为已 Clear，使用 Append 而非 Replace）
+			if len(tagIDs) > 0 {
+				var tags []model.Tag
+				if err := tx.Find(&tags, tagIDs).Error; err != nil {
 					return fmt.Errorf("查询标签失败: %w", err)
 				}
-
-				existTagNames := make(map[string]bool)
-				var tagIDs []uint
-				for _, t := range existTags {
-					existTagNames[t.TagName] = true
-					tagIDs = append(tagIDs, t.ID)
+				if err := tx.Model(&article).Association("Tags").Append(tags); err != nil {
+					return fmt.Errorf("关联标签失败: %w", err)
 				}
-
-				// 创建不存在的标签
-				for _, tagName := range vo.TagNames {
-					if !existTagNames[tagName] {
-						newTag := model.Tag{TagName: tagName}
-						if err := tx.Create(&newTag).Error; err != nil {
-							return fmt.Errorf("创建标签失败: %w", err)
-						}
-						tagIDs = append(tagIDs, newTag.ID)
-					}
-				}
-
-				// 关联标签
-				if len(tagIDs) > 0 {
-					var tags []model.Tag
-					if err := tx.Find(&tags, tagIDs).Error; err != nil {
-						return fmt.Errorf("查询标签失败: %w", err)
-					}
-					tx.Model(&article).Association("Tags").Replace(tags)
-				}
-			} else {
-				tx.Model(&article).Association("Tags").Clear()
 			}
 		}
 

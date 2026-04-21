@@ -177,11 +177,20 @@ func (s *TagService) ListAdminTags(ctx context.Context, cond dto.ConditionVO, pa
 }
 
 // SearchTags 模糊搜索标签 (用于文章编辑器标签选择器)
+// 对标Java listTagsAdminBySearch: like(keywords) + orderByDesc(id)
 func (s *TagService) SearchTags(ctx context.Context, keyword string) ([]dto.TagDTO, error) {
 	var tags []model.Tag
 
-	err := s.db.WithContext(ctx).
-		Where("tag_name LIKE ?", "%"+keyword+"%").
+	query := s.db.WithContext(ctx)
+
+	// 对标Java: StringUtils.isNotBlank(conditionVO.getKeywords())
+	// 只在keywords非空时才加LIKE条件
+	if keyword != "" {
+		query = query.Where("tag_name LIKE ?", "%"+keyword+"%")
+	}
+
+	// 对标Java: orderByDesc(Tag::getId) - 最新标签在前
+	err := query.Order("id DESC").
 		Limit(20).
 		Find(&tags).Error
 
