@@ -216,13 +216,16 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 
 	// 5. 独立访客统计 (最近7天，对标 Java UniqueViewServiceImpl.listUniqueViews)
 	// Java: uniqueViewService.listUniqueViews() → UniqueViewMapper.xml 直接查 t_unique_view 表
+	// Go增强: 合并数据库历史数据 + 今天Redis实时数据，确保数据及时性
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		
 		// 对标 Java: DateUtil.beginOfDay(DateUtil.offsetDay(new Date(), -7)) ~ DateUtil.endOfDay(new Date())
-		startTime := time.Now().AddDate(0, 0, -7)
-		endTime := time.Now()
+		// 关键修复: 使用 beginOfDay 和 endOfDay 确保查询完整的日期范围
+		now := time.Now()
+		startTime := now.AddDate(0, 0, -7).Truncate(24 * time.Hour)                     // 7天前的 00:00:00
+		endTime := now.Truncate(24 * time.Hour).Add(24*time.Hour).Add(-time.Second)     // 今天的 23:59:59
 		
 		type UniqueViewRow struct {
 			Day        string `gorm:"column:day"`
@@ -232,17 +235,37 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 		s.db.WithContext(ctx).
 			Table("t_unique_view").
 			Select(`DATE_FORMAT(create_time, "%Y-%m-%d") as day, views_count`).
-			Where("create_time > ? AND create_time <= ?", startTime, endTime).
+			Where("create_time >= ? AND create_time <= ?", startTime, endTime).  // 修复: 使用 >= 和 endOfDay
 			Order("create_time ASC").
 			Find(&rows)
 		
-		info.UniqueViewDTOs = make([]dto.UniqueViewDTO, len(rows))
-		for i, r := range rows {
-			info.UniqueViewDTOs[i] = dto.UniqueViewDTO{
-				Day:        r.Day,
-				ViewsCount: r.ViewsCount,
+		// 构建日期 -> 访客数的映射
+		viewMap := make(map[string]int)
+		for _, r := range rows {
+			viewMap[r.Day] = r.ViewsCount
+		}
+		
+		// 补充今天的实时数据（从 Redis 获取）
+		today := now.Format("2006-01-02")
+		if s.statsService != nil {
+			todayCount, err := s.statsService.GetTodayUniqueVisitors(ctx)
+			if err == nil && todayCount > 0 {
+				viewMap[today] = int(todayCount)
 			}
 		}
+		
+		// 生成最近7天的完整数据（缺失日期补0，对齐前端趋势图需求）
+		result := make([]dto.UniqueViewDTO, 0, 7)
+		for i := 6; i >= 0; i-- {
+			date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+			count := viewMap[date] // 没有数据时默认为0
+			result = append(result, dto.UniqueViewDTO{
+				Day:        date,
+				ViewsCount: count,
+			})
+		}
+		
+		info.UniqueViewDTOs = result
 	}()
 
 	// 6. 文章统计 (按日期分组，对标 Java 第160行)

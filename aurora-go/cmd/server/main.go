@@ -150,6 +150,12 @@ func main() {
 
 	// 5. 创建 Gin 引擎并注册全局中间件
 	r := gin.New()
+	
+	// ⭐ 配置信任代理：允许从代理头（X-Forwarded-For/X-Real-IP）获取真实客户端IP
+	// nil 表示信任所有来源（适用于Nginx反向代理场景）
+	// 如果有固定Nginx IP，可以指定: []string{"172.18.0.1"}
+	r.SetTrustedProxies(nil)
+	
 	slogLogger := slog.Default()
 	r.Use(middleware.Recovery(registry, slogLogger))
 	r.Use(middleware.Logger(slogLogger))

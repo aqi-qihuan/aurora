@@ -37,6 +37,17 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
+// ListUserRoles 获取用户角色选项列表（简化版，对标Java listUserRoles）
+// GET /api/admin/users/role
+func (h *RoleHandler) ListUserRoles(c *gin.Context) {
+	result, err := h.svc.ListUserRoles(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, result)
+}
+
 // SaveOrUpdate 保存/更新角色
 // POST /api/admin/roles
 // PUT /api/admin/roles/:id

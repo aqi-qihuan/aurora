@@ -103,6 +103,29 @@ func (s *RoleService) DeleteRole(ctx context.Context, id uint) error {
 	})
 }
 
+// ListUserRoles 获取用户角色选项列表（简化版，对标Java RoleServiceImpl.listUserRoles）
+// 用于: 编辑用户时选择角色下拉框
+func (s *RoleService) ListUserRoles(ctx context.Context) ([]dto.UserRoleDTO, error) {
+	var roles []model.Role
+
+	err := s.db.WithContext(ctx).
+		Select("id, role_name"). // 只查询需要的字段
+		Find(&roles).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询角色列表失败: %w", err)
+	}
+
+	list := make([]dto.UserRoleDTO, len(roles))
+	for i, r := range roles {
+		list[i] = dto.UserRoleDTO{
+			ID:       r.ID,
+			RoleName: r.RoleName,
+		}
+	}
+	return list, nil
+}
+
 // ListRoles 获取所有角色列表
 func (s *RoleService) ListRoles(ctx context.Context) ([]dto.RoleDTO, error) {
 	var roles []model.Role

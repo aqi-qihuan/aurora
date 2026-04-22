@@ -121,6 +121,7 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	// --- 评论（CommentController） ---
 	rg.GET("/comments", r.CommentHandler.ListComments)
 	rg.GET("/comments/topSix", r.CommentHandler.ListTopSixComments)
+	rg.GET("/comments/:id/replies", r.CommentHandler.ListRepliesByCommentId) // 根据评论ID获取回复列表（对标Java CommentController.listRepliesByCommentId）
 
 	// --- 分类（CategoryController） ---
 	rg.GET("/categories/all", r.CategoryHandler.ListCategories)
@@ -187,7 +188,7 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.PUT("/users/disable", r.UserAuthHandler.UpdateUserDisable)
 	rg.GET("/users/online", r.UserAuthHandler.ListOnlineUsers)
 	rg.DELETE("/users/:id/online", r.UserAuthHandler.RemoveOnlineUser)
-	rg.GET("/users/role", r.RoleHandler.ListRoles) // 获取角色列表（用于编辑用户时选择角色）
+	rg.GET("/users/role", r.RoleHandler.ListUserRoles) // 获取角色列表（用于编辑用户时选择角色，对标Java listUserRoles）
 
 	// --- 文章管理（ArticleController） ---
 	rg.GET("/articles", r.ArticleHandler.ListAdminArticles)

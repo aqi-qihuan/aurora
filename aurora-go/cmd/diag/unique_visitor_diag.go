@@ -19,13 +19,13 @@ func main() {
 
 	// 连接 Redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
+		Addr:     "134.175.206.158:6379",
+		Password: "aqi1015",
 		DB:       0,
 	})
 
 	// 连接 MySQL
-	db, err := gorm.Open(mysql.Open("root:password@tcp(localhost:3306)/aurora?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open("root:aqi1015@tcp(134.175.206.158:3306)/aurora?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("MySQL连接失败:", err)
 	}
@@ -34,12 +34,12 @@ func main() {
 
 	// 1. 检查 Redis 中的 key
 	fmt.Println("【1. Redis Key 检查】")
-	
+
 	// 旧格式 key
 	oldKey := constant.UniqueVisitor
 	oldCount, _ := rdb.SCard(ctx, oldKey).Result()
 	fmt.Printf("  旧格式 key: %s = %d 个IP\n", oldKey, oldCount)
-	
+
 	// 新格式 key（最近7天）
 	fmt.Println("\n  新格式 key（最近7天）:")
 	for i := 6; i >= 0; i-- {
@@ -58,7 +58,7 @@ func main() {
 	var uniqueViews []model.UniqueView
 	startTime := time.Now().AddDate(0, 0, -7)
 	db.Where("create_time >= ?", startTime).Order("create_time ASC").Find(&uniqueViews)
-	
+
 	for _, uv := range uniqueViews {
 		date := uv.CreateTime.Format("2006-01-02")
 		fmt.Printf("  %s: views_count=%d\n", date, uv.ViewsCount)
@@ -70,7 +70,7 @@ func main() {
 		fmt.Println("  ⚠️  发现旧格式 key 还有数据！这是之前累积的访客数据")
 		fmt.Println("  💡 建议：手动执行数据迁移，或清空旧 key 从今天重新开始")
 	}
-	
+
 	hasError := false
 	for _, uv := range uniqueViews {
 		if uv.ViewsCount == 0 {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -60,7 +61,11 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	result, err := h.registry.UserAuth.Login(c.Request.Context(), loginVO)
+	// 获取客户端IP和归属地（对标Java IpUtil.getIpAddress/getIpSource）
+	clientIP := util.GetClientIP(c)
+	ipSource := util.GetIPRegion(clientIP)
+
+	result, err := h.registry.UserAuth.Login(c.Request.Context(), loginVO, clientIP, ipSource)
 	if err != nil {
 		slog.Warn("登录失败", "username", loginVO.Username, "error", err.Error())
 		util.ResponseError(c, err)
@@ -384,7 +389,10 @@ func (h *UserAuthHandler) TriggerUserAreaStats(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	// 使用独立的 Context，避免 HTTP 请求结束后被取消
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
 	job := scheduler.NewUserAreaJob(h.registry.DB, h.registry.RDB)
 
 	if err := job.Run(ctx); err != nil {
@@ -474,8 +482,8 @@ func (h *UserAuthHandler) UpdateUserRole(c *gin.Context) {
 // Java逻辑: 1)下线用户(删除Redis Session) 2)更新 isDisable 字段
 func (h *UserAuthHandler) UpdateUserDisable(c *gin.Context) {
 	var body struct {
-		UserID    uint `json:"userId" binding:"required"`
-		IsDisable int8 `json:"isDisable" binding:"required"`
+		ID        uint `json:"id" binding:"required"`             // 对标Java UserDisableVO.id
+		IsDisable int8 `json:"isDisable" binding:"min=0,max=1"`   // 对标Java UserDisableVO.isDisable (0正常,1禁用)
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
@@ -486,14 +494,14 @@ func (h *UserAuthHandler) UpdateUserDisable(c *gin.Context) {
 
 	// Step 1: 下线用户（对标Java removeOnlineUser(userDisableVO.getId())）
 	if body.IsDisable == 1 {
-		if err := h.registry.UserAuth.RemoveOnlineUser(ctx, body.UserID); err != nil {
-			slog.Warn("下线用户失败", "error", err.Error(), "userId", body.UserID)
+		if err := h.registry.UserAuth.RemoveOnlineUser(ctx, body.ID); err != nil {
+			slog.Warn("下线用户失败", "error", err.Error(), "userId", body.ID)
 			// 不阻断后续操作
 		}
 	}
 
 	// Step 2: 更新禁用状态
-	if err := h.registry.DB.WithContext(ctx).Model(&model.UserInfo{}).Where("id = ?", body.UserID).Update("is_disable", body.IsDisable).Error; err != nil {
+	if err := h.registry.DB.WithContext(ctx).Model(&model.UserInfo{}).Where("id = ?", body.ID).Update("is_disable", body.IsDisable).Error; err != nil {
 		util.ResponseError(c, err)
 		return
 	}

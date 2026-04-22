@@ -477,6 +477,21 @@ type CommentAdminDTO struct {
 	CreateTime    time.Time `json:"createTime"`
 }
 
+// ReplyDTO 回复DTO（对标Java ReplyDTO，用于 GET /comments/{commentId}/replies）
+type ReplyDTO struct {
+	ID             uint      `json:"id"`
+	ParentID       uint      `json:"parentId"`
+	UserID         uint      `json:"userId"`
+	Nickname       string    `json:"nickname,omitempty"`
+	Avatar         string    `json:"avatar,omitempty"`
+	Website        string    `json:"webSite,omitempty"`        // 用户网站
+	ReplyUserID    *uint     `json:"replyUserId,omitempty"`    // 被回复用户ID
+	ReplyNickname  string    `json:"replyNickname,omitempty"`  // 被回复用户昵称
+	ReplyWebsite   string    `json:"replyWebsite,omitempty"`   // 被回复用户网站
+	CommentContent string    `json:"commentContent"`           // 回复内容
+	CreateTime     time.Time `json:"createTime"`
+}
+
 // ===== RBAC权限 DTO =====
 
 // ResourceRoleDTO 资源-角色映射DTO (对标Java ResourceRoleDTO)

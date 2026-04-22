@@ -146,7 +146,8 @@ func (s *UserAuthService) Register(ctx context.Context, reg vo.RegisterVO) (*dto
 }
 
 // Login 登录验证 (对标 Java LoginStrategy + TokenService)
-func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO) (*dto.LoginVO, error) {
+// Java逻辑: 登录成功后异步更新 t_user_auth 表的 ip_address, ip_source, last_login_time
+func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO, ipAddress string, ipSource string) (*dto.LoginVO, error) {
 	// 第一步: 快速查询 UserAuth (不关联 UserInfo)
 	var auth model.UserAuth
 	if err := s.db.WithContext(ctx).
@@ -183,10 +184,16 @@ func (s *UserAuthService) Login(ctx context.Context, login vo.LoginVO) (*dto.Log
 	// TODO: P0-6 JWT签发 → 返回Token
 	token, _ := util.GenerateRandomString(32) // 临时token, P0-6替换为JWT
 
-	// 异步更新最后登录时间 (不阻塞登录响应)
-	go func(userID uint) {
-		s.db.Model(&model.UserInfo{}).Where("id = ?", userID).Update("update_time", time.Now())
-	}(auth.UserID)
+	// 异步更新登录信息 (对标Java AuthenticationSuccessHandlerImpl.updateUserInfo)
+	// Java更新: ip_address, ip_source, last_login_time
+	go func(authID uint) {
+		now := time.Now()
+		s.db.Model(&model.UserAuth{}).Where("id = ?", authID).Updates(map[string]interface{}{
+			"ip_address":      ipAddress,
+			"ip_source":       ipSource,
+			"last_login_time": now,
+		})
+	}(auth.ID)
 
 	slog.Info("用户登录成功", "user_id", auth.UserID, "username", login.Username)
 
@@ -480,16 +487,17 @@ func (s *UserAuthService) ListUsers(ctx context.Context, cond dto.ConditionVO, p
 		return nil, fmt.Errorf("查询用户列表失败: %w", err)
 	}
 
-	// 统计总数（对标Java countUser）
+	// 统计总数（对标Java countUser - 基于t_user_info表统计）
 	var count int64
-	countQuery := s.db.WithContext(ctx).Table("t_user_auth ua").
-		Joins("LEFT JOIN t_user_info ui ON ua.user_info_id = ui.id")
+	countQuery := s.db.WithContext(ctx).Table("t_user_info ui")
 
 	if cond.Keywords != "" {
 		countQuery = countQuery.Where("ui.nickname LIKE ?", "%"+cond.Keywords+"%")
 	}
 	if cond.LoginType != nil && *cond.LoginType > 0 {
-		countQuery = countQuery.Where("ua.login_type = ?", *cond.LoginType)
+		// 有loginType过滤时，需要JOIN t_user_auth
+		countQuery = countQuery.Joins("JOIN t_user_auth ua ON ua.user_info_id = ui.id").
+			Where("ua.login_type = ?", *cond.LoginType)
 	}
 	countQuery.Count(&count)
 

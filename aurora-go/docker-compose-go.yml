@@ -45,33 +45,49 @@ services:
     restart: always
 
   elasticsearch:
-    image: elasticsearch:8.17.2
+    image: elasticsearch:8.19.14
     container_name: aurora-elasticsearch
     environment:
       discovery.type: single-node
-      ES_JAVA_OPTS: "-Xms128m -Xmx160m"
+      ES_JAVA_OPTS: "-Xms96m -Xmx160m"
       TZ: Asia/Shanghai
-      # 内存优化参数
-      bootstrap.memory_lock: "true"
+      # 安全关闭（博客无需认证）
       xpack.security.enabled: "false"
+      # 禁用 GeoIP 下载（博客不需要，节省 ~30MiB）
+      ingest.geoip.downloader.enabled: "false"
+      # 禁用 deprecation 日志写入索引
+      logger.deprecation.level: "ERROR"
+      # 关闭 memory_lock（减少强制内存锁定，允许 swap 释放）
+      bootstrap.memory_lock: "false"
       # Lucene 内存优化
-      indices.memory.index_buffer_size: "20%"
-      indices.fielddata.cache.size: "10%"
-      indices.breaker.total.limit: "60%"
-      http.max_content_length: "150mb"
-      indices.query.bool.max_clause_count: "1024"
+      indices.memory.index_buffer_size: "5%"
+      indices.fielddata.cache.size: "5%"
+      indices.breaker.total.limit: "50%"
+      indices.breaker.fielddata.limit: "30%"
+      indices.breaker.request.limit: "30%"
+      # 查询优化
+      indices.query.bool.max_clause_count: "512"
+      http.max_content_length: "50mb"
+      # 关闭机器学习（省内存）
+      xpack.ml.enabled: "false"
+      # 关闭 watcher（告警功能，博客不需要）
+      xpack.watcher.enabled: "false"
+      # ILM 优化：减少历史索引
+      indices.lifecycle.history_index_enabled: "false"
     ports:
       - "9200:9200"
-      - "9300:9300"
     volumes:
       - /opt/aurora/elasticsearch/data:/usr/share/elasticsearch/data
+      - /opt/aurora/elasticsearch/plugins:/usr/share/elasticsearch/plugins
     networks:
       - aurora-network
     restart: always
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+        reservations:
+          memory: 384M
 
   minio:
     image: bitnami/minio:2023.12.7

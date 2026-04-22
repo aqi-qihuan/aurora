@@ -788,6 +788,33 @@ type CommentStats struct {
 	Approved int64 `json:"approved"` // 已通过
 }
 
+// ListRepliesByCommentId 根据评论ID获取回复列表（对标Java CommentServiceImpl.listRepliesByCommentId）
+func (s *CommentService) ListRepliesByCommentId(ctx context.Context, commentId uint) ([]dto.ReplyDTO, error) {
+	var replies []model.Comment
+
+	err := s.db.WithContext(ctx).
+		Where("parent_id = ? AND is_review = 1", commentId).
+		Preload("UserInfo").
+		Preload("ReplyUser").
+		Order("create_time ASC").
+		Find(&replies).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查询回复列表失败: %w", err)
+	}
+
+	// 确保返回空数组而非 null
+	if replies == nil {
+		return []dto.ReplyDTO{}, nil
+	}
+
+	list := make([]dto.ReplyDTO, len(replies))
+	for i, r := range replies {
+		list[i] = s.toReplyDTO(&r)
+	}
+	return list, nil
+}
+
 func (s *CommentService) GetCommentStats(ctx context.Context) (*CommentStats, error) {
 	stats := &CommentStats{}
 
@@ -969,4 +996,31 @@ func collectTopicIDs(comments []model.Comment, t int8) []uint {
 		}
 	}
 	return ids
+}
+
+// toReplyDTO 将 Comment 模型转换为 ReplyDTO（对标Java）
+func (s *CommentService) toReplyDTO(c *model.Comment) dto.ReplyDTO {
+	dto := dto.ReplyDTO{
+		ID:             c.ID,
+		ParentID:       c.ParentID,
+		UserID:         c.UserID,
+		CommentContent: c.CommentContent,
+		ReplyUserID:    c.ReplyUserID,
+		CreateTime:     c.CreateTime,
+	}
+
+	// 评论人信息
+	if c.UserInfo != nil {
+		dto.Nickname = c.UserInfo.Nickname
+		dto.Avatar = c.UserInfo.Avatar
+		dto.Website = c.UserInfo.Website
+	}
+
+	// 被回复用户信息
+	if c.ReplyUser != nil {
+		dto.ReplyNickname = c.ReplyUser.Nickname
+		dto.ReplyWebsite = c.ReplyUser.Website
+	}
+
+	return dto
 }

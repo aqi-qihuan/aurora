@@ -262,12 +262,12 @@ func (s *RedisStatsService) GetTagArticleCount(ctx context.Context, tagID uint) 
 
 // ===== 访客统计 =====
 
-// RecordUniqueVisitor 记录独立访客（按天拆分 key，避免累积）
+// RecordUniqueVisitor 记录独立访客（使用全局 Set，对标Java）
+// 对标Java: redisService.sAdd(UNIQUE_VISITOR, md5)
 func (s *RedisStatsService) RecordUniqueVisitor(ctx context.Context, ip string) error {
-	// 使用按天拆分的 key，对标 Java 版实现
-	// 每天独立存储，避免累积
-	today := time.Now().Format("2006-01-02")
-	key := fmt.Sprintf("%s:%s", constant.UniqueVisitor, today)
+	// Java 版使用全局 Set: unique_visitor
+	// 定时任务每天凌晨0点读取后清空
+	key := constant.UniqueVisitor
 	
 	// 使用 Set 去重
 	_, err := s.rdb.SAdd(ctx, key, ip).Result()
@@ -275,52 +275,76 @@ func (s *RedisStatsService) RecordUniqueVisitor(ctx context.Context, ip string) 
 		return err
 	}
 	
-	// 设置过期时间（3 天，确保定时任务能读到）
+	// 设置过期时间（3 天，防止内存泄漏）
 	s.rdb.Expire(ctx, key, 72*time.Hour)
 	
 	return nil
 }
 
-// GetTodayUniqueVisitors 获取今日独立访客数（从当天的 Set 获取）
-func (s *RedisStatsService) GetTodayUniqueVisitors(ctx context.Context) (int64, error) {
-	today := time.Now().Format("2006-01-02")
-	key := fmt.Sprintf("%s:%s", constant.UniqueVisitor, today)
-	count, err := s.rdb.SCard(ctx, key).Result()
+// RecordUniqueVisitorByFingerprint 记录独立访客（使用 MD5 指纹，与检查逻辑一致）
+// 对标Java: redisService.sAdd(UNIQUE_VISITOR, md5)
+func (s *RedisStatsService) RecordUniqueVisitorByFingerprint(ctx context.Context, fingerprint string) error {
+	// Java 版使用全局 Set: unique_visitor（凌晨0点定时任务读取后清空）
+	key := constant.UniqueVisitor
+	
+	// 使用 Set 去重
+	_, err := s.rdb.SAdd(ctx, key, fingerprint).Result()
 	if err != nil {
-		return 0, err
+		return err
 	}
-	return count, nil
+	
+	// 设置过期时间（3天，防止内存泄漏）
+	s.rdb.Expire(ctx, key, 72*time.Hour)
+	
+	return nil
 }
 
-// GetUniqueVisitorsByDate 获取指定日期的独立访客数（支持新旧两种 key 格式）
-// 优先查询新格式 unique_visitor:YYYY-MM-DD，如果没有则查询旧格式 unique_visitor
+// IsUniqueVisitor 检查是否为独立访客（根据MD5指纹判断）
+// 对标Java: redisService.sIsMember(UNIQUE_VISITOR, md5)
+func (s *RedisStatsService) IsUniqueVisitor(ctx context.Context, md5Fingerprint string) (bool, error) {
+	// Java 版使用全局 key: unique_visitor
+	return s.rdb.SIsMember(ctx, constant.UniqueVisitor, md5Fingerprint).Result()
+}
+
+// MarkUniqueVisitor 标记独立访客（将MD5指纹加入Set）
+// 对标Java: redisService.sAdd(UNIQUE_VISITOR, md5)
+func (s *RedisStatsService) MarkUniqueVisitor(ctx context.Context, md5Fingerprint string) error {
+	// Java 版使用全局 key: unique_visitor
+	_, err := s.rdb.SAdd(ctx, constant.UniqueVisitor, md5Fingerprint).Result()
+	if err != nil {
+		return err
+	}
+	
+	// 设置过期时间（3天，防止内存泄漏）
+	s.rdb.Expire(ctx, constant.UniqueVisitor, 72*time.Hour)
+	return nil
+}
+
+// IncrementTotalViews 增加总浏览量（PV）
+// 对标Java: redisService.incr(BLOG_VIEWS_COUNT, 1)
+func (s *RedisStatsService) IncrementTotalViews(ctx context.Context) error {
+	return s.rdb.Incr(ctx, constant.BlogViewsCount).Err()
+}
+
+// GetTodayUniqueVisitors 获取今日独立访客数（从全局 Set 读取，对标Java）
+func (s *RedisStatsService) GetTodayUniqueVisitors(ctx context.Context) (int64, error) {
+	// Java 版使用全局 key: unique_visitor
+	return s.rdb.SCard(ctx, constant.UniqueVisitor).Result()
+}
+
+// GetUniqueVisitorsByDate 获取指定日期的独立访客数（从全局 Set 读取）
+// 对标Java: redisService.sCard(UNIQUE_VISITOR)
 func (s *RedisStatsService) GetUniqueVisitorsByDate(ctx context.Context, date string) (int64, error) {
-	// 1. 先尝试查询新格式（按天拆分）
-	newKey := fmt.Sprintf("%s:%s", constant.UniqueVisitor, date)
-	count, err := s.rdb.SCard(ctx, newKey).Result()
-	if err == nil && count > 0 {
-		return count, nil
-	}
-	
-	// 2. 如果是今天或昨天，可能还在旧格式 key 中（兼容历史数据）
-	today := time.Now().Format("2006-01-02")
-	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
-	
-	if date == today || date == yesterday {
-		// 尝试查询旧格式 key（全局累积）
-		oldCount, oldErr := s.rdb.SCard(ctx, constant.UniqueVisitor).Result()
-		if oldErr == nil && oldCount > 0 {
-			return oldCount, nil
-		}
-	}
-	
-	return 0, nil
+	// Java 版使用全局 key: unique_visitor
+	// 定时任务每天凌晨0点归档后清空，所以只有今天的实时数据
+	return s.rdb.SCard(ctx, constant.UniqueVisitor).Result()
 }
 
-// RecordVisitorArea 记录访客地域
+// RecordVisitorArea 记录访客地域（对标Java，使用全局累积key）
 func (s *RedisStatsService) RecordVisitorArea(ctx context.Context, area string) error {
-	today := time.Now().Format("2006-01-02")
-	key := fmt.Sprintf("%s:%s", constant.VisitorArea, today)
+	// 对标Java: redisService.hIncr(VISITOR_AREA, ipProvince, 1L)
+	// 使用全局累积key（无日期后缀），与读取端保持一致
+	key := constant.VisitorArea
 	
 	// 使用 Hash 统计各地域访问次数
 	_, err := s.rdb.HIncrBy(ctx, key, area, 1).Result()
@@ -328,28 +352,27 @@ func (s *RedisStatsService) RecordVisitorArea(ctx context.Context, area string) 
 		return err
 	}
 	
-	s.rdb.Expire(ctx, key, 7*24*time.Hour)
+	// 设置过期时间（30天，定期清理）
+	s.rdb.Expire(ctx, key, 30*24*time.Hour)
 	return nil
 }
 
-// GetVisitorAreaStats 获取访客地域统计
+// GetVisitorAreaStats 获取访客地域统计（从全局累积key读取）
 func (s *RedisStatsService) GetVisitorAreaStats(ctx context.Context, days int) (map[string]int64, error) {
-	stats := make(map[string]int64)
+	// 对标Java: redisService.hGetAll(VISITOR_AREA)
+	// 直接从全局key读取，无需按日期聚合
+	key := constant.VisitorArea
 	
-	for i := 0; i < days; i++ {
-		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
-		key := fmt.Sprintf("%s:%s", constant.VisitorArea, date)
-		
-		areaData, err := s.rdb.HGetAll(ctx, key).Result()
-		if err != nil {
-			continue
-		}
-		
-		for area, countStr := range areaData {
-			var count int64
-			fmt.Sscanf(countStr, "%d", &count)
-			stats[area] += count
-		}
+	areaData, err := s.rdb.HGetAll(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+	
+	stats := make(map[string]int64)
+	for area, countStr := range areaData {
+		var count int64
+		fmt.Sscanf(countStr, "%d", &count)
+		stats[area] += count
 	}
 	
 	return stats, nil

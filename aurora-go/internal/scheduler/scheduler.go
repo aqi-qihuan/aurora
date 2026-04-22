@@ -243,12 +243,17 @@ func (s *Scheduler) RunJobNow(ctx context.Context, jobName string, invokeTarget 
 		return fmt.Errorf("任务未注册: %s", invokeTarget)
 	}
 
+	// 使用独立的 Context，避免 HTTP 请求结束后被取消
+	// 设置 5 分钟超时，防止长时间运行的任务无限期执行
+	taskCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+
 	// 异步执行（对标Java triggerJob）
 	go func() {
-		s.executeJob(ctx, jobName, invokeTarget, handler)
+		defer cancel() // 任务完成后释放资源
+		s.executeJob(taskCtx, jobName, invokeTarget, handler)
 	}()
 
-	slog.Info("手动触发任务执行", "name", jobName, "target", invokeTarget)
+	slog.Info("手动触发任务执行", "id", ctx.Value("job_id"), "name", jobName)
 	return nil
 }
 

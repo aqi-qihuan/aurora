@@ -282,3 +282,20 @@ func (h *CommentHandler) GetCommentStats(c *gin.Context) {
 	}
 	util.ResponseSuccess(c, stats)
 }
+
+// ListRepliesByCommentId 根据评论ID获取回复列表（对标Java CommentController.listRepliesByCommentId）
+// GET /api/comments/:id/replies
+func (h *CommentHandler) ListRepliesByCommentId(c *gin.Context) {
+	commentId, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的评论ID"))
+		return
+	}
+
+	list, err := h.svc.ListRepliesByCommentId(c.Request.Context(), uint(commentId))
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+	util.ResponseSuccess(c, list)
+}
