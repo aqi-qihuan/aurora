@@ -326,26 +326,29 @@ export default defineComponent({
             initTocbot()
           })
         })
-        new Promise((resolve) => {
-          data.data.preArticleCard.articleContent = markdownToHtml(data.data.preArticleCard.articleContent)
-            .replace(/<\/?[^>]*>/g, '')
-            .replace(/[|]*\n/, '')
-            .replace(/&npsp;/gi, '')
-          resolve(data.data.preArticleCard)
-        }).then((preArticleCard: any) => {
-          reactiveData.preArticleCard = preArticleCard
-        })
-        new Promise((resolve) => {
-          data.data.nextArticleCard.articleContent = markdownToHtml(data.data.nextArticleCard.articleContent)
-            .replace(/<\/?[^>]*>/g, '')
-            .replace(/[|]*\n/, '')
-            .replace(/&nbsp;/gi, '')
-          resolve(data.data.nextArticleCard)
-        }).then((nextArticleCard) => {
-          reactiveData.nextArticleCard = nextArticleCard
-        }).catch((error) => {
-          console.error('下一篇文章处理失败:', error)
-        })
+        // 处理上一篇/下一篇文章（防御性检查：当文章是第一篇或最后一篇时，对应字段为null）
+        if (data.data.preArticleCard) {
+          new Promise((resolve) => {
+            data.data.preArticleCard.articleContent = markdownToHtml(data.data.preArticleCard.articleContent)
+              .replace(/<\/?[^>]*>/g, '')
+              .replace(/[|]*\n/, '')
+              .replace(/&npsp;/gi, '')
+            resolve(data.data.preArticleCard)
+          }).then((preArticleCard: any) => {
+            reactiveData.preArticleCard = preArticleCard
+          })
+        }
+        if (data.data.nextArticleCard) {
+          new Promise((resolve) => {
+            data.data.nextArticleCard.articleContent = markdownToHtml(data.data.nextArticleCard.articleContent)
+              .replace(/<\/?[^>]*>/g, '')
+              .replace(/[|]*\n/, '')
+              .replace(/&nbsp;/gi, '')
+            resolve(data.data.nextArticleCard)
+          }).then((nextArticleCard) => {
+            reactiveData.nextArticleCard = nextArticleCard
+          })
+        }
       })
     }
     const fetchComments = () => {

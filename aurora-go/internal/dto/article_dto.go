@@ -12,24 +12,28 @@ type UserInfoInCard struct {
 
 // ArticleDTO 文章数据传输对象 (用于API响应)
 type ArticleDTO struct {
-	ID             uint           `json:"id"`
-	UserID         uint           `json:"userId"`
-	ArticleCover   string        `json:"articleCover"`
-	ArticleTitle   string        `json:"articleTitle"`
-	ArticleContent string        `json:"articleContent"`
-	IsTop          int8          `json:"isTop"`
-	IsFeatured     int8          `json:"isFeatured"`
-	Status         int8          `json:"status"`
-	Type           int8          `json:"type"`
-	ViewCount      uint64        `json:"viewsCount"`
-	LikeCount      int64         `json:"likeCount"`
-	CategoryID     uint           `json:"categoryId"`
-	CategoryName   string        `json:"categoryName,omitempty"`
-	Nickname       string        `json:"nickname,omitempty"`         // 兼容旧前端
-	Avatar         string        `json:"avatar,omitempty"`             // 兼容旧前端
-	Author         *UserInfoInCard `json:"author,omitempty"`        // 前端详情页使用 article.author.nickname/avatar
-	Tags           []TagDTO      `json:"tags,omitempty"`
-	CreateTime     time.Time     `json:"createTime"`
+	ID             uint            `json:"id"`
+	UserID         uint            `json:"userId"`
+	ArticleCover   string         `json:"articleCover"`
+	ArticleTitle   string         `json:"articleTitle"`
+	ArticleContent string         `json:"articleContent"`
+	IsTop          int8           `json:"isTop"`
+	IsFeatured     int8           `json:"isFeatured"`
+	Status         int8           `json:"status"`
+	Type           int8           `json:"type"`
+	ViewCount      uint64         `json:"viewsCount"`
+	LikeCount      int64          `json:"likeCount"`
+	CategoryID     uint            `json:"categoryId"`
+	CategoryName   string         `json:"categoryName,omitempty"`
+	Nickname       string         `json:"nickname,omitempty"`          // 兼容旧前端
+	Avatar         string         `json:"avatar,omitempty"`              // 兼容旧前端
+	Author         *UserInfoInCard `json:"author,omitempty"`          // 前端详情页使用 article.author.nickname/avatar
+	Tags           []TagDTO       `json:"tags,omitempty"`
+	CreateTime     time.Time      `json:"createTime"`
+
+	// 上一篇/下一篇文章卡片（前台文章详情页导航用）
+	PreArticleCard  *ArticleCardDTO `json:"preArticleCard,omitempty"`
+	NextArticleCard *ArticleCardDTO `json:"nextArticleCard,omitempty"`
 }
 
 // ArticleCardDTO 文章卡片(列表页精简版) - 完全对标Java版 ArticleCardDTO

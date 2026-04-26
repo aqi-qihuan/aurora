@@ -237,7 +237,40 @@ func (s *ArticleService) GetArticleByID(ctx context.Context, id uint) (*dto.Arti
 		return nil, fmt.Errorf("查询文章失败: %w", err)
 	}
 
-	return s.toArticleDTO(&article), nil
+	// 转换主文章 DTO
+	result := s.toArticleDTO(&article)
+
+	// 查询上一篇文章 (ID < 当前ID 的最大值, 只查已发布非删除的公开文章)
+	var preArt model.Article
+	preErr := s.db.WithContext(ctx).
+		Where("is_delete = 0 AND status = 1 AND id < ?", id).
+		Preload("Tags").
+		Preload("Category").
+		Preload("UserInfo").
+		Order("id DESC").
+		Limit(1).
+		First(&preArt).Error
+	if preErr == nil {
+		card := s.toArticleCardDTO(&preArt)
+		result.PreArticleCard = &card
+	}
+
+	// 查询下一篇文章 (ID > 当前ID 的最小值, 只查已发布非删除的公开文章)
+	var nextArt model.Article
+	nextErr := s.db.WithContext(ctx).
+		Where("is_delete = 0 AND status = 1 AND id > ?", id).
+		Preload("Tags").
+		Preload("Category").
+		Preload("UserInfo").
+		Order("id ASC").
+		Limit(1).
+		First(&nextArt).Error
+	if nextErr == nil {
+		card := s.toArticleCardDTO(&nextArt)
+		result.NextArticleCard = &card
+	}
+
+	return result, nil
 }
 
 // ListArticles 分页查询文章列表 (前台用, 只查已发布非删除)
