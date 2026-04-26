@@ -212,7 +212,7 @@ export default defineComponent({
     onUnmounted(() => {
       commonStore.resetHeaderImage()
       reactiveData.article = ''
-      tocbot.destroy()
+      try { tocbot.destroy() } catch (e) { /* ignore if not initialized */ }
       // 清理图片点击事件监听器
       imageClickHandlers.forEach(cleanup => cleanup())
       imageClickHandlers = []

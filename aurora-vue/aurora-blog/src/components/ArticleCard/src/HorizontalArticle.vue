@@ -6,7 +6,7 @@
         {{ t('settings.pinned') }}
       </b>
     </span>
-    <span v-else-if="article.isfeatured" class="article-tag">
+    <span v-else-if="article.isFeatured" class="article-tag">
       <b>
         <svg-icon icon-class="hot" />
         {{ t('settings.featured') }}
@@ -47,18 +47,18 @@
         <ob-skeleton v-else tag="h1" height="3rem" />
         <p v-if="article.articleContent" class="article-content-main">{{ article.articleContent }}</p>
         <ob-skeleton v-else tag="p" :count="4" height="20px" />
-        <div class="article-footer" v-if="article">
+        <div class="article-footer" v-if="article && article.author && article.createTime">
           <div class="flex flex-row items-center">
             <img
               class="hover:opacity-50 cursor-pointer"
-              :src="article.author.avatar"
+              :src="article.author?.avatar || ''"
               alt=""
-              @click="handleAuthorClick(article.author.website)" />
+              @click="handleAuthorClick(article.author?.website || '')" />
             <span class="text-ob-dim">
               <strong
                 class="text-ob-normal pr-1.5 hover:text-ob hover:opacity-50 cursor-pointer"
-                @click="handleAuthorClick(article.author.website)">
-                {{ article.author.nickname }}
+                @click="handleAuthorClick(article.author?.website || '')">
+                {{ article.author?.nickname }}
               </strong>
               {{ t('settings.shared-on') }} {{ t(`settings.months[${new Date(article.createTime).getMonth()}]`) }}
               {{ new Date(article.createTime).getDate() }}, {{ new Date(article.createTime).getFullYear() }}
@@ -101,6 +101,8 @@ export default defineComponent({
       window.open(link)
     }
     const toArticle = () => {
+      // 防御：topArticle 未加载时不跳转
+      if (!articleStore.topArticle || !articleStore.topArticle.id) return
       let isAccess = false
       userStore.accessArticles.forEach((item: any) => {
         if (item == articleStore.topArticle.id) {

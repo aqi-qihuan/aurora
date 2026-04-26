@@ -45,6 +45,7 @@ import Dia from '@/components/Dia.vue'
 import AuroraNavigator from '@/components/AuroraNavigator.vue'
 import UserCenter from '@/components/UserCenter.vue'
 import api from './api/api'
+import defaultCover from '@/assets/default-cover.jpg'
 export default defineComponent({
   name: 'App',
   components: {
@@ -100,13 +101,22 @@ export default defineComponent({
     }
     const fetchWebsiteConfig = () => {
       api.getWebsiteConfig().then(({ data }) => {
-        appStore.viewCount = data.data.viewCount
-        appStore.articleCount = data.data.articleCount
-        appStore.talkCount = data.data.talkCount
-        appStore.categoryCount = data.data.categoryCount
-        appStore.tagCount = data.data.tagCount
-        appStore.websiteConfig = data.data.websiteConfigDTO
-        initFavicon(data.data.websiteConfigDTO.favicon)
+        // 添加安全检查
+        if (!data || !data.data) {
+          console.warn('网站配置数据为空:', data)
+          return
+        }
+        
+        appStore.viewCount = data.data.viewCount || 0
+        appStore.articleCount = data.data.articleCount || 0
+        appStore.talkCount = data.data.talkCount || 0
+        appStore.categoryCount = data.data.categoryCount || 0
+        appStore.tagCount = data.data.tagCount || 0
+        appStore.websiteConfig = data.data.websiteConfigDTO || {}
+        
+        if (data.data.websiteConfigDTO && data.data.websiteConfigDTO.favicon) {
+          initFavicon(data.data.websiteConfigDTO.favicon)
+        }
       }).catch((error) => {
         console.error('获取网站配置失败:', error)
       })
@@ -167,7 +177,7 @@ export default defineComponent({
       theme: computed(() => appStore.themeConfig.theme),
       headerImage: computed(() => {
         return {
-          backgroundImage: `url(${commonStore.headerImage}), url(${require('@/assets/default-cover.jpg')})`,
+          backgroundImage: `url(${commonStore.headerImage}), url(${defaultCover})`,
           opacity: commonStore.headerImage !== '' ? 1 : 0
         }
       }),

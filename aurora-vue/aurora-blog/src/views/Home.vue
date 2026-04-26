@@ -133,18 +133,33 @@ export default defineComponent({
     })
     const fetchTopAndFeatured = () => {
       api.getTopAndFeaturedArticles().then(({ data }) => {
-        data.data.topArticle.articleContent = markdownToHtml(data.data.topArticle.articleContent)
-          .replace(/<\/?[^>]*>/g, '')
-          .replace(/[|]*\n/, '')
-          .replace(/&npsp;/gi, '')
-        data.data.featuredArticles.forEach((item: any) => {
-          item.articleContent = markdownToHtml(item.articleContent)
+        // 添加安全检查
+        if (!data || !data.data) {
+          console.warn('置顶/推荐文章数据为空:', data)
+          return
+        }
+
+        // 后端返回: { topArticle: ArticleCardDTO, featuredArticles: ArticleCardDTO[] }
+        if (data.data.topArticle) {
+          const topArticle = data.data.topArticle
+          topArticle.articleContent = markdownToHtml(topArticle.articleContent)
             .replace(/<\/?[^>]*>/g, '')
             .replace(/[|]*\n/, '')
             .replace(/&npsp;/gi, '')
-        })
-        articleStore.topArticle = data.data.topArticle
-        articleStore.featuredArticles = data.data.featuredArticles
+          articleStore.topArticle = topArticle
+        }
+
+        if (data.data.featuredArticles && Array.isArray(data.data.featuredArticles)) {
+          data.data.featuredArticles.forEach((item: any) => {
+            item.articleContent = markdownToHtml(item.articleContent)
+              .replace(/<\/?[^>]*>/g, '')
+              .replace(/[|]*\n/, '')
+              .replace(/&npsp;/gi, '')
+          })
+          articleStore.featuredArticles = data.data.featuredArticles
+        }
+      }).catch((err: Error) => {
+        console.error('获取置顶/推荐文章失败:', err)
       })
     }
     const fetchArticles = () => {
@@ -198,7 +213,12 @@ export default defineComponent({
     const fetchCategories = () => {
       categoryStore.categories = []
       api.getAllCategories().then(({ data }) => {
-        categoryStore.categories.push(...data.data)
+        // 添加安全检查
+        if (data && data.data && Array.isArray(data.data)) {
+          categoryStore.categories.push(...data.data)
+        } else {
+          console.warn('分类数据为空或格式错误:', data)
+        }
       })
     }
     const expandHandler = () => {

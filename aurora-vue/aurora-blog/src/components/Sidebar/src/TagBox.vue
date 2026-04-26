@@ -35,7 +35,13 @@ export default defineComponent({
     })
     const fetchTopTenTags = () => {
       api.getTopTenTags().then(({ data }) => {
-        tagStore.homeTags = data.data
+        // 添加安全检查
+        if (data && data.data) {
+          tagStore.homeTags = data.data
+        } else {
+          console.warn('标签数据为空:', data)
+          tagStore.homeTags = []
+        }
       })
     }
     return {

@@ -1,21 +1,32 @@
-import mermaidPlugin from "@agoose77/markdown-it-mermaid";
+import MarkdownIt from 'markdown-it'
+import markdownItKatexExternal from 'markdown-it-katex-external'
+import markdownItEmoji from 'markdown-it-emoji'
+import markdownItContainer from 'markdown-it-container'
+import markdownItSup from 'markdown-it-sup'
+import markdownItSub from 'markdown-it-sub'
+import markdownItFootnote from 'markdown-it-footnote'
+import markdownItAbbr from 'markdown-it-abbr'
+import markdownItIns from 'markdown-it-ins'
+import markdownItMark from 'markdown-it-mark'
+import markdownItKatex from '@iktakahiro/markdown-it-katex'
+import mermaidPlugin from '@agoose77/markdown-it-mermaid'
+
 export default function markdownToHtml(content: any) {
-  const MarkdownIt = require('markdown-it')
   const md = new MarkdownIt({
     html: true
   })
-    .use(require('markdown-it-katex-external'))
-    .use(require('markdown-it-emoji'))
-    .use(require('markdown-it-container'), 'hljs-center')  // 容器插件
-    .use(require('markdown-it-container'), 'hljs-left')
-    .use(require('markdown-it-container'), 'hljs-right')
-    .use(require('markdown-it-sup'))                       // 上角标插件
-    .use(require('markdown-it-sub'))                       // 下角标插件
-    .use(require('markdown-it-footnote'))                  // 脚注插件
-    .use(require('markdown-it-abbr'))                      // 缩写插件
-    .use(require('markdown-it-ins'))                       // 插入插件
-    .use(require('markdown-it-mark'))                      // 标记插件
-    .use(require('@iktakahiro/markdown-it-katex'))
+    .use(markdownItKatexExternal)
+    .use(markdownItEmoji)
+    .use(markdownItContainer, 'hljs-center')
+    .use(markdownItContainer, 'hljs-left')
+    .use(markdownItContainer, 'hljs-right')
+    .use(markdownItSup)
+    .use(markdownItSub)
+    .use(markdownItFootnote)
+    .use(markdownItAbbr)
+    .use(markdownItIns)
+    .use(markdownItMark)
+    .use(markdownItKatex)
     .use(mermaidPlugin)
   return md.render(content)
 }

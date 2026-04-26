@@ -53,11 +53,11 @@
               class="hover:opacity-50 cursor-pointer"
               :src="article.author.avatar || ''"
               alt="author avatar"
-              @click="handleAuthorClick(article.author.website)" />
+              @click="handleAuthorClick(article.author.website || '')" />
             <span class="text-ob-dim">
               <strong
                 class="text-ob-normal pr-1.5 hover:text-ob hover:opacity-50 cursor-pointer"
-                @click="handleAuthorClick(article.author.website)">
+                @click="handleAuthorClick(article.author.website || '')">
                 {{ article.author.nickname }}
               </strong>
               {{ t('settings.shared-on') }} {{ t(`settings.months[${new Date(article.createTime).getMonth()}]`) }}

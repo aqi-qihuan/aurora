@@ -7,9 +7,11 @@ import 'normalize.css/normalize.css'
 import { createPinia } from 'pinia'
 import { i18n } from './locales'
 import VueClickAway from 'vue3-click-away'
-import lazyPlugin from 'vue3-lazy'
+import defaultCover from '@/assets/default-cover.jpg'
 import { registerSvgIcon } from '@/icons'
 import { registerObSkeleton } from '@/components/LoadingSkeleton'
+// 注入 vite-plugin-svg-icons 生成的 SVG sprite（必须在入口文件引入）
+import 'virtual:svg-icons-register'
 import 'prismjs/themes/prism.css'
 import 'prismjs'
 import 'element-plus/theme-chalk/index.css'
@@ -17,6 +19,7 @@ import { components, plugins } from './plugins/element-plus'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import infiniteScroll from 'vue3-infinite-scroll-better'
 import v3ImgPreview from 'v3-img-preview'
+import lazyPlugin from 'vue3-lazy'
 import 'mavon-editor/dist/css/index.css'
 import api from './api/api'
 import axios from 'axios'
@@ -32,8 +35,8 @@ export const app = createApp(App)
   .use(infiniteScroll)
   .use(v3ImgPreview, {})
   .use(lazyPlugin, {
-    loading: require('@/assets/default-cover.jpg'),
-    error: require('@/assets/default-cover.jpg')
+    loading: defaultCover,
+    error: defaultCover
   })
 const userStore = useUserStore()
 axios.interceptors.request.use((config: any) => {
@@ -93,10 +96,10 @@ plugins.forEach((plugin) => {
 registerSvgIcon(app)
 registerObSkeleton(app)
 app.mount('#app')
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.DEV) {
   console.log('%c 网站作者:七七', 'color:#bada55')
   console.log('%c qq:2316364297', 'color:#bada55')
 }
-if (process.env.NODE_ENV === 'production') {
+if (import.meta.env.PROD) {
   api.report()
 }

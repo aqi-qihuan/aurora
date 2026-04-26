@@ -105,7 +105,7 @@ export default defineComponent({
     })
     onUnmounted(() => {
       commonStore.resetHeaderImage()
-      tocbot.destroy()
+      try { tocbot.destroy() } catch (e) { /* ignore if not initialized */ }
     })
     provide(
       'comments',

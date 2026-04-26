@@ -52,9 +52,18 @@ export default defineComponent({
     })
     const initRecentComment = () => {
       api.getTopSixComments().then(({ data }) => {
+        // 添加安全检查
+        if (!data || !data.data) {
+          console.warn('评论数据为空:', data)
+          commentStore.recentComment = []
+          return
+        }
+        
         if (data.data.length === 0) {
           commentStore.recentComment = []
+          return
         }
+        
         data.data.forEach((itme: any) => {
           itme.createTime = formatTime(itme.createTime)
         })

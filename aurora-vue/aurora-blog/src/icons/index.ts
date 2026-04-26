@@ -4,9 +4,9 @@ import { App } from 'vue'
 // register globally
 export const registerSvgIcon = (app: App): void => {
   app.component('svg-icon', SvgIcon)
-  const req = require.context('./svg', false, /\.svg$/)
-  // eslint-disable-next-line
-  const requireAll = (requireContext: any) =>
-    requireContext.keys().map(requireContext)
-  requireAll(req)
+  
+  // Vite 使用 import.meta.glob 替代 require.context
+  const modules = import.meta.glob('./svg/*.svg', { eager: true })
+  // 导入所有 SVG 文件
+  Object.values(modules)
 }

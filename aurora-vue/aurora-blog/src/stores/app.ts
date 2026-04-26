@@ -6,8 +6,8 @@ import 'nprogress/nprogress.css'
 
 nProgress.configure({
   showSpinner: false,
-  trickleSpeed: 100,
-  parent: '#loading-bar-wrapper'
+  trickleSpeed: 100
+  // parent: '#loading-bar-wrapper' // 移除此配置，避免因元素不存在导致错误
 })
 
 const setTheme = (theme: string) => {

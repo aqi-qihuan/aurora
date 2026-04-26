@@ -1,18 +1,14 @@
-@import './theme-variables.scss';
+/* Import all SCSS modules first */
+@use './theme-variables.scss' as *;
+@use './components/article.scss' as *;
+@use './components/sidebar-box.scss' as *;
+@use './components/search-modal.scss' as *;
+@use './transitions.scss' as *;
 
-/* Base css */
-@import 'tailwindcss/base';
-
-/* Components css */
-@import 'tailwindcss/components';
-@import './components/article.scss';
-@import './components/sidebar-box.scss';
-@import './components/search-modal.scss';
-
-/* Utilities css */
-@import 'tailwindcss/utilities';
-
-@import './transitions.scss';
+/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 .stroke-ob-bright {
   stroke: var(--text-bright) !important;
