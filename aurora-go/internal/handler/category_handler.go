@@ -134,8 +134,8 @@ func (h *CategoryHandler) ListAdminCategories(c *gin.Context) {
 // SearchCategories 搜索分类（用于编辑器下拉）
 // GET /api/admin/categories/search
 func (h *CategoryHandler) SearchCategories(c *gin.Context) {
-	_ = c.DefaultQuery("keywords", "")
-	result, err := h.svc.GetCategories(c.Request.Context())
+	keyword := c.DefaultQuery("keywords", "")
+	result, err := h.svc.SearchCategories(c.Request.Context(), keyword)
 	if err != nil {
 		util.ResponseError(c, err)
 		return

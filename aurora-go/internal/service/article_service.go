@@ -87,6 +87,7 @@ func (s *ArticleService) CreateArticle(ctx context.Context, userID uint, vo vo.A
 		if vo.IsFeatured != 0 {
 			article.IsFeatured = vo.IsFeatured
 		}
+		// 密码保护逻辑：设置了密码则强制设为加密状态
 		if vo.Password != "" {
 			article.Status = 2 // 密码保护
 			article.Password = vo.Password
@@ -219,11 +220,12 @@ func (s *ArticleService) GetArticleByIDAdmin(ctx context.Context, id uint) (*dto
 	}, nil
 }
 
-// GetArticleByID 根据ID获取文章详情 (含分类+作者+标签)
+// GetArticleByID 根据ID获取文章详情 (公开接口, 只返回已发布且未删除的文章)
 func (s *ArticleService) GetArticleByID(ctx context.Context, id uint) (*dto.ArticleDTO, error) {
 	var article model.Article
 
 	query := s.db.WithContext(ctx).
+		Where("is_delete = 0 AND status IN (1, 2)").
 		Preload("Tags").
 		Preload("Category").
 		Preload("UserInfo")
@@ -253,6 +255,9 @@ func (s *ArticleService) ListArticles(ctx context.Context, cond dto.ConditionVO,
 	}
 	if cond.CategoryID != nil && *cond.CategoryID > 0 {
 		baseQuery = baseQuery.Where("category_id = ?", *cond.CategoryID)
+	}
+	if cond.TagID != nil && *cond.TagID > 0 {
+		baseQuery = baseQuery.Where("id IN (SELECT article_id FROM t_article_tag WHERE tag_id = ?)", *cond.TagID)
 	}
 	if cond.Type != nil && *cond.Type > 0 {
 		baseQuery = baseQuery.Where("type = ?", *cond.Type)
@@ -401,9 +406,16 @@ func (s *ArticleService) UpdateArticle(ctx context.Context, vo vo.ArticleVO) (*m
 		}
 		if vo.Status != nil {
 			article.Status = *vo.Status
-			if *vo.Status == 2 && vo.Password != "" {
+			// 切换到非密码保护状态时清除密码
+			if *vo.Status != 2 {
+				article.Password = ""
+			} else if vo.Password != "" {
 				article.Password = vo.Password
 			}
+		} else if vo.Password != "" {
+			// 未指定状态但提供了密码，设为密码保护模式
+			article.Status = 2
+			article.Password = vo.Password
 		}
 		if vo.IsTop != 0 {
 			article.IsTop = vo.IsTop

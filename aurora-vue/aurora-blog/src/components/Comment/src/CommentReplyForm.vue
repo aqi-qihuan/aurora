@@ -26,7 +26,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, toRefs, reactive, getCurrentInstance, inject, computed } from 'vue'
+import { defineComponent, toRefs, reactive, getCurrentInstance, inject, computed, unref } from 'vue'
 import Avatar from '@/components/Avatar.vue'
 import emitter from '@/utils/mitt'
 import { useUserStore } from '@/stores/user'
@@ -73,7 +73,7 @@ export default defineComponent({
       const params: any = {
         type: commentStore.type,
         replyUserId: props.replyUserId,
-        parentId: parentId,
+        parentId: unref(parentId) as number,
         commentContent: reactiveData.commentContent
       }
       params.topicId = arr[2]
@@ -102,21 +102,22 @@ export default defineComponent({
       })
     }
     const fetchReplies = () => {
+      const indexVal = unref(index)
       switch (commentStore.type) {
         case 1:
-          emitter.emit('articleFetchReplies', index)
+          emitter.emit('articleFetchReplies', indexVal)
           break
         case 2:
-          emitter.emit('messageFetchReplies', index)
+          emitter.emit('messageFetchReplies', indexVal)
           break
         case 3:
-          emitter.emit('aboutFetchReplies', index)
+          emitter.emit('aboutFetchReplies', indexVal)
           break
         case 4:
-          emitter.emit('friendLinkFetchReplies', index)
+          emitter.emit('friendLinkFetchReplies', indexVal)
           break
         case 5:
-          emitter.emit('talkFetchReplies', index)
+          emitter.emit('talkFetchReplies', indexVal)
       }
     }
     const CancelReply = () => {

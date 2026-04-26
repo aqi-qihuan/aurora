@@ -826,7 +826,7 @@ func (s *CommentService) GetCommentStats(ctx context.Context) (*CommentStats, er
 
 	go func() { ch <- struct{ key string; val int64 }{"total", s.countAll(ctx)} }()
 	go func() { ch <- struct{ key string; val int64 }{"article", s.countByType(ctx, 1)} }()
-	go func() { ch <- struct{ key string; val int64 }{"talk", s.countByType(ctx, 2)} }()
+	go func() { ch <- struct{ key string; val int64 }{"talk", s.countByType(ctx, 5)} }()
 	go func() { ch <- struct{ key string; val int64 }{"pending", s.countByReview(ctx, 0)} }()
 	go func() { ch <- struct{ key string; val int64 }{"approved", s.countByReview(ctx, 1)} }()
 
@@ -961,9 +961,10 @@ func (s *CommentService) countByReview(ctx context.Context, review int8) int64 {
 func commentTypeStr(t int8) string {
 	switch t {
 	case 1: return "文章"
-	case 2: return "说说"
-	case 3: return "友链"
-	case 4: return "关于"
+	case 2: return "留言板"
+	case 3: return "关于页"
+	case 4: return "友链"
+	case 5: return "说说"
 	default: return "其他"
 	}
 }

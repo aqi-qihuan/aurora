@@ -24,7 +24,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, toRefs } from 'vue'
+import { computed, defineComponent, reactive, toRefs, provide } from 'vue'
 import Avatar from '@/components/Avatar.vue'
 import CommentReplyForm from './CommentReplyForm.vue'
 
@@ -63,6 +63,7 @@ export default defineComponent({
     const changeShow = () => {
       reactiveData.show = false
     }
+    provide('parentId', computed(() => props.reply.id))
     const commentContent = computed(() => {
       if (props.reply.replyUserId !== props.commentUserId) {
         const nickname = props.reply.replyNickname || ''

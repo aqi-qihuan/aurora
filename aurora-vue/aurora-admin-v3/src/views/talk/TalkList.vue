@@ -206,17 +206,16 @@ const topCount = computed(() => talks.value.filter(t => t.isTop === 1).length)
 
 /**
  * 导航到发布说说页面
- * Talk 组件路由为 /talk/:talkId，用 "write" 作为 talkId 标识发布模式
  */
 const goToWrite = () => {
-  router.push({ path: '/talk/write' })
+  router.push({ path: '/talks' })
 }
 
 /**
  * 导航到编辑说说页面
  */
 const goToEdit = (id) => {
-  router.push({ path: '/talk/' + id })
+  router.push({ path: '/talks/' + id })
 }
 
 const formatDateTime = (date) => {

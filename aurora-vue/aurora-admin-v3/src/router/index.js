@@ -27,6 +27,48 @@ export const constantRoutes = [
     meta: { title: '登录' }
   },
   {
+    path: '/article/:id',
+    name: 'ArticleEdit',
+    component: () => import('@/views/article/Article.vue'),
+    hidden: true,
+    meta: { title: '编辑文章' }
+  },
+  {
+    path: '/articles/write',
+    name: 'ArticleWrite',
+    component: () => import('@/views/article/Article.vue'),
+    hidden: true,
+    meta: { title: '写文章' }
+  },
+  {
+    path: '/albums/:albumId',
+    name: 'AlbumPhoto',
+    component: () => import('@/views/album/Photo.vue'),
+    hidden: true,
+    meta: { title: '相册照片' }
+  },
+  {
+    path: '/photos/delete',
+    name: 'PhotoDelete',
+    component: () => import('@/views/album/Delete.vue'),
+    hidden: true,
+    meta: { title: '照片回收站' }
+  },
+  {
+    path: '/talks/:talkId',
+    name: 'TalkEdit',
+    component: () => import('@/views/talk/Talk.vue'),
+    hidden: true,
+    meta: { title: '编辑说说' }
+  },
+  {
+    path: '/quartz/log/:quartzId',
+    name: 'QuartzLog',
+    component: () => import('@/views/log/QuartzLog.vue'),
+    hidden: true,
+    meta: { title: '调度日志' }
+  },
+  {
     path: '/404',
     name: '404',
     component: () => import('@/views/error/404.vue'),

@@ -52,6 +52,50 @@ const addStaticRoutes = () => {
       }
     ]
   })
+
+  // 说说模块 - 注册为独立顶级路由，每个路由都包裹 Layout（确保侧边栏正常显示）
+  router.addRoute({
+    path: '/talk-list',
+    name: 'TalkList',
+    component: Layout,
+    children: [
+      { path: '', component: () => import('@/views/talk/TalkList.vue'), meta: { title: '说说列表' } }
+    ]
+  })
+  router.addRoute({
+    path: '/talks',
+    name: 'TalkWrite',
+    component: Layout,
+    children: [
+      { path: '', component: () => import('@/views/talk/Talk.vue'), meta: { title: '发布说说' } }
+    ]
+  })
+  router.addRoute({
+    path: '/talks/:talkId',
+    name: 'TalkEdit',
+    component: Layout,
+    children: [
+      { path: '', component: () => import('@/views/talk/Talk.vue'), meta: { title: '编辑说说' } }
+    ]
+  })
+
+  // 相册照片模块 - 查看相册内照片和回收站
+  router.addRoute({
+    path: '/albums/:albumId',
+    name: 'AlbumPhoto',
+    component: Layout,
+    children: [
+      { path: '', component: () => import('@/views/album/Photo.vue'), meta: { title: '相册照片' } }
+    ]
+  })
+  router.addRoute({
+    path: '/photos/delete',
+    name: 'PhotoDelete',
+    component: Layout,
+    children: [
+      { path: '', component: () => import('@/views/album/Delete.vue'), meta: { title: '照片回收站' } }
+    ]
+  })
 }
 
 // 标记是否已加载动态路由
@@ -274,8 +318,10 @@ router.beforeEach(async (to, from, next) => {
       next({ path: '/home' })
       NProgress.done()
     } else {
-      // 检查是否已加载动态路由
-      if (!dynamicRoutesLoaded) {
+      // 检查是否已加载动态路由，或 store 中已有菜单数据（从 sessionStorage 恢复）
+      const hasMenus = userStore.userMenus && userStore.userMenus.length > 0
+      
+      if (!dynamicRoutesLoaded && !hasMenus) {
         // 加载动态路由
         const success = await loadDynamicRoutes(userStore)
 
@@ -287,6 +333,31 @@ router.beforeEach(async (to, from, next) => {
           userStore.logout()
           next('/login')
         }
+      } else if (!dynamicRoutesLoaded && hasMenus) {
+        // store 中有菜单数据（从 sessionStorage 恢复），直接使用，不重新请求后端
+        // 但需要重新注册路由
+        const processedMenus = processMenuData(userStore.userMenus)
+        
+        processedMenus.forEach(route => {
+          router.addRoute(route)
+        })
+        
+        // 在通配符之前添加静态路由（修复刷新后文章编辑/说说编辑/相册照片404）
+        addStaticRoutes()
+        
+        // 添加 404 通配符路由
+        router.addRoute({
+          name: 'NotFound',
+          path: '/:pathMatch(.*)*',
+          redirect: '/404',
+          hidden: true
+        })
+        
+        dynamicRoutesLoaded = true
+        logger.log('从 sessionStorage 恢复动态路由')
+        
+        // 重新导航到目标路由
+        next({ ...to, replace: true })
       } else {
         next()
       }

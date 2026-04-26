@@ -50,9 +50,8 @@ export async function registerChinaMap() {
     // china.js 会自动调用 echarts.registerMap
     await import('@/assets/js/china.js')
     chinaMapRegistered = true
-    console.log('✅ 中国地图注册成功')
   } catch (error) {
-    console.warn('⚠️ 完整地图加载失败，使用简化版:', error.message)
+    // 完整地图加载失败，使用简化版
     // 如果加载失败，注册简化版
     registerSimplifiedChinaMap()
   }
@@ -74,7 +73,6 @@ function registerSimplifiedChinaMap() {
     features
   })
   chinaMapRegistered = true
-  console.log('✅ 简化版中国地图注册成功')
 }
 
 export default { registerChinaMap, provinceCoordinates }

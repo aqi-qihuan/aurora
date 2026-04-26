@@ -183,13 +183,13 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 		info.ViewsCount = 0
 	}
 
-	// 2. 留言数 (type=2 的评论，对标 Java 第155行)
+	// 2. 留言量：文章评论(type=1) + 留言板(type=2) + 说说评论(type=5) 的总和（对标Java但扩展为全部评论）
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Comment{}).
-			Where("type = 2").
+			Where("is_delete = 0 AND type IN (1, 2, 5)").
 			Count(&count)
 		info.MessageCount = int(count)
 	}()

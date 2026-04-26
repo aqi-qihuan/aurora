@@ -313,21 +313,21 @@ func (h *ArticleHandler) UpdateArticlePassword(c *gin.Context) {
 }
 
 // VerifyArticlePassword 验证文章访问密码
-// POST /api/articles/:id/password/verify
+// POST /api/articles/access
 func (h *ArticleHandler) VerifyArticlePassword(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
-		return
-	}
 	var body struct {
-		Password string `json:"password"`
+		ArticleID      uint   `json:"articleId"`
+		ArticlePassword string `json:"articlePassword"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	verified := h.svc.VerifyPassword(c.Request.Context(), uint(id), body.Password)
+	if body.ArticleID == 0 {
+		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
+		return
+	}
+	verified := h.svc.VerifyPassword(c.Request.Context(), body.ArticleID, body.ArticlePassword)
 	util.ResponseSuccess(c, map[string]interface{}{
 		"verified": verified,
 	})
@@ -362,7 +362,7 @@ func (h *ArticleHandler) ListArticlesByTagId(c *gin.Context) {
 	}
 	pageNum, pageSize := util.PageQuery(c)
 	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
-	condition := dto.ConditionVO{Keywords: ""}
+	condition := dto.ConditionVO{TagID: ptrUint(uint(tagID))}
 	result, err := h.svc.ListArticles(c.Request.Context(), condition, page)
 	if err != nil {
 		util.ResponseError(c, err)

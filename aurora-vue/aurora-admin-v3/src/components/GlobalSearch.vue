@@ -44,8 +44,18 @@
               <el-icon :size="20"><component :is="item.iconComponent" /></el-icon>
             </div>
             <div class="result-content">
-              <div class="result-title" v-html="highlightText(item.title)"></div>
-              <div class="result-description" v-html="highlightText(item.description)"></div>
+              <div class="result-title">
+                <template v-for="(part, i) in highlightParts(item.title)" :key="'title-' + i">
+                  <mark v-if="part.highlight">{{ part.text }}</mark>
+                  <span v-else>{{ part.text }}</span>
+                </template>
+              </div>
+              <div class="result-description">
+                <template v-for="(part, i) in highlightParts(item.description)" :key="'desc-' + i">
+                  <mark v-if="part.highlight">{{ part.text }}</mark>
+                  <span v-else>{{ part.text }}</span>
+                </template>
+              </div>
               <div class="result-path">
                 <el-breadcrumb separator="/">
                   <el-breadcrumb-item v-for="(crumb, i) in item.breadcrumbs" :key="i">
@@ -371,18 +381,41 @@ const clearSearch = () => {
   searchInput.value.focus()
 }
 
-const highlightText = (text) => {
-  if (!searchQuery.value) return text
-  // XSS 防护：转义特殊字符
-  const escapeHtml = (str) => {
-    const div = document.createElement('div')
-    div.textContent = str
-    return div.innerHTML
+const highlightParts = (text) => {
+  if (!searchQuery.value) return [{ text, highlight: false }]
+  
+  const query = searchQuery.value.toLowerCase()
+  const lowerText = text.toLowerCase()
+  const parts = []
+  let lastIndex = 0
+  
+  let index = lowerText.indexOf(query)
+  while (index !== -1) {
+    // Add non-matching part
+    if (index > lastIndex) {
+      parts.push({
+        text: text.slice(lastIndex, index),
+        highlight: false
+      })
+    }
+    // Add matching part
+    parts.push({
+      text: text.slice(index, index + query.length),
+      highlight: true
+    })
+    lastIndex = index + query.length
+    index = lowerText.indexOf(query, lastIndex)
   }
-  const escapedText = escapeHtml(text)
-  const escapedQuery = escapeHtml(searchQuery.value)
-  const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-  return escapedText.replace(regex, '<mark>$1</mark>')
+  
+  // Add remaining non-matching part
+  if (lastIndex < text.length) {
+    parts.push({
+      text: text.slice(lastIndex),
+      highlight: false
+    })
+  }
+  
+  return parts
 }
 
 const loadRecentItems = () => {
@@ -429,7 +462,7 @@ onBeforeUnmount(() => {
 }
 
 .global-search :deep(.el-input__inner:focus) {
-  background-color: #fff;
+  background-color: var(--el-fill-color, #fff);
   border-color: var(--el-color-primary, #409eff);
   box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
 }
@@ -466,7 +499,7 @@ onBeforeUnmount(() => {
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background-color: #fff;
+  background-color: var(--el-bg-color, #fff);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--el-border-color, #dcdfe6);
@@ -629,7 +662,7 @@ onBeforeUnmount(() => {
   font-family: monospace;
   font-size: 10px;
   color: var(--el-text-color-regular, #606266);
-  background-color: #fff;
+  background-color: var(--el-bg-color, #fff);
   border: 1px solid var(--el-border-color, #dcdfe6);
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);

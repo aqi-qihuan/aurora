@@ -108,9 +108,10 @@ func (s *TagService) GetTags(ctx context.Context) ([]dto.TagDTO, error) {
 	list := make([]dto.TagDTO, len(tags))
 	for i, t := range tags {
 		list[i] = dto.TagDTO{
-			ID:         t.ID,
-			TagName:    t.TagName,
-			CreateTime: t.CreateTime,
+			ID:           t.ID,
+			TagName:      t.TagName,
+			ArticleCount: countMap[t.ID],
+			CreateTime:   t.CreateTime,
 		}
 	}
 	return list, nil

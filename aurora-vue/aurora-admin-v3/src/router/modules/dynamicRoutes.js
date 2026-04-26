@@ -33,7 +33,6 @@ export const loadView = (componentPath) => {
   }
   
   // 如果找不到组件,返回 404 页面
-  console.warn(`Component not found: ${importPath}`)
   return () => import('@/views/error/404.vue')
 }
 

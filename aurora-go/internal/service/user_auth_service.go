@@ -68,17 +68,30 @@ func cleanIPAddress(ip string) string {
 
 // Register 注册用户 (事务: UserInfo + UserAuth)
 func (s *UserAuthService) Register(ctx context.Context, reg vo.RegisterVO) (*dto.UserDTO, error) {
+	// 验证邮箱验证码
+	email := reg.Email
+	if email == "" {
+		email = reg.Username
+	}
+	if s.rdb != nil {
+		redisKey := constant.UserAuthCode + email
+		storedCode, err := s.rdb.Get(ctx, redisKey).Result()
+		if err != nil || storedCode == "" {
+			return nil, errors.ErrInvalidParams.WithMsg("验证码已过期或不存在")
+		}
+		if storedCode != reg.Code {
+			return nil, errors.ErrInvalidParams.WithMsg("验证码错误")
+		}
+		// 验证成功后删除验证码（一次性使用）
+		s.rdb.Del(ctx, redisKey)
+	} else {
+		slog.Warn("Redis未初始化，跳过验证码校验")
+	}
+
 	var user model.UserInfo
 	var auth model.UserAuth
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 前端用username传邮箱地址，email字段留空
-		// 统一使用username作为邮箱地址
-		email := reg.Email
-		if email == "" {
-			email = reg.Username
-		}
-		
 		// 检查用户名(邮箱)是否已存在
 		var count int64
 		if tx.Model(&model.UserAuth{}).Where("username = ?", email).Count(&count); count > 0 {

@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
 /* 布局容器 */
 .layout-wrapper {
   min-height: 100vh;
-  background: var(--bg-deep, #0F172A);
+  background: var(--bg-deep);
 }
 
 /* 主容器 - 添加左边距为侧边栏留空间 */
@@ -106,12 +106,12 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 999;
-  background: var(--bg-base, #1B2336);
+  background: var(--bg-base);
 }
 
 /* 主内容区域 */
 .main-content {
-  background: var(--bg-deep, #0F172A);
+  background: var(--bg-deep);
   min-height: calc(100vh - 96px);
 }
 

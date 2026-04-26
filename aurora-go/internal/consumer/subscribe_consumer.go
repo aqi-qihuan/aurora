@@ -153,7 +153,7 @@ func (c *SubscribeConsumer) processMessage(msg amqp.Delivery) error {
 		}
 
 		subject := "📝 文章订阅"
-		if !article.UpdateTime.IsZero() && !article.UpdateTime.Equal(article.CreateTime) {
+		if article.UpdateTime != nil && !article.UpdateTime.IsZero() && !article.UpdateTime.Equal(article.CreateTime) {
 			subject = "🔄 文章更新通知"
 		}
 

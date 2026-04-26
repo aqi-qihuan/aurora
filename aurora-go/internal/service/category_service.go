@@ -210,6 +210,31 @@ func (s *CategoryService) GetCategoryOptions(ctx context.Context) ([]dto.OptionD
 	return options, nil
 }
 
+// SearchCategories 按关键词搜索分类（用于编辑器自动补全）
+func (s *CategoryService) SearchCategories(ctx context.Context, keyword string) ([]dto.CategoryDTO, error) {
+	var categories []model.Category
+
+	query := s.db.WithContext(ctx)
+	if keyword != "" {
+		query = query.Where("category_name LIKE ?", "%"+keyword+"%")
+	}
+
+	err := query.Order("create_time ASC").Find(&categories).Error
+	if err != nil {
+		return nil, fmt.Errorf("搜索分类失败: %w", err)
+	}
+
+	list := make([]dto.CategoryDTO, len(categories))
+	for i, c := range categories {
+		list[i] = dto.CategoryDTO{
+			ID:           c.ID,
+			CategoryName: c.CategoryName,
+			CreateTime:   c.CreateTime,
+		}
+	}
+	return list, nil
+}
+
 // GetCategoryByID 根据ID获取分类详情
 func (s *CategoryService) GetCategoryByID(ctx context.Context, id uint) (*dto.CategoryDTO, error) {
 	var category model.Category
