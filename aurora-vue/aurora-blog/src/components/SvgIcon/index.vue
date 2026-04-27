@@ -51,12 +51,14 @@ export default defineComponent({
 .svg-icon {
   width: 1em;
   height: 1em;
+  min-width: 1em;
+  min-height: 1em;
   vertical-align: -0.15em;
   fill: currentColor;
-  stroke: var(--background-primary);
-  overflow: hidden;
-  display: inline;
+  overflow: visible;
+  display: inline-block;
   position: relative;
+  flex-shrink: 0;
 }
 
 .svg-external-icon {

@@ -46,6 +46,17 @@ import (
 // @description JWT Token 认证，格式: Bearer <token>
 
 func main() {
+	// 0. 初始化时区为 Asia/Shanghai (CST, UTC+8)
+	// Docker alpine 镜像默认不含 tzdata，TZ 环境变量无效，time.Local 默认 UTC
+	// 必须在所有 time.Now() 调用前设置，否则日期/定时任务/MySQL loc=Local 全部偏移 8 小时
+	if loc, err := time.LoadLocation("Asia/Shanghai"); err == nil {
+		time.Local = loc
+	} else {
+		// 降级: tzdata 不可用时使用固定偏移量 (UTC+8)
+		time.Local = time.FixedZone("CST", 8*3600)
+		slog.Warn("tzdata 不可用，使用固定 UTC+8 偏移量", "error", err.Error())
+	}
+
 	// 解析命令行参数
 	configPath := flag.String("config", "configs/config.yaml", "配置文件路径")
 	flag.Parse()

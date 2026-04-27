@@ -1,9 +1,9 @@
-# Aurora 博客系统 - JDK 25 + Spring Boot 4.1.0-M4
+# Aurora 博客系统 - JDK 25 + Spring Boot 3.2.12
 FROM eclipse-temurin:25-jre-alpine
 
 LABEL maintainer="Aurora Team"
-LABEL description="Aurora Blog System - JDK 25 + Spring Boot 4.1.0-M4"
-LABEL version="4.1.0-M4"
+LABEL description="Aurora Blog System - JDK 25 + Spring Boot 3.2.12"
+LABEL version="3.2.12"
 
 WORKDIR /app
 VOLUME /tmp

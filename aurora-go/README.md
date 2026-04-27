@@ -148,3 +148,8 @@ Apache 2.0
 
 cd aurora-go
 $env:CGO_ENABLED="0"; $env:GOOS="linux"; $env:GOARCH="amd64"; go build -ldflags="-w -s" -o aurora-server ./cmd/server
+
+
+cd C:\Users\aqi\Desktop\aurora-master\aurora-go
+docker compose -f docker-compose-go.yml stop aurora-go
+docker compose -f docker-compose-go.yml rm -f aurora-go

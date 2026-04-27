@@ -88,7 +88,10 @@ export default {
     return axios.post('/api/users/oauth/qq', params)
   },
   report: () => {
-    axios.post('/api/report')
+    return axios.post('/api/report').catch((e) => {
+      console.warn('[Report] 访问上报失败:', e.message)
+      return Promise.resolve(null)
+    })
   },
   getTalks: (params: any) => {
     return axios.get('/api/talks', {

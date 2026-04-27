@@ -69,21 +69,23 @@ func (h *AuroraInfoHandler) Report(c *gin.Context) {
 	fingerprint := hex.EncodeToString(md5Hash[:])
 	
 	// 5. 检查是否为独立访客（去重）
+	// 对标Java: if (!redisService.sIsMember(UNIQUE_VISITOR, md5))
+	// IsUniqueVisitor 返回 true 表示指纹已存在(老访客)，需要取反
 	if h.statsService != nil {
 		// 使用独立 Context，避免 HTTP 请求结束后被取消
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		
 		// 使用全局Set检查是否已访问过（对标Java redisService.sIsMember(UNIQUE_VISITOR, md5)）
-		isNewVisitor, err := h.statsService.IsUniqueVisitor(ctx, fingerprint)
+		isExistingVisitor, err := h.statsService.IsUniqueVisitor(ctx, fingerprint)
 		if err != nil {
 			// Redis 出错时，降级处理：仍然执行统计，但不去重
 			slog.Warn("检查独立访客失败，降级处理", "ip", ip, "error", err.Error())
-			isNewVisitor = true // 假设是新访客，继续执行统计
+			isExistingVisitor = false // 假设是新访客，继续执行统计
 		}
 		
-		// 6. 如果是新访客，标记并记录统计信息
-		if isNewVisitor {
+		// 6. 如果是新访客（指纹不存在于Set中），标记并记录统计信息
+		if !isExistingVisitor {
 			// 标记为已访问（对标Java redisService.sAdd(UNIQUE_VISITOR, md5)）
 			_ = h.statsService.MarkUniqueVisitor(ctx, fingerprint)
 			

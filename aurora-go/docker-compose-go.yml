@@ -168,12 +168,16 @@ services:
       - /opt/aurora/app/configs:/app/configs
       - /opt/aurora/app/uploads:/app/uploads
       - /opt/aurora/app/scripts:/app/scripts
+      # 时区文件: 确保 TZ=Asia/Shanghai 生效 (alpine 默认不含 tzdata)
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - aurora-network
     restart: always
     working_dir: /app
-    command: >
-      /app/aurora-server --config configs/config.yaml
+    # Go程序已内置 time.FixedZone("CST", 8*3600) 降级方案，无需 apk add tzdata
+    # 挂载宿主机时区文件确保 TZ=Asia/Shanghai 对系统命令生效
+    command: ["/app/aurora-server", "--config", "configs/config.yaml"]
 
   maxwell:
     image: zendesk/maxwell:latest

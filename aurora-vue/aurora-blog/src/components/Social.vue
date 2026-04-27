@@ -69,13 +69,22 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.custom-social-svg-icon {
-  width: 1em;
-  height: 1em;
-  font-size: 1em;
-  vertical-align: -0.15em;
-  fill: var(--text-bright);
-  stroke: var(--background-primary);
-  overflow: hidden;
+.diamond-icon {
+  color: #fff;
+}
+
+.diamond-icon :deep(.svg-icon) {
+  width: 1.5em !important;
+  height: 1.5em !important;
+  min-width: 1.5em !important;
+  min-height: 1.5em !important;
+  overflow: visible !important;
+  display: inline-block !important;
+  fill: #fff !important;
+  color: #fff !important;
+}
+
+.diamond-icon :deep(svg use) {
+  fill: inherit !important;
 }
 </style>

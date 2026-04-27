@@ -130,8 +130,9 @@ export default defineComponent({
       v3ImgPreviewFn({ images: reactiveData.images, index: reactiveData.images.indexOf(index) })
     }
     const initTocbot = () => {
+      if (!postRef.value) return
       let nodes = postRef.value.children
-      if (nodes.length) {
+      if (nodes && nodes.length) {
         for (let i = 0; i < nodes.length; i++) {
           let node = nodes[i]
           let reg = /^H[1-4]{1}$/
@@ -158,11 +159,20 @@ export default defineComponent({
         })
       }
     }
+    const waitForPostRef = (callback: () => void, retries = 10) => {
+      nextTick(() => {
+        if (postRef.value) {
+          callback()
+        } else if (retries > 0) {
+          setTimeout(() => waitForPostRef(callback, retries - 1), 50)
+        }
+      })
+    }
     const fetchAbout = () => {
       api.getAbout().then(({ data }) => {
         data.data.content = markdownToHtml(data.data.content)
         reactiveData.about = data.data.content
-        nextTick(() => {
+        waitForPostRef(() => {
           Prism.highlightAll()
           initTocbot()
         })

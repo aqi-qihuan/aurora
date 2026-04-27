@@ -84,7 +84,7 @@ type CategoryVO struct {
 
 // TagVO 标签请求
 type TagVO struct {
-	TagName string `json:"tagName" binding:"required,max=20"`
+	TagName string `json:"tagName" binding:"required,max=50"`
 }
 
 // ===== 友链 =====

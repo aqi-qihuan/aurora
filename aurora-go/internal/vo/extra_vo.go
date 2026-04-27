@@ -37,13 +37,13 @@ type QQLoginVO struct {
 // ===== 分类 VO =====
 
 type CategoryVO struct {
-	CategoryName string `json:"categoryName" binding:"required,max=20"`
+	CategoryName string `json:"categoryName" binding:"required,max=50"`
 }
 
 // ===== 标签 VO =====
 
 type TagVO struct {
-	TagName string `json:"tagName" binding:"required,max=20"`
+	TagName string `json:"tagName" binding:"required,max=50"`
 }
 
 // ===== 友链 VO =====
