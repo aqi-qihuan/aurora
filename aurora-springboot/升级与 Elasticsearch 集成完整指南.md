@@ -1,8 +1,7 @@
 # Aurora 博客系统 - 升级与 Elasticsearch 集成完整指南
 
 <div align="center">
-
-![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.17.2-00BFb3?style=flat-square&logo=elasticsearch)
+![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.19.14-00BFb3?style=flat-square&logo=elasticsearch)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0+-6DB33F?style=flat-square&logo=spring)
 ![Version](https://img.shields.io/badge/Version-v2.0-blue?style=flat-square)
 ![Last Updated](https://img.shields.io/badge/Last%20Updated-2026--04--08-orange?style=flat-square)
@@ -13,7 +12,7 @@
 
 ## 目录
 
-1. [Elasticsearch 8.17.2 集成问题排查](#1-elasticsearch-8172-集成问题排查)
+1. [Elasticsearch 8.19.14 集成问题排查](#1-elasticsearch-8172-集成问题排查)
    - [问题概述](#11-问题概述)
    - [常见问题与解决方案](#12-常见问题与解决方案)
    - [关键配置文件](#13-关键配置文件)
@@ -27,11 +26,11 @@
 
 ---
 
-# 1. Elasticsearch 8.17.2 集成问题排查
+# 1. Elasticsearch 8.19.14 集成问题排查
 
 ## 1.1 问题概述
 
-在将 Elasticsearch 升级到 8.17.2 后，遇到搜索功能完全失效的问题。经过排查，发现多个关键问题导致搜索无法正常工作。
+在将 Elasticsearch 升级到 8.19.14 后，遇到搜索功能完全失效的问题。经过排查，发现多个关键问题导致搜索无法正常工作。
 
 > **📌 核心问题**：索引配置、字段映射、数据同步、分词器、超时设置
 
@@ -194,12 +193,12 @@ Highlight highlight = Highlight.of(h -> h
 
 ---
 
-### ❌ 问题 7: ES Client 超时配置（SB 4.0 + ES 8.17.2）
+### ❌ 问题 7: ES Client 超时配置（SB 4.0 + ES 8.19.14）
 
 | 类别 | 内容 |
 |:---|:---|
 | 🔴 **现象** | `30,000 milliseconds timeout on connection http-outgoing-0` |
-| 🔴 **原因** | SB 4.0 + ES 8.17.2 需要显式配置超时参数 |
+| 🔴 **原因** | SB 4.0 + ES 8.19.14 需要显式配置超时参数 |
 | 🟢 **解决** | 在 `ElasticsearchConfig` 中设置 `RequestConfig` |
 
 ```java
@@ -230,8 +229,8 @@ RestClientBuilder builder = RestClient.builder(new HttpHost(hostname, port, "htt
 | 🟢 **解决** | 在 ES 服务器安装 IK 分词器并重建索引 |
 
 ```bash
-# 1. 安装 IK 分词器（ES 8.17.2）
-elasticsearch-plugin install https://github.com/infinilabs/analysis-ik/releases/download/v8.17.2/elasticsearch-analysis-ik-8.17.2.zip
+# 1. 安装 IK 分词器（ES 8.19.14）
+elasticsearch-plugin install https://github.com/infinilabs/analysis-ik/releases/download/v8.19.14/elasticsearch-analysis-ik-8.19.14.zip
 
 # 2. 重启 ES
 docker restart aurora-elasticsearch
@@ -278,8 +277,8 @@ search:
 | 2️⃣ | **数据同步机制**：MaxWell 只同步增量变更，删除索引后需要手动全量同步历史数据 |
 | 3️⃣ | **分词器配置**：索引时使用 `ik_max_word`，搜索时使用 `ik_smart`，查询时必须明确指定 analyzer |
 | 4️⃣ | **高亮配置**：全局设置 `preTags` 和 `postTags`，字段级别可以单独配置 `fragmentSize` 和 `numberOfFragments` |
-| 5️⃣ | **SB 4.0 + ES 8.17.2**：必须显式配置超时参数，否则批量同步会失败 |
-| 6️⃣ | **IK 分词器版本**：必须与 ES 版本严格一致（如 ES 8.17.2 对应 IK 8.17.2） |
+| 5️⃣ | **SB 4.0 + ES 8.19.14**：必须显式配置超时参数，否则批量同步会失败 |
+| 6️⃣ | **IK 分词器版本**：必须与 ES 版本严格一致（如 ES 8.19.14 对应 IK 8.19.14） |
 
 ---
 
@@ -409,13 +408,12 @@ powershell -Command "Stop-Process -Id <PID> -Force"
 | 版本 | 日期 | 修改内容 | 作者 |
 |:---|:---:|:---|:---|
 | v1.0 | 2026-03-09 | 初始版本：Elasticsearch 8 集成问题排查记录 | Aurora Team |
-| v2.0 | 2026-04-08 | 更新 ES 到 8.17.2，新增 SB 4.0 兼容性说明 | Aurora Team |
+| v2.0 | 2026-04-08 | 更新 ES 到 8.19.14，新增 SB 4.0 兼容性说明 | Aurora Team |
 
 ---
 
 <div align="center">
-
-**文档版本**: v2.0 (ES 8.17.2) | **最后更新**: 2026-04-08 | **维护者**: Aurora Team
+**文档版本**: v2.0 (ES 8.19.14) | **最后更新**: 2026-04-08 | **维护者**: Aurora Team
 
 ![Built with ❤️](https://img.shields.io/badge/Built%20with-%E2%9D%A4%EF%B8%8F-blue?style=flat-square)
 
