@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/aurora-go/aurora/internal/agent"
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/consumer"
@@ -61,7 +63,10 @@ func main() {
 	configPath := flag.String("config", "configs/config.yaml", "配置文件路径")
 	flag.Parse()
 
-	// 1. 加载配置
+	// 加载 .env 文件（失败不报错，允许无 .env 运行）
+	_ = godotenv.Load()
+
+	// 1. 加载配置（Viper AutomaticEnv 会覆盖 .env 中的 AURORA_ 前缀变量）
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "加载配置失败: %v\n", err)

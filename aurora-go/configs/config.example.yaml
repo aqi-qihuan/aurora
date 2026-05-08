@@ -19,7 +19,7 @@ mysql:
   host: 134.175.206.158
   port: 3306
   user: root
-  password: "aqi1015"            # 通过 AURORA_MYSQL_PASSWORD 注入
+  password: ""                    # 由 .env (AURORA_MYSQL_PASSWORD) 覆盖
   dbname: aurora
   max_open_conns: 20
   max_idle_conns: 5
@@ -28,7 +28,7 @@ mysql:
 redis:
   host: 134.175.206.158
   port: 6379
-  password: "aqi1015"            # 通过 AURORA_REDIS_PASSWORD 注入
+  password: ""                    # 由 .env (AURORA_REDIS_PASSWORD) 覆盖
   db: 1
   pool_size: 100
 
@@ -36,7 +36,7 @@ rabbitmq:
   host: 134.175.206.158
   port: 5672
   user: myroot             # 通过 AURORA_RABBITMQ_USER 覆盖
-  password: "myaqi1015"            # 通过 AURORA_RABBITMQ_PASSWORD 注入
+  password: ""                    # 由 .env (AURORA_RABBITMQ_PASSWORD) 覆盖
   vhost: /
   prefetch_count: 10
 
@@ -44,15 +44,15 @@ elasticsearch:
   urls:
     - "http://134.175.206.158:9200"
   index_name: article
-  username: "user_admin"            # 通过 AURORA_ELASTICSEARCH_USERNAME 注入
-  password: "user_aqi125.cn"            # 通过 AURORA_ELASTICSEARCH_PASSWORD 注入
+  username: ""                    # 由 .env (AURORA_ELASTICSEARCH_USERNAME) 覆盖
+  password: ""                    # 由 .env (AURORA_ELASTICSEARCH_PASSWORD) 覆盖
   sniff_enabled: false
 
 minio:
   endpoint: "http://134.175.206.158:9000"
   url: "https://ws.aqi125.cn"          # 外部访问URL (对标Java minio.url, 用于前端加载图片)
-  access_key: "aqi125"          # 通过 AURORA_MINIO_ACCESS_KEY 注入
-  secret_key: "aqi1015."          # 通过 AURORA_MINIO_SECRET_KEY 注入
+  access_key: ""                  # 由 .env (AURORA_MINIO_ACCESS_KEY) 覆盖
+  secret_key: ""                  # 由 .env (AURORA_MINIO_SECRET_KEY) 覆盖
   bucket: aurora
   use_ssl: false
 
@@ -65,7 +65,7 @@ upload:
   mode: minio
 
 jwt:
-  secret: "YXVyb3JhLXNlY3JldC1rZXktZm9yLXNwcmluZy1ib290LTMtMi0xMg=="              # 通过 AURORA_JWT_SECRET 注入
+  secret: ""                      # 由 .env (AURORA_JWT_SECRET) 覆盖
   expire_time: 168
   issuer: aurora-go
 
@@ -87,8 +87,8 @@ email:
   enabled: true          # 启用邮件服务（发送验证码、评论通知、订阅通知）
   host: smtp.qq.com
   port: 465
-  username: "a4i.icu@qq.com"            # 通过 AURORA_EMAIL_USERNAME 注入
-  password: "xydwwqkthweuecdf"            # 通过 AURORA_EMAIL_PASSWORD 注入
+  username: ""                    # 由 .env (AURORA_EMAIL_USERNAME) 覆盖
+  password: ""                    # 由 .env (AURORA_EMAIL_PASSWORD) 覆盖
   from_name: Aurora Blog
   is_ssl: true
   verify_code_expire: 5

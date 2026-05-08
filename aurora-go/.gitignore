@@ -16,9 +16,18 @@
 .DS_Store
 Thumbs.db
 
-# === 配置 (含敏感信息) ===
+# === 配置 (含敏感信息，不提交) ===
 .env
+configs/config.yaml
 configs/config-local.yaml
+configs/config.prod.yaml
+
+# === Docker Compose (含硬编码密码，不提交) ===
+docker-compose-go.yml
+docker-compose.override.yml
+
+# === 诊断工具 (含硬编码密码，仅本地使用) ===
+cmd/diag/
 
 # === 测试 ===
 *.test
@@ -29,9 +38,6 @@ profile.out
 # === 日志 ===
 logs/
 *.log
-
-# === Docker ===
-docker-compose.override.yml
 
 # === 临时文件 ===
 *.tmp

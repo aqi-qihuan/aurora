@@ -4,7 +4,7 @@ services:
     image: mysql:8.0.32
     container_name: aurora-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: aqi1015
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: aurora
       TZ: Asia/Shanghai
     ports:
@@ -26,14 +26,14 @@ services:
     networks:
       - aurora-network
     restart: always
-    command: redis-server --requirepass aqi1015 --maxmemory 32mb --maxmemory-policy allkeys-lru --save ""
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 32mb --maxmemory-policy allkeys-lru --save ""
 
   rabbitmq:
     image: rabbitmq:3.11.9-management
     container_name: aurora-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: myroot
-      RABBITMQ_DEFAULT_PASS: myaqi1015
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
       TZ: Asia/Shanghai
     ports:
       - "5672:5672"
@@ -94,8 +94,8 @@ services:
     container_name: aurora-minio
     hostname: minio-server
     environment:
-      MINIO_ROOT_USER: "aqi1015."
-      MINIO_ROOT_PASSWORD: "aqi1015."
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
       MINIO_DEFAULT_BUCKETS: "aurora"
       MINIO_SERVER_URL: "http://127.0.0.1:9000"
       TZ: Asia/Shanghai
@@ -141,21 +141,21 @@ services:
       AURORA_MYSQL_HOST: aurora-mysql
       AURORA_MYSQL_PORT: "3306"
       AURORA_MYSQL_USER: root
-      AURORA_MYSQL_PASSWORD: aqi1015
+      AURORA_MYSQL_PASSWORD: ${AURORA_MYSQL_PASSWORD}
       AURORA_MYSQL_DBNAME: aurora
       AURORA_REDIS_HOST: aurora-redis
       AURORA_REDIS_PORT: "6379"
-      AURORA_REDIS_PASSWORD: aqi1015
+      AURORA_REDIS_PASSWORD: ${AURORA_REDIS_PASSWORD}
       AURORA_RABBITMQ_HOST: aurora-rabbitmq
       AURORA_RABBITMQ_PORT: "5672"
-      AURORA_RABBITMQ_USER: myroot
-      AURORA_RABBITMQ_PASSWORD: myaqi1015
-      AURORA_ELASTICSEARCH_USERNAME: ""
-      AURORA_ELASTICSEARCH_PASSWORD: ""
-      AURORA_MINIO_ACCESS_KEY: "aqi125"
-      AURORA_MINIO_SECRET_KEY: "aqi1015."
+      AURORA_RABBITMQ_USER: ${RABBITMQ_USER}
+      AURORA_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      AURORA_ELASTICSEARCH_USERNAME: "${AURORA_ELASTICSEARCH_USERNAME}"
+      AURORA_ELASTICSEARCH_PASSWORD: "${AURORA_ELASTICSEARCH_PASSWORD}"
+      AURORA_MINIO_ACCESS_KEY: "${AURORA_MINIO_ACCESS_KEY}"
+      AURORA_MINIO_SECRET_KEY: "${AURORA_MINIO_SECRET_KEY}"
       AURORA_MINIO_BUCKET: aurora
-      AURORA_JWT_SECRET: "YXVyb3JhLXNlY3JldC1rZXktZm9yLXNwcmluZy1ib290LTMtMi0xMg=="
+      AURORA_JWT_SECRET: "${AURORA_JWT_SECRET}"
       AURORA_JWT_EXPIRE_TIME: "168"
       AURORA_SERVER_MODE: release
       AURORA_SEARCH_MODE: elasticsearch
@@ -188,9 +188,9 @@ services:
       - aurora-network
     restart: always
     command: >
-      bin/maxwell --host=aurora-mysql --user=root --password=aqi1015
+      bin/maxwell --host=aurora-mysql --user=root --password=${MAXWELL_MYSQL_PASSWORD}
         --producer=rabbitmq --rabbitmq_host=aurora-rabbitmq
-        --rabbitmq_user=myroot --rabbitmq_pass=myaqi1015
+        --rabbitmq_user=${RABBITMQ_USER} --rabbitmq_pass=${RABBITMQ_PASSWORD}
         --rabbitmq_exchange=maxwell --rabbitmq_exchange_type=topic
         --rabbitmq_routing_key_template=%{database}.%{table}
         --client_id=maxwell_prod
