@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Gin-1.10-008ECF?style=for-the-badge" />
   <img src="https://img.shields.io/badge/GORM-1.30-7C4DFF?style=for-the-badge" />
   <img src="https://img.shields.io/badge/ES-8.19-FEC514?style=for-the-badge&logo=elasticsearch" />
-  <img src="https://img.shields.io/badge/内存-~40MiB-success?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/内存-~29MiB-success?style=for-the-badge" />
 </p>
 
 ---
@@ -16,10 +16,11 @@
 
 | 特性 | Java SpringBoot | Aurora Go | 提升 |
 |------|-----------------|-----------|------|
-| 运行时内存 | ~280 MiB (GraalVM) | **~40 MiB** | **↓86%** |
+| 运行时内存 | ~280 MiB (JVM) | **~29 MiB** | **↓89.6%** |
 | 启动时间 | ~8s | **~0.3s** | **↓96%** |
-| Docker 镜像 | ~180 MB (JRE) | **~15 MB** (Alpine) | **↓92%** |
+| Docker 镜像 | ~180 MB (JRE) | **~5 MB** (Alpine) | **↓97.2%** |
 | API 延迟 (P99) | ~50ms | **~10ms** | **↓80%** |
+| 总内存占用 | ~1,587 MiB | **~1,336 MiB** | **↓15.8%** |
 | AI Agent | — | tRPC-Agent-Go v1.8 (可选) | **全新** |
 | 前端兼容 | ✅ | ✅ **100% API 兼容** | — |
 
@@ -359,6 +360,23 @@ agent:
 | aurora-maxwell | zendesk/maxwell:latest | — | MySQL→MQ 同步 |
 
 > ES 8.19.14 已深度优化：禁用 GeoIP/ML/Watcher，内存限制 640M
+
+### 内存占用优化（实测）
+
+| 服务 | 内存使用 | 内存占比 | 说明 |
+|:-----|:---------|:---------|:-----|
+| **aurora-go** | **~29 MiB** | **0.85%** | Go 静态编译，极致轻量 |
+| aurora-mysql | ~264 MiB | 7.76% | 优化配置 (innodb_buffer_pool_size=128M) |
+| aurora-redis | ~5 MiB | 0.15% | 极致优化 (maxmemory 32mb) |
+| aurora-rabbitmq | ~110 MiB | 3.22% | 限制 Erlang VM 内存 |
+| aurora-elasticsearch | ~579 MiB / 640 MiB | 90.44% | 限制 640M，正常缓存使用 |
+| aurora-minio | ~158 MiB | 4.64% | 对象存储 |
+| aurora-maxwell | ~180 MiB | 5.30% | MySQL binlog 同步 |
+| aurora-nginx | ~11 MiB | 0.34% | 反向代理 |
+
+**Go 模式总内存：~1,336 MiB** vs **Java 模式：~1,587 MiB**，节省 **~251 MiB (15.8%)**
+
+> 💡 Go 后端内存仅 ~29 MiB，相比 Java 后端 (~280 MiB) 节省 **~251 MiB (89.6%)**
 
 ---
 
