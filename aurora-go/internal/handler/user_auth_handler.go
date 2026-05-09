@@ -31,8 +31,16 @@ func NewUserAuthHandler(registry *service.Registry) *UserAuthHandler {
 	return &UserAuthHandler{registry: registry}
 }
 
-// Register 用户注册
-// POST /api/auth/register
+// @Summary 用户注册
+// @Tags 用户
+// @Description 注册新用户账号
+// @Accept json
+// @Produce json
+// @Param registerVO body vo.RegisterVO true "注册信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/users/register [post]
 func (h *UserAuthHandler) Register(c *gin.Context) {
 	var registerVO vo.RegisterVO
 	if err := c.ShouldBindJSON(&registerVO); err != nil {
@@ -47,8 +55,16 @@ func (h *UserAuthHandler) Register(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// Login 用户登录
-// POST /api/auth/login
+// @Summary 用户登录
+// @Tags 用户
+// @Description 用户登录获取Token
+// @Accept json
+// @Produce json
+// @Param loginVO body vo.LoginVO true "登录信息"
+// @Success 200 {object} object "成功返回登录结果和Token"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/users/login [post]
 func (h *UserAuthHandler) Login(c *gin.Context) {
 	var loginVO vo.LoginVO
 
@@ -125,8 +141,16 @@ func (h *UserAuthHandler) Login(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// Logout 用户登出
-// POST /api/auth/logout
+// @Summary 用户登出
+// @Tags 用户
+// @Description 用户登出（需要登录）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功响应"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/logout [post]
 func (h *UserAuthHandler) Logout(c *gin.Context) {
 	// 获取当前用户ID (Gin Context中可能是 uint64 或 uint)
 	userID, _ := c.Get("user_id")
@@ -149,8 +173,16 @@ func (h *UserAuthHandler) Logout(c *gin.Context) {
 	util.ResponseSuccess(c, "登出成功")
 }
 
-// QQLogin QQ OAuth 登录回调
-// POST /api/auth/qq/callback
+// @Summary QQ OAuth登录
+// @Tags 用户
+// @Description 通过QQ OAuth登录
+// @Accept json
+// @Produce json
+// @Param qqLoginVO body dto.QQLoginVO true "QQ登录信息"
+// @Success 200 {object} object "成功返回登录结果"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/users/oauth/qq [post]
 func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 	var qqVO dto.QQLoginVO
 	if err := c.ShouldBindJSON(&qqVO); err != nil {
@@ -169,9 +201,16 @@ func (h *UserAuthHandler) QQLogin(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SendVerificationCode 发送邮箱验证码
-// GET /api/users/code?username=xxx@xx.com
-// 对标 Java UserAuthController.sendCode(String username)
+// @Summary 发送邮箱验证码
+// @Tags 用户
+// @Description 发送邮箱验证码
+// @Accept json
+// @Produce json
+// @Param username query string true "邮箱地址"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/users/code [get]
 func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
 	email := c.Query("username") // 前端传参名是 username（实际是邮箱）
 	if email == "" {
@@ -185,10 +224,16 @@ func (h *UserAuthHandler) SendVerificationCode(c *gin.Context) {
 	util.ResponseSuccess(c, "验证码已发送，请查收邮件")
 }
 
-// UpdatePassword 修改/重置密码
-// PUT /api/users/password
-// 对标 Java UserAuthController.updatePassword (公开接口，无需登录)
-// 前端传参: username(邮箱), code(验证码), password(新密码)
+// @Summary 修改/重置密码
+// @Tags 用户
+// @Description 通过验证码修改或重置密码
+// @Accept json
+// @Produce json
+// @Param body body object true "邮箱、验证码和新密码(username, code, password)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/users/password [put]
 func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
 	var userVO struct {
 		Username string `json:"username" binding:"required"`
@@ -214,8 +259,16 @@ func (h *UserAuthHandler) UpdatePassword(c *gin.Context) {
 	util.ResponseSuccess(c, "密码修改成功")
 }
 
-// ResetPassword 重置密码（通过邮箱验证码）
-// PUT /api/auth/password/reset
+// @Summary 重置密码
+// @Tags 用户
+// @Description 通过邮箱验证码重置密码
+// @Accept json
+// @Produce json
+// @Param resetVO body dto.ResetPasswordVO true "重置密码信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/users/password/reset [put]
 func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 	var resetVO dto.ResetPasswordVO
 	if err := c.ShouldBindJSON(&resetVO); err != nil {
@@ -237,8 +290,16 @@ func (h *UserAuthHandler) ResetPassword(c *gin.Context) {
 	util.ResponseSuccess(c, "密码重置成功")
 }
 
-// GetUserInfo 获取当前登录用户信息
-// GET /api/user/info
+// @Summary 获取当前登录用户信息
+// @Tags 用户
+// @Description 获取当前登录用户的信息（需要登录）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回用户信息"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/info/{id} [get]
 func (h *UserAuthHandler) GetUserInfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -268,8 +329,19 @@ func (h *UserAuthHandler) GetUserInfo(c *gin.Context) {
 
 // ==================== 后台管理端点（UserInfoController + UserAuthController） ====================
 
-// ListUsers 查询后台用户列表
-// GET /api/admin/users
+// @Summary 查询后台用户列表
+// @Tags 用户
+// @Description 后台查询用户列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回用户列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users [get]
 func (h *UserAuthHandler) ListUsers(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -284,9 +356,17 @@ func (h *UserAuthHandler) ListUsers(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ListUserAreas 获取用户区域分布
-// GET /api/admin/users/area
-// 对标 Java UserAuthServiceImpl.listUserAreas()
+// @Summary 获取用户区域分布
+// @Tags 用户
+// @Description 获取用户地域分布统计
+// @Accept json
+// @Produce json
+// @Param type query int false "区域类型(1用户/2游客)"
+// @Success 200 {object} object "成功返回地域分布"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/area [get]
 func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -381,8 +461,16 @@ func (h *UserAuthHandler) ListUserAreas(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// TriggerUserAreaStats 手动触发用户地域统计（用于测试）
-// POST /api/admin/users/area/trigger
+// @Summary 手动触发用户地域统计
+// @Tags 用户
+// @Description 手动触发用户地域分布统计
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功响应"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/area/trigger [post]
 func (h *UserAuthHandler) TriggerUserAreaStats(c *gin.Context) {
 	if h.registry.RDB == nil || h.registry.DB == nil {
 		util.ResponseError(c, errors.ErrInternalServer.WithMsg("Redis或数据库未初始化"))
@@ -404,9 +492,18 @@ func (h *UserAuthHandler) TriggerUserAreaStats(c *gin.Context) {
 	util.ResponseSuccess(c, "用户地域统计已更新")
 }
 
-// UpdateAdminPassword 修改管理员密码（对标Java UserAuthController.updateAdminPassword）
-// PUT /api/admin/users/password
-// Java逻辑: 管理员直接重置密码，不需要验证旧密码
+// @Summary 修改管理员密码
+// @Tags 用户
+// @Description 修改管理员密码（无需旧密码）
+// @Accept json
+// @Produce json
+// @Param passwordVO body vo.PasswordVO true "新密码"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/password [put]
 func (h *UserAuthHandler) UpdateAdminPassword(c *gin.Context) {
 	var passwordVO vo.PasswordVO
 	if err := c.ShouldBindJSON(&passwordVO); err != nil {
@@ -434,9 +531,18 @@ func (h *UserAuthHandler) UpdateAdminPassword(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// UpdateUserRole 修改用户角色和昵称（完全对标Java UserInfoController.updateUserRole）
-// PUT /api/admin/users/role
-// Java逻辑：1)更新UserInfo.nickname  2)删除旧角色  3)批量插入新角色
+// @Summary 修改用户角色和昵称
+// @Tags 用户
+// @Description 修改用户角色和昵称
+// @Accept json
+// @Produce json
+// @Param body body object true "用户信息(userInfoId, nickname, roleIds)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/role [put]
 func (h *UserAuthHandler) UpdateUserRole(c *gin.Context) {
 	var body struct {
 		UserInfoID uint   `json:"userInfoId" binding:"required"` // 用户信息ID（不是UserAuth.id）
@@ -477,9 +583,18 @@ func (h *UserAuthHandler) UpdateUserRole(c *gin.Context) {
 	util.ResponseSuccess(c, "角色修改成功")
 }
 
-// UpdateUserDisable 修改用户禁用状态（对标Java UserInfoController.updateUserDisable）
-// PUT /api/admin/users/disable
-// Java逻辑: 1)下线用户(删除Redis Session) 2)更新 isDisable 字段
+// @Summary 修改用户禁用状态
+// @Tags 用户
+// @Description 禁用或启用用户（同时下线）
+// @Accept json
+// @Produce json
+// @Param body body object true "用户ID和禁用状态(id, isDisable)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/disable [put]
 func (h *UserAuthHandler) UpdateUserDisable(c *gin.Context) {
 	var body struct {
 		ID        uint `json:"id" binding:"required"`             // 对标Java UserDisableVO.id
@@ -509,8 +624,19 @@ func (h *UserAuthHandler) UpdateUserDisable(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// ListOnlineUsers 查看在线用户列表
-// GET /api/admin/users/online
+// @Summary 查看在线用户列表
+// @Tags 用户
+// @Description 查看当前在线用户列表
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回在线用户列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/online [get]
 func (h *UserAuthHandler) ListOnlineUsers(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -525,8 +651,18 @@ func (h *UserAuthHandler) ListOnlineUsers(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// RemoveOnlineUser 下线指定用户
-// DELETE /api/admin/users/:id/online
+// @Summary 下线指定用户
+// @Tags 用户
+// @Description 强制指定用户下线
+// @Accept json
+// @Produce json
+// @Param id path int true "用户ID"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/{id}/online [delete]
 func (h *UserAuthHandler) RemoveOnlineUser(c *gin.Context) {
 	userInfoIdStr := c.Param("id")
 	if userInfoIdStr == "" {
@@ -546,9 +682,18 @@ func (h *UserAuthHandler) RemoveOnlineUser(c *gin.Context) {
 
 // ==================== 用户信息端点（UserInfoController） ====================
 
-// UpdateUserInfo 更新用户信息（对标Java UserInfoController.updateUserInfo）
-// PUT /api/users/info
-// Java逻辑: 更新当前用户的 nickname, intro, website
+// @Summary 更新用户信息
+// @Tags 用户
+// @Description 更新当前用户的昵称、简介和网站
+// @Accept json
+// @Produce json
+// @Param body body object true "用户信息(nickname, intro, website)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/info [put]
 func (h *UserAuthHandler) UpdateUserInfo(c *gin.Context) {
 	var body struct {
 		Nickname string `json:"nickname" binding:"required"`
@@ -599,9 +744,18 @@ func (h *UserAuthHandler) UpdateUserInfo(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// UpdateUserAvatar 更新用户头像
-// POST /api/users/avatar
-// 对标Java版: 1)上传到对象存储(MinIO/OSS) 2)更新数据库avatar字段 3)返回完整URL
+// @Summary 更新用户头像
+// @Tags 用户
+// @Description 上传并更新用户头像
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "头像文件"
+// @Success 200 {object} object "成功返回头像URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/avatar [post]
 func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -648,9 +802,18 @@ func (h *UserAuthHandler) UpdateUserAvatar(c *gin.Context) {
 	util.ResponseSuccess(c, avatarURL)
 }
 
-// BindUserEmail 绑定用户邮箱（对标Java UserInfoController.saveUserEmail）
-// PUT /api/users/email
-// Java逻辑: 1)校验验证码 2)更新当前用户邮箱
+// @Summary 绑定用户邮箱
+// @Tags 用户
+// @Description 绑定当前用户的邮箱（需要验证码）
+// @Accept json
+// @Produce json
+// @Param emailVO body dto.EmailVO true "邮箱和验证码"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/email [put]
 func (h *UserAuthHandler) BindUserEmail(c *gin.Context) {
 	var emailVO dto.EmailVO
 	if err := c.ShouldBindJSON(&emailVO); err != nil {
@@ -709,9 +872,18 @@ func (h *UserAuthHandler) BindUserEmail(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// UpdateUserSubscribe 修改用户订阅状态（对标Java UserInfoController.updateUserSubscribe）
-// PUT /api/users/subscribe
-// Java逻辑: 1)检查用户是否绑定邮箱 2)更新 isSubscribe 字段
+// @Summary 修改用户订阅状态
+// @Tags 用户
+// @Description 修改当前用户的邮件订阅状态
+// @Accept json
+// @Produce json
+// @Param body body object true "用户ID和订阅状态(userId, isSubscribe)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/subscribe [put]
 func (h *UserAuthHandler) UpdateUserSubscribe(c *gin.Context) {
 	var body struct {
 		UserID      uint `json:"userId" binding:"required"`
@@ -756,8 +928,18 @@ func (h *UserAuthHandler) UpdateUserSubscribe(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// GetUserInfoById 根据ID获取用户信息
-// GET /api/users/info/:id
+// @Summary 根据ID获取用户信息
+// @Tags 用户
+// @Description 根据ID获取用户信息
+// @Accept json
+// @Produce json
+// @Param id path int true "用户ID"
+// @Success 200 {object} object "成功返回用户信息"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/users/info/{id} [get]
 func (h *UserAuthHandler) GetUserInfoById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

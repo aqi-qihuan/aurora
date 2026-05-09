@@ -23,8 +23,20 @@ func NewPhotoHandler(svc *service.PhotoService, uploadSvc *strategy.UploadServic
 	return &PhotoHandler{svc: svc, uploadSvc: uploadSvc}
 }
 
-// ListPhotos 获取相册下的照片列表（后台管理用，分页）
-// GET /api/admin/photos
+// @Summary 后台照片管理列表
+// @Tags 照片
+// @Description 后台获取照片列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param albumId query int false "相册ID"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回照片列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos [get]
 func (h *PhotoHandler) ListAdminPhotos(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -39,8 +51,16 @@ func (h *PhotoHandler) ListAdminPhotos(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ListPhotosByAlbumId 根据相册id查看照片列表（前台）
-// GET /api/albums/:albumId/photos
+// @Summary 根据相册ID获取照片列表
+// @Tags 照片
+// @Description 根据相册ID获取照片列表
+// @Accept json
+// @Produce json
+// @Param albumId path int true "相册ID"
+// @Success 200 {object} object "成功返回照片列表"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/albums/{albumId}/photos [get]
 func (h *PhotoHandler) ListPhotosByAlbumId(c *gin.Context) {
 	albumId, err := strconv.ParseUint(c.Param("albumId"), 10, 64)
 	if err != nil {
@@ -55,8 +75,18 @@ func (h *PhotoHandler) ListPhotosByAlbumId(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UploadPhoto 上传照片（对标Java PhotoController.savePhotoAlbumCover）
-// POST /api/admin/photos/upload
+// @Summary 上传照片
+// @Tags 照片
+// @Description 上传照片文件
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "照片文件"
+// @Success 200 {object} object "成功返回照片URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/upload [post]
 func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -90,8 +120,18 @@ func (h *PhotoHandler) UploadPhoto(c *gin.Context) {
 	util.ResponseSuccess(c, url)
 }
 
-// DeletePhotos 批量删除照片
-// DELETE /api/admin/photos
+// @Summary 批量删除照片
+// @Tags 照片
+// @Description 后台批量删除照片
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "照片ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos [delete]
 func (h *PhotoHandler) DeletePhotos(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
@@ -108,8 +148,18 @@ func (h *PhotoHandler) DeletePhotos(c *gin.Context) {
 // ListAdminPhotos 后台照片管理列表
 // GET /api/admin/photos
 
-// SavePhotos 保存照片
-// POST /api/admin/photos
+// @Summary 保存照片
+// @Tags 照片
+// @Description 保存照片到指定相册
+// @Accept json
+// @Produce json
+// @Param body body object true "相册ID和照片URL列表(albumId, photoUrls)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos [post]
 func (h *PhotoHandler) SavePhotos(c *gin.Context) {
 	var body struct {
 		AlbumIDStr string   `json:"albumId" binding:"required"`
@@ -133,8 +183,18 @@ func (h *PhotoHandler) SavePhotos(c *gin.Context) {
 	util.ResponseSuccess(c, "照片保存成功")
 }
 
-// UpdatePhoto 更新照片信息
-// PUT /api/admin/photos
+// @Summary 更新照片信息
+// @Tags 照片
+// @Description 更新照片名称等信息
+// @Accept json
+// @Produce json
+// @Param body body object true "照片ID和名称(id, photoName)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos [put]
 func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 	var body struct {
 		ID       uint   `json:"id" binding:"required"`
@@ -151,8 +211,18 @@ func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 	util.ResponseSuccess(c, "照片信息已更新")
 }
 
-// MovePhotosAlbum 移动照片到其他相册
-// PUT /api/admin/photos/album
+// @Summary 移动照片到其他相册
+// @Tags 照片
+// @Description 批量移动照片到指定相册
+// @Accept json
+// @Produce json
+// @Param body body object true "目标相册ID和照片ID列表(albumId, photoIds)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/album [put]
 func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
 	var body struct {
 		AlbumIDStr string   `json:"albumId" binding:"required"`
@@ -176,8 +246,18 @@ func (h *PhotoHandler) MovePhotosAlbum(c *gin.Context) {
 	util.ResponseSuccess(c, "照片已移动")
 }
 
-// UpdatePhotoDelete 更新照片删除状态（逻辑删除/恢复）
-// PUT /api/admin/photos/delete
+// @Summary 更新照片删除状态
+// @Tags 照片
+// @Description 批量更新照片删除状态（逻辑删除/恢复）
+// @Accept json
+// @Produce json
+// @Param body body object true "照片ID列表和删除状态(ids, isDelete)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/delete [put]
 func (h *PhotoHandler) UpdatePhotoDelete(c *gin.Context) {
 	var body struct {
 		IDs      []uint `json:"ids" binding:"required"`

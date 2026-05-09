@@ -22,8 +22,16 @@ func NewTalkHandler(svc *service.TalkService, fileSvc *service.FileService) *Tal
 	return &TalkHandler{svc: svc, fileSvc: fileSvc}
 }
 
-// ListTalks 获取说说列表（前台，按时间倒序）
-// GET /api/talks
+// @Summary 获取说说列表
+// @Tags 说说
+// @Description 获取前台说说列表（分页，按时间倒序）
+// @Accept json
+// @Produce json
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回说说列表"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/talks [get]
 func (h *TalkHandler) ListTalks(c *gin.Context) {
 	pageNum, pageSize := util.PageQuery(c)
 	page := dto.PageVO{PageNum: pageNum, PageSize: pageSize}
@@ -36,8 +44,16 @@ func (h *TalkHandler) ListTalks(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// GetTalkById 获取说说详情（前台）
-// GET /api/talks/:id
+// @Summary 获取说说详情
+// @Tags 说说
+// @Description 根据ID获取说说详情
+// @Accept json
+// @Produce json
+// @Param id path int true "说说ID"
+// @Success 200 {object} object "成功返回说说详情"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/talks/{id} [get]
 func (h *TalkHandler) GetTalkById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -52,9 +68,18 @@ func (h *TalkHandler) GetTalkById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SaveOrUpdate 保存或更新说说（后台，统一接口）
-// POST /api/admin/talks
-// 对标Java版：根据ID有无自动判断新增/更新
+// @Summary 保存或更新说说
+// @Tags 说说
+// @Description 后台保存或更新说说
+// @Accept json
+// @Produce json
+// @Param talkVO body vo.TalkVO true "说说内容"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/talks [post]
 func (h *TalkHandler) SaveOrUpdate(c *gin.Context) {
 	var talkVO vo.TalkVO
 	if err := c.ShouldBindJSON(&talkVO); err != nil {
@@ -89,9 +114,18 @@ func (h *TalkHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// DeleteTalks 批量删除说说（后台）
-// DELETE /api/admin/talks
-// 对标Java版：接收ID数组批量删除
+// @Summary 批量删除说说
+// @Tags 说说
+// @Description 后台批量删除说说
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "说说ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/talks [delete]
 func (h *TalkHandler) DeleteTalks(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
@@ -106,8 +140,19 @@ func (h *TalkHandler) DeleteTalks(c *gin.Context) {
 	util.ResponseSuccess(c, "说说已删除")
 }
 
-// ListAdminTalks 后台说说列表
-// GET /api/admin/talks
+// @Summary 后台说说列表
+// @Tags 说说
+// @Description 后台获取说说列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回说说列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/talks [get]
 func (h *TalkHandler) ListAdminTalks(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -122,8 +167,18 @@ func (h *TalkHandler) ListAdminTalks(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// GetAdminTalkById 后台获取说说详情
-// GET /api/admin/talks/:id
+// @Summary 后台获取说说详情
+// @Tags 说说
+// @Description 后台根据ID获取说说详情
+// @Accept json
+// @Produce json
+// @Param id path int true "说说ID"
+// @Success 200 {object} object "成功返回说说详情"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/talks/{id} [get]
 func (h *TalkHandler) GetAdminTalkById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -138,9 +193,18 @@ func (h *TalkHandler) GetAdminTalkById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UploadTalkImage 上传说说图片
-// POST /api/admin/talks/images
-// 对标Java: uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.TALK.getPath())
+// @Summary 上传说说图片
+// @Tags 说说
+// @Description 上传说说中的图片
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "图片文件"
+// @Success 200 {object} object "成功返回图片URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/talks/images [post]
 func (h *TalkHandler) UploadTalkImage(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {

@@ -22,8 +22,17 @@ func NewResourceHandler(svc *service.ResourceService) *ResourceHandler {
 	return &ResourceHandler{svc: svc}
 }
 
-// ListResources 获取资源权限列表（树形结构，对标Java版）
-// GET /api/admin/resources
+// @Summary 获取资源权限列表
+// @Tags 资源
+// @Description 获取资源权限列表（树形结构）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Success 200 {object} object "成功返回资源树"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/resources [get]
 func (h *ResourceHandler) ListResources(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -36,9 +45,18 @@ func (h *ResourceHandler) ListResources(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SaveOrUpdate 保存/更新资源
-// POST /api/admin/resources
-// 对标Java版 saveOrUpdateResource，根据ID判断新增或更新
+// @Summary 保存/更新资源
+// @Tags 资源
+// @Description 后台保存或更新资源权限
+// @Accept json
+// @Produce json
+// @Param resourceVO body vo.ResourceVO true "资源信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/resources [post]
 func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 	var resourceVO vo.ResourceVO
 	if err := c.ShouldBindJSON(&resourceVO); err != nil {
@@ -66,8 +84,18 @@ func (h *ResourceHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteResources 批量删除资源
-// DELETE /api/admin/resources?ids=1,2,3
+// @Summary 批量删除资源
+// @Tags 资源
+// @Description 批量删除资源权限
+// @Accept json
+// @Produce json
+// @Param ids query string true "资源ID列表，逗号分隔"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/resources [delete]
 func (h *ResourceHandler) DeleteResources(c *gin.Context) {
 	idsStr := c.Query("ids")
 	if idsStr == "" {
@@ -85,8 +113,18 @@ func (h *ResourceHandler) DeleteResources(c *gin.Context) {
 	util.ResponseSuccess(c, "资源已删除")
 }
 
-// DeleteResource 删除单个资源
-// DELETE /api/admin/resources/:id
+// @Summary 删除单个资源
+// @Tags 资源
+// @Description 删除单个资源权限
+// @Accept json
+// @Produce json
+// @Param id path int true "资源ID"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/resources/{id} [delete]
 func (h *ResourceHandler) DeleteResource(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -100,8 +138,16 @@ func (h *ResourceHandler) DeleteResource(c *gin.Context) {
 	util.ResponseSuccess(c, "资源已删除")
 }
 
-// ListResourceOptions 获取角色资源选项（用于角色授权下拉框，树形结构）
-// GET /api/admin/role/resources
+// @Summary 获取角色资源选项
+// @Tags 资源
+// @Description 获取角色授权资源选项（用于下拉框，树形结构）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回资源树"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/role/resources [get]
 func (h *ResourceHandler) ListResourceOptions(c *gin.Context) {
 	result, err := h.svc.ListResourceOptions(c.Request.Context())
 	if err != nil {
@@ -111,8 +157,19 @@ func (h *ResourceHandler) ListResourceOptions(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UpdateRoleResource 更新角色的资源关联
-// PUT /api/admin/roles/:id/resources
+// @Summary 更新角色的资源关联
+// @Tags 资源
+// @Description 为角色分配资源权限
+// @Accept json
+// @Produce json
+// @Param id path int true "角色ID"
+// @Param body body object true "资源ID列表(resourceIds)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/roles/{id}/resources [put]
 func (h *ResourceHandler) UpdateRoleResource(c *gin.Context) {
 	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

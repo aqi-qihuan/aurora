@@ -21,8 +21,19 @@ func NewJobHandler(svc *service.JobService) *JobHandler {
 	return &JobHandler{svc: svc}
 }
 
-// ListJobs 获取定时任务列表
-// GET /api/admin/jobs
+// @Summary 获取定时任务列表
+// @Tags 定时任务
+// @Description 获取定时任务列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回任务列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs [get]
 func (h *JobHandler) ListJobs(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -37,9 +48,18 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SaveOrUpdate 保存/更新定时任务
-// POST /api/admin/jobs
-// PUT /api/admin/jobs/:id
+// @Summary 保存/更新定时任务
+// @Tags 定时任务
+// @Description 后台保存或更新定时任务
+// @Accept json
+// @Produce json
+// @Param jobVO body vo.JobVO true "任务信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs [post]
 func (h *JobHandler) SaveOrUpdate(c *gin.Context) {
 	var jobVO vo.JobVO
 	if err := c.ShouldBindJSON(&jobVO); err != nil {
@@ -70,9 +90,18 @@ func (h *JobHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteJob 批量删除定时任务
-// DELETE /api/admin/jobs
-// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
+// @Summary 批量删除定时任务
+// @Tags 定时任务
+// @Description 后台批量删除定时任务
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "任务ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs [delete]
 func (h *JobHandler) DeleteJob(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil {
@@ -92,9 +121,18 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 	util.ResponseSuccess(c, "任务已删除")
 }
 
-// UpdateJobStatus 启用/禁用定时任务
-// PUT /api/admin/jobs/status
-// Java: @PutMapping("/jobs/status")
+// @Summary 启用/禁用定时任务
+// @Tags 定时任务
+// @Description 启用或禁用定时任务
+// @Accept json
+// @Produce json
+// @Param body body object true "任务ID和状态(id, status)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs/status [put]
 func (h *JobHandler) UpdateJobStatus(c *gin.Context) {
 	var body struct {
 		ID     uint `json:"id"`
@@ -111,9 +149,18 @@ func (h *JobHandler) UpdateJobStatus(c *gin.Context) {
 	util.ResponseSuccess(c, "任务状态已更新")
 }
 
-// RunJobOnce 立即执行一次定时任务
-// PUT /api/admin/jobs/run
-// Java: @PutMapping("/jobs/run")
+// @Summary 立即执行一次定时任务
+// @Tags 定时任务
+// @Description 立即手动执行一次定时任务
+// @Accept json
+// @Produce json
+// @Param body body object true "任务ID和分组(id, jobGroup)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs/run [put]
 func (h *JobHandler) RunJobOnce(c *gin.Context) {
 	var body struct {
 		ID       uint   `json:"id"`
@@ -131,8 +178,18 @@ func (h *JobHandler) RunJobOnce(c *gin.Context) {
 	util.ResponseSuccess(c, log)
 }
 
-// SaveJob 新增定时任务
-// POST /api/admin/jobs
+// @Summary 新增定时任务
+// @Tags 定时任务
+// @Description 新增定时任务
+// @Accept json
+// @Produce json
+// @Param jobVO body vo.JobVO true "任务信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs [post]
 func (h *JobHandler) SaveJob(c *gin.Context) {
 	var jobVO vo.JobVO
 	if err := c.ShouldBindJSON(&jobVO); err != nil {
@@ -147,8 +204,18 @@ func (h *JobHandler) SaveJob(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UpdateJob 修改定时任务
-// PUT /api/admin/jobs
+// @Summary 修改定时任务
+// @Tags 定时任务
+// @Description 修改定时任务信息
+// @Accept json
+// @Produce json
+// @Param body body object true "任务ID和任务信息(id, jobVO)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs [put]
 func (h *JobHandler) UpdateJob(c *gin.Context) {
 	var body struct {
 		ID    uint        `json:"id"`
@@ -167,8 +234,18 @@ func (h *JobHandler) UpdateJob(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// GetJobById 根据ID获取任务详情
-// GET /api/admin/jobs/:id
+// @Summary 获取任务详情
+// @Tags 定时任务
+// @Description 根据ID获取定时任务详情
+// @Accept json
+// @Produce json
+// @Param id path int true "任务ID"
+// @Success 200 {object} object "成功返回任务详情"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs/{id} [get]
 func (h *JobHandler) GetJobById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -183,8 +260,16 @@ func (h *JobHandler) GetJobById(c *gin.Context) {
 	util.ResponseSuccess(c, job)
 }
 
-// ListJobGroups 获取所有任务分组
-// GET /api/admin/jobs/jobGroups
+// @Summary 获取所有任务分组
+// @Tags 定时任务
+// @Description 获取所有定时任务分组列表
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回任务分组列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobs/jobGroups [get]
 func (h *JobHandler) ListJobGroups(c *gin.Context) {
 	util.ResponseSuccess(c, []string{"DEFAULT", "SYSTEM"})
 }

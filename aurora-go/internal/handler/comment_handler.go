@@ -26,8 +26,18 @@ func NewCommentHandler(svc *service.CommentService) *CommentHandler {
 	return &CommentHandler{svc: svc}
 }
 
-// ListComments 获取评论列表（前台，分页，对标 Java getComments）
-// GET /api/comments?type=5&topicId=123&current=1&size=7
+// @Summary 获取评论列表
+// @Tags 评论
+// @Description 获取前台评论列表（分页）
+// @Accept json
+// @Produce json
+// @Param type query int false "评论类型"
+// @Param topicId query int false "主题ID"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回评论列表"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/comments [get]
 func (h *CommentHandler) ListComments(c *gin.Context) {
 	// 对标Java: CommentVO commentVO 作为Query参数绑定
 	var commentVO vo.CommentVO
@@ -56,8 +66,18 @@ func (h *CommentHandler) ListComments(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// AddComment 发表评论/回复
-// POST /api/comments/save
+// @Summary 发表评论/回复
+// @Tags 评论
+// @Description 发表评论或回复评论（需要登录）
+// @Accept json
+// @Produce json
+// @Param commentVO body vo.CommentVO true "评论内容"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/comments/save [post]
 func (h *CommentHandler) AddComment(c *gin.Context) {
 	// 检查是否登录
 	if !middleware.RequireLogin(c) {
@@ -102,8 +122,19 @@ func (h *CommentHandler) AddComment(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ReplyComment 回复指定评论
-// POST /api/comments/:id/reply
+// @Summary 回复指定评论
+// @Tags 评论
+// @Description 回复指定评论（需要登录）
+// @Accept json
+// @Produce json
+// @Param id path int true "父评论ID"
+// @Param replyVO body vo.CommentVO true "回复内容"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/comments/{id}/reply [post]
 func (h *CommentHandler) ReplyComment(c *gin.Context) {
 	var replyVO vo.CommentVO
 	if err := c.ShouldBindJSON(&replyVO); err != nil {
@@ -137,8 +168,18 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// LikeComment 点赞评论
-// POST /api/comments/:id/like
+// @Summary 点赞评论
+// @Tags 评论
+// @Description 点赞指定评论
+// @Accept json
+// @Produce json
+// @Param id path int true "评论ID"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/comments/{id}/like [post]
 func (h *CommentHandler) LikeComment(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -154,8 +195,19 @@ func (h *CommentHandler) LikeComment(c *gin.Context) {
 
 // ==================== 后台管理端点 ====================
 
-// ListAdminComments 后台评论列表（含审核状态筛选）
-// GET /api/admin/comments
+// @Summary 后台评论列表
+// @Tags 评论
+// @Description 后台评论列表（含审核状态筛选）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回评论列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/comments [get]
 func (h *CommentHandler) ListAdminComments(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -170,8 +222,18 @@ func (h *CommentHandler) ListAdminComments(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UpdateCommentReview 审核评论（通过/拒绝）- 支持批量
-// PUT /api/admin/comments/review
+// @Summary 审核评论
+// @Tags 评论
+// @Description 批量审核评论（通过/拒绝）
+// @Accept json
+// @Produce json
+// @Param body body object true "审核参数(isReview:审核状态, ids:评论ID列表)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/comments/review [put]
 func (h *CommentHandler) UpdateCommentReview(c *gin.Context) {
 	var reviewVO struct {
 		IsReview int8   `json:"isReview"`
@@ -193,8 +255,18 @@ func (h *CommentHandler) UpdateCommentReview(c *gin.Context) {
 	util.SuccessWithMessage(c, "审核成功", nil)
 }
 
-// DeleteComment 删除评论
-// DELETE /api/admin/comments
+// @Summary 删除评论
+// @Tags 评论
+// @Description 后台批量删除评论
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "评论ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/comments [delete]
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	var ids []uint
 
@@ -261,8 +333,14 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	util.SuccessWithMessage(c, "评论已删除", nil)
 }
 
-// ListTopSixComments 获取前6条最新评论（用于侧边栏）
-// GET /api/comments/topSix
+// @Summary 获取前6条最新评论
+// @Tags 评论
+// @Description 获取前6条最新评论（用于侧边栏）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回评论列表"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/comments/topSix [get]
 func (h *CommentHandler) ListTopSixComments(c *gin.Context) {
 	list, err := h.svc.GetLatestComments(c.Request.Context(), 6)
 	if err != nil {
@@ -272,8 +350,16 @@ func (h *CommentHandler) ListTopSixComments(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// GetCommentStats 获取评论统计信息
-// GET /api/admin/comments/stats
+// @Summary 获取评论统计信息
+// @Tags 评论
+// @Description 获取后台评论统计信息
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回评论统计数据"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/comments/stats [get]
 func (h *CommentHandler) GetCommentStats(c *gin.Context) {
 	stats, err := h.svc.GetCommentStats(c.Request.Context())
 	if err != nil {
@@ -283,8 +369,16 @@ func (h *CommentHandler) GetCommentStats(c *gin.Context) {
 	util.ResponseSuccess(c, stats)
 }
 
-// ListRepliesByCommentId 根据评论ID获取回复列表（对标Java CommentController.listRepliesByCommentId）
-// GET /api/comments/:id/replies
+// @Summary 获取评论回复列表
+// @Tags 评论
+// @Description 根据评论ID获取回复列表
+// @Accept json
+// @Produce json
+// @Param id path int true "评论ID"
+// @Success 200 {object} object "成功返回回复列表"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/comments/{id}/replies [get]
 func (h *CommentHandler) ListRepliesByCommentId(c *gin.Context) {
 	commentId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

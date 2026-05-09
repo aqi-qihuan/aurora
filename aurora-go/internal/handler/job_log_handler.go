@@ -19,8 +19,19 @@ func NewJobLogHandler(svc *service.JobLogService) *JobLogHandler {
 	return &JobLogHandler{svc: svc}
 }
 
-// ListJobLogs 获取调度日志列表
-// GET /api/admin/jobLogs
+// @Summary 获取调度日志列表
+// @Tags 任务日志
+// @Description 获取定时任务调度日志列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回调度日志列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobLogs [get]
 func (h *JobLogHandler) ListJobLogs(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -35,9 +46,18 @@ func (h *JobLogHandler) ListJobLogs(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteJobLogs 批量删除调度日志（对标Java: deleteJobLogs）
-// DELETE /api/admin/jobLogs
-// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
+// @Summary 批量删除调度日志
+// @Tags 任务日志
+// @Description 批量删除定时任务调度日志
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "日志ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobLogs [delete]
 func (h *JobLogHandler) DeleteJobLogs(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil {
@@ -58,8 +78,16 @@ func (h *JobLogHandler) DeleteJobLogs(c *gin.Context) {
 	util.ResponseSuccess(c, "日志已删除")
 }
 
-// CleanJobLogs 清空所有调度日志（对标Java: cleanJobLogs）
-// DELETE /api/admin/jobLogs/clean
+// @Summary 清空所有调度日志
+// @Tags 任务日志
+// @Description 清空所有定时任务调度日志
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功响应"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobLogs/clean [delete]
 func (h *JobLogHandler) CleanJobLogs(c *gin.Context) {
 	if err := h.svc.CleanJobLogs(c.Request.Context()); err != nil {
 		util.ResponseError(c, err)
@@ -68,8 +96,16 @@ func (h *JobLogHandler) CleanJobLogs(c *gin.Context) {
 	util.ResponseSuccess(c, "日志已清除")
 }
 
-// ListJobLogGroups 获取调度日志所有分组名
-// GET /api/admin/jobLogs/jobGroups
+// @Summary 获取调度日志所有分组名
+// @Tags 任务日志
+// @Description 获取调度日志所有分组名称
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回分组列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/jobLogs/jobGroups [get]
 func (h *JobLogHandler) ListJobLogGroups(c *gin.Context) {
 	util.ResponseSuccess(c, []string{"DEFAULT", "SYSTEM"})
 }

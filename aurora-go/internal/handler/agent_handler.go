@@ -22,9 +22,19 @@ func NewAgentHandler() *AgentHandler {
 	return &AgentHandler{}
 }
 
-// Chat SSE流式AI对话
-// GET  /api/agent/chat?message=...&sessionId=...
-// POST /api/agent/chat
+// @Summary SSE流式AI对话
+// @Tags AI Agent
+// @Description 通过SSE流式输出或同步模式进行AI对话
+// @Accept json
+// @Produce json
+// @Param message query string false "对话消息"
+// @Param sessionId query string false "会话ID"
+// @Param mode query string false "对话模式"
+// @Param stream query bool false "是否流式输出"
+// @Success 200 {object} object "成功返回AI响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/agent/chat [get]
 func (h *AgentHandler) Chat(c *gin.Context) {
 	var req dto.ChatRequest
 
@@ -109,8 +119,16 @@ func (h *AgentHandler) handleStreamChat(c *gin.Context, a *agent.AuroraAgent, re
 	}
 }
 
-// Write AI写作助手
-// POST /api/agent/write
+// @Summary AI写作助手
+// @Tags AI Agent
+// @Description 使用AI生成文章/内容
+// @Accept json
+// @Produce json
+// @Param request body dto.WriteRequest true "写作请求"
+// @Success 200 {object} object "成功返回写作结果"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/agent/write [post]
 func (h *AgentHandler) Write(c *gin.Context) {
 	var req dto.WriteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -135,8 +153,16 @@ func (h *AgentHandler) Write(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Search AI语义搜索
-// POST /api/agent/search
+// @Summary AI语义搜索
+// @Tags AI Agent
+// @Description 使用AI进行语义搜索
+// @Accept json
+// @Produce json
+// @Param request body dto.SearchRequest true "搜索请求"
+// @Success 200 {object} object "成功返回搜索结果"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/agent/search [post]
 func (h *AgentHandler) Search(c *gin.Context) {
 	var req dto.SearchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -161,8 +187,16 @@ func (h *AgentHandler) Search(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Analyze 数据分析 + AI洞察
-// POST /api/agent/analyze
+// @Summary 数据分析+AI洞察
+// @Tags AI Agent
+// @Description 使用AI进行数据分析并获取洞察结果
+// @Accept json
+// @Produce json
+// @Param request body dto.AnalyzeRequest true "分析请求"
+// @Success 200 {object} object "成功返回分析结果"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/agent/analyze [post]
 func (h *AgentHandler) Analyze(c *gin.Context) {
 	var req dto.AnalyzeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -187,8 +221,15 @@ func (h *AgentHandler) Analyze(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Sessions 会话列表
-// GET /api/agent/sessions
+// @Summary AI对话会话列表
+// @Tags AI Agent
+// @Description 获取用户的AI对话会话列表
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回会话列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/agent/sessions [get]
 func (h *AgentHandler) Sessions(c *gin.Context) {
 	a := agent.GetAgent()
 	if a == nil {

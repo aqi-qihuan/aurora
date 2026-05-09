@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/aurora-go/aurora/internal/agent"
 	"github.com/aurora-go/aurora/internal/config"
@@ -206,6 +208,12 @@ func main() {
 			"agentReady": cfg.Agent.Enabled,
 		})
 	})
+
+	// 6.1 Swagger 文档 UI（开发/调试用，可通过 SWAGGER_ENABLED 环境变量控制）
+	if os.Getenv("SWAGGER_ENABLED") == "true" || cfg.Server.Mode == "debug" {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		slog.Info("Swagger UI 已启用: http://localhost:8080/swagger/index.html")
+	}
 
 	// 7. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
 	tokenSvc := registry.TokenSvc

@@ -26,8 +26,14 @@ func NewAuroraInfoHandler(svc *service.AuroraInfoService, statsService *service.
 	return &AuroraInfoHandler{svc: svc, statsService: statsService}
 }
 
-// GetHomeInfo 获取前台首页数据聚合（文章/分类/标签/友链/统计）
-// GET /api/home/info
+// @Summary 获取前台首页数据
+// @Tags 网站信息
+// @Description 获取前台首页聚合数据（文章/分类/标签/友链/统计）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回首页数据"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/ [get]
 func (h *AuroraInfoHandler) GetHomeInfo(c *gin.Context) {
 	info, err := h.svc.GetHomeInfo(c.Request.Context())
 	if err != nil {
@@ -37,8 +43,16 @@ func (h *AuroraInfoHandler) GetHomeInfo(c *gin.Context) {
 	util.ResponseSuccess(c, info)
 }
 
-// GetAdminInfo 获取后台管理首页统计数据
-// GET /api/admin/ (需JWT)
+// @Summary 获取后台首页统计数据
+// @Tags 网站信息
+// @Description 获取后台管理首页统计数据
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回后台统计数据"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/ [get]
 func (h *AuroraInfoHandler) GetAdminInfo(c *gin.Context) {
 	dashboard, err := h.svc.GetAdminDashboard(c.Request.Context())
 	if err != nil {
@@ -48,10 +62,15 @@ func (h *AuroraInfoHandler) GetAdminInfo(c *gin.Context) {
 	util.ResponseSuccess(c, dashboard)
 }
 
-// Report 上报访客信息
-// POST /api/report
-// 完全对标 Java AuroraInfoServiceImpl.report()
-// 逻辑: 计算访客唯一指纹(IP+浏览器+操作系统) → 判断是否为新访客 → 记录地域+浏览量+独立访客
+// @Summary 上报访客信息
+// @Tags 网站信息
+// @Description 上报访客IP、浏览器、操作系统等统计信息
+// @Accept json
+// @Produce json
+// @Param User-Agent header string false "浏览器User-Agent"
+// @Success 200 {object} object "成功响应"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/report [post]
 func (h *AuroraInfoHandler) Report(c *gin.Context) {
 	// 1. 获取客户端IP
 	ip := util.GetClientIP(c)

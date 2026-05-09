@@ -21,8 +21,14 @@ func NewCategoryHandler(svc *service.CategoryService) *CategoryHandler {
 	return &CategoryHandler{svc: svc}
 }
 
-// ListCategories 获取分类列表（前台，含文章数量）
-// GET /api/categories
+// @Summary 获取分类列表
+// @Tags 分类
+// @Description 获取前台分类列表（含文章数量）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回分类列表"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/categories/all [get]
 func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	list, err := h.svc.GetCategories(c.Request.Context())
 	if err != nil {
@@ -32,8 +38,16 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// GetCategoryById 获取分类详情
-// GET /api/categories/:id
+// @Summary 获取分类详情
+// @Tags 分类
+// @Description 根据ID获取分类详情
+// @Accept json
+// @Produce json
+// @Param id path int true "分类ID"
+// @Success 200 {object} object "成功返回分类详情"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/categories/{id} [get]
 func (h *CategoryHandler) GetCategoryById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -48,8 +62,16 @@ func (h *CategoryHandler) GetCategoryById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ListCategoriesOption 后台获取分类下拉选项
-// GET /api/admin/categories/options
+// @Summary 获取分类下拉选项
+// @Tags 分类
+// @Description 后台获取分类下拉选项列表
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回分类选项列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/categories/options [get]
 func (h *CategoryHandler) ListCategoriesOption(c *gin.Context) {
 	options, err := h.svc.GetCategoryOptions(c.Request.Context())
 	if err != nil {
@@ -59,9 +81,18 @@ func (h *CategoryHandler) ListCategoriesOption(c *gin.Context) {
 	util.ResponseSuccess(c, options)
 }
 
-// SaveOrUpdate 保存或更新分类（后台管理）
-// POST /api/admin/categories (新增)
-// PUT /api/admin/categories/:id (更新)
+// @Summary 保存或更新分类
+// @Tags 分类
+// @Description 后台保存或更新分类信息
+// @Accept json
+// @Produce json
+// @Param categoryVO body vo.CategoryVO true "分类信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/categories [post]
 func (h *CategoryHandler) SaveOrUpdate(c *gin.Context) {
 	var categoryVO vo.CategoryVO
 	if err := c.ShouldBindJSON(&categoryVO); err != nil {
@@ -94,9 +125,18 @@ func (h *CategoryHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteCategory 批量删除分类（后台）
-// DELETE /api/admin/categories
-// 对标Java: @DeleteMapping("/admin/categories") + @RequestBody List<Integer> categoryIds
+// @Summary 批量删除分类
+// @Tags 分类
+// @Description 后台批量删除分类
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "分类ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/categories [delete]
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	// 从请求体接收ID数组（对标Java @RequestBody List<Integer>）
 	var ids []uint
@@ -115,8 +155,19 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	util.ResponseSuccess(c, "分类已删除")
 }
 
-// ListAdminCategories 后台分类管理列表
-// GET /api/admin/categories
+// @Summary 后台分类管理列表
+// @Tags 分类
+// @Description 后台获取分类列表（分页，含筛选）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回分类列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/categories [get]
 func (h *CategoryHandler) ListAdminCategories(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -131,8 +182,17 @@ func (h *CategoryHandler) ListAdminCategories(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SearchCategories 搜索分类（用于编辑器下拉）
-// GET /api/admin/categories/search
+// @Summary 搜索分类
+// @Tags 分类
+// @Description 搜索分类（用于编辑器下拉）
+// @Accept json
+// @Produce json
+// @Param keywords query string false "搜索关键词"
+// @Success 200 {object} object "成功返回分类列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/categories/search [get]
 func (h *CategoryHandler) SearchCategories(c *gin.Context) {
 	keyword := c.DefaultQuery("keywords", "")
 	result, err := h.svc.SearchCategories(c.Request.Context(), keyword)

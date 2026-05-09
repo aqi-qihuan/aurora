@@ -21,8 +21,16 @@ func NewMenuHandler(svc *service.MenuService) *MenuHandler {
 	return &MenuHandler{svc: svc}
 }
 
-// ListMenus 获取菜单列表（后台，对标Java listMenus，不过滤isHidden）
-// GET /api/admin/menus
+// @Summary 获取菜单列表
+// @Tags 菜单
+// @Description 后台获取菜单列表（包含隐藏菜单）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回菜单列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/menus [get]
 func (h *MenuHandler) ListMenus(c *gin.Context) {
 	// 后台管理应显示所有菜单（包含隐藏），对标Java listMenus无is_hidden过滤
 	result, err := h.svc.ListMenus(c.Request.Context())
@@ -33,8 +41,16 @@ func (h *MenuHandler) ListMenus(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// GetUserMenus 获取当前用户的菜单树（用于前端动态路由）
-// GET /api/admin/user/menus (需JWT)
+// @Summary 获取当前用户的菜单树
+// @Tags 菜单
+// @Description 获取当前登录用户的菜单树（用于前端动态路由）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回菜单树"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/user/menus [get]
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 	userID, _ := c.Get("userId")
 	uid := uint(0)
@@ -65,9 +81,18 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 	util.ResponseSuccess(c, tree)
 }
 
-// SaveOrUpdate 保存/更新菜单（后台）
-// POST /api/admin/menus
-// PUT /api/admin/menus/:id
+// @Summary 保存/更新菜单
+// @Tags 菜单
+// @Description 后台保存或更新菜单
+// @Accept json
+// @Produce json
+// @Param menuVO body vo.MenuVO true "菜单信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/menus [post]
 func (h *MenuHandler) SaveOrUpdate(c *gin.Context) {
 	var menuVO vo.MenuVO
 	if err := c.ShouldBindJSON(&menuVO); err != nil {
@@ -98,8 +123,18 @@ func (h *MenuHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteMenu 删除菜单（级联删除子菜单）
-// DELETE /api/admin/menus/:id
+// @Summary 删除菜单
+// @Tags 菜单
+// @Description 删除菜单（级联删除子菜单）
+// @Accept json
+// @Produce json
+// @Param id path int true "菜单ID"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/menus/{id} [delete]
 func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -113,8 +148,16 @@ func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 	util.ResponseSuccess(c, "菜单已删除")
 }
 
-// ListMenuOptions 获取角色菜单选项（用于角色授权下拉框）
-// GET /api/admin/role/menus
+// @Summary 获取角色菜单选项
+// @Tags 菜单
+// @Description 获取角色授权菜单选项（用于下拉框）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回菜单选项列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/role/menus [get]
 func (h *MenuHandler) ListMenuOptions(c *gin.Context) {
 	tree, err := h.svc.GetMenuTree(c.Request.Context())
 	if err != nil {
@@ -124,8 +167,18 @@ func (h *MenuHandler) ListMenuOptions(c *gin.Context) {
 	util.ResponseSuccess(c, tree)
 }
 
-// UpdateMenuIsHidden 修改目录是否隐藏
-// PUT /api/admin/menus/isHidden
+// @Summary 修改目录是否隐藏
+// @Tags 菜单
+// @Description 修改菜单目录的隐藏状态
+// @Accept json
+// @Produce json
+// @Param body body object true "菜单ID和隐藏状态(id, isHidden)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/menus/isHidden [put]
 func (h *MenuHandler) UpdateMenuIsHidden(c *gin.Context) {
 	var body struct {
 		ID       uint `json:"id"`

@@ -17,8 +17,19 @@ func NewExceptionLogHandler(svc *service.ExceptionLogService) *ExceptionLogHandl
 	return &ExceptionLogHandler{svc: svc}
 }
 
-// ListExceptionLogs 获取异常日志列表（对标Java ExceptionLogController.listExceptionLogs）
-// GET /api/admin/exception/logs
+// @Summary 获取异常日志列表
+// @Tags 异常日志
+// @Description 获取异常日志列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回异常日志列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/exception/logs [get]
 func (h *ExceptionLogHandler) ListExceptionLogs(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -33,9 +44,18 @@ func (h *ExceptionLogHandler) ListExceptionLogs(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteExceptionLogs 批量删除异常日志（对标Java: @DeleteMapping + @RequestBody List<Integer>）
-// DELETE /api/admin/exception/logs
-// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
+// @Summary 批量删除异常日志
+// @Tags 异常日志
+// @Description 批量删除异常日志
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "异常日志ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/exception/logs [delete]
 func (h *ExceptionLogHandler) DeleteExceptionLogs(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil {

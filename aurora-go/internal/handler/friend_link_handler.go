@@ -19,8 +19,14 @@ func NewFriendLinkHandler(svc *service.FriendLinkService) *FriendLinkHandler {
 	return &FriendLinkHandler{svc: svc}
 }
 
-// ListFriendLinks 获取友链列表（前台，对标Java: listFriendLinks）
-// GET /api/links
+// @Summary 获取友链列表
+// @Tags 友链
+// @Description 获取前台友链列表
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回友链列表"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/links [get]
 func (h *FriendLinkHandler) ListFriendLinks(c *gin.Context) {
 	list, err := h.svc.ListFriendLinks(c.Request.Context())
 	if err != nil {
@@ -30,8 +36,18 @@ func (h *FriendLinkHandler) ListFriendLinks(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// SaveOrUpdateFriendLink 新增或更新友链（对标Java: saveOrUpdateFriendLink）
-// POST /api/admin/links
+// @Summary 新增或更新友链
+// @Tags 友链
+// @Description 后台新增或更新友链信息
+// @Accept json
+// @Produce json
+// @Param friendLinkVO body vo.FriendLinkVO true "友链信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/links [post]
 func (h *FriendLinkHandler) SaveOrUpdateFriendLink(c *gin.Context) {
 	var friendLinkVO vo.FriendLinkVO
 	if err := c.ShouldBindJSON(&friendLinkVO); err != nil {
@@ -47,8 +63,19 @@ func (h *FriendLinkHandler) SaveOrUpdateFriendLink(c *gin.Context) {
 
 // ==================== 后台管理端点 ====================
 
-// ListAdminFriendLinks 后台友链列表（含全部状态）
-// GET /api/admin/links
+// @Summary 后台友链列表
+// @Tags 友链
+// @Description 后台获取友链列表（分页，含全部状态）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回友链列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/links [get]
 func (h *FriendLinkHandler) ListAdminFriendLinks(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -63,8 +90,18 @@ func (h *FriendLinkHandler) ListAdminFriendLinks(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UpdateFriendLink 更新友链信息（后台）
-// PUT /api/admin/links
+// @Summary 更新友链信息
+// @Tags 友链
+// @Description 后台更新友链信息
+// @Accept json
+// @Produce json
+// @Param friendLinkVO body vo.FriendLinkVO true "友链信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/links [put]
 func (h *FriendLinkHandler) UpdateFriendLink(c *gin.Context) {
 	var friendLinkVO vo.FriendLinkVO
 	if err := c.ShouldBindJSON(&friendLinkVO); err != nil {
@@ -78,10 +115,18 @@ func (h *FriendLinkHandler) UpdateFriendLink(c *gin.Context) {
 	util.ResponseSuccess(c, nil)
 }
 
-// DeleteFriendLink 批量删除友链
-// DELETE /api/admin/links
-// Java: @DeleteMapping("/admin/links") public ResultVO<?> deleteFriendLink(@RequestBody List<Integer> linkIdList)
-// 前端 axios 发送的 body 是原始数组 [id1, id2, ...]
+// @Summary 批量删除友链
+// @Tags 友链
+// @Description 后台批量删除友链
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "友链ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/links [delete]
 func (h *FriendLinkHandler) DeleteFriendLink(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil {

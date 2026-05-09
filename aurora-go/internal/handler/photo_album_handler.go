@@ -24,8 +24,14 @@ func NewPhotoAlbumHandler(svc *service.PhotoAlbumService, uploadSvc *strategy.Up
 	return &PhotoAlbumHandler{svc: svc, uploadSvc: uploadSvc}
 }
 
-// ListAlbums 获取相册列表（前台，公开相册）
-// GET /api/albums
+// @Summary 获取相册列表
+// @Tags 相册
+// @Description 获取前台公开相册列表
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回相册列表"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/photos/albums [get]
 func (h *PhotoAlbumHandler) ListAlbums(c *gin.Context) {
 	list, err := h.svc.GetAlbums(c.Request.Context())
 	if err != nil {
@@ -35,8 +41,18 @@ func (h *PhotoAlbumHandler) ListAlbums(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// GetAlbumById 获取相册详情
-// GET /api/admin/photos/albums/:id/info
+// @Summary 获取相册详情
+// @Tags 相册
+// @Description 根据ID获取相册详情
+// @Accept json
+// @Produce json
+// @Param id path int true "相册ID"
+// @Success 200 {object} object "成功返回相册详情"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/albums/{id}/info [get]
 func (h *PhotoAlbumHandler) GetAlbumById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -51,8 +67,18 @@ func (h *PhotoAlbumHandler) GetAlbumById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SaveOrUpdate 保存/更新相册（后台）
-// POST /api/admin/photos/albums
+// @Summary 保存/更新相册
+// @Tags 相册
+// @Description 后台保存或更新相册
+// @Accept json
+// @Produce json
+// @Param albumVO body vo.PhotoAlbumVO true "相册信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/albums [post]
 func (h *PhotoAlbumHandler) SaveOrUpdate(c *gin.Context) {
 	var albumVO vo.PhotoAlbumVO
 	if err := c.ShouldBindJSON(&albumVO); err != nil {
@@ -68,8 +94,18 @@ func (h *PhotoAlbumHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, "操作成功")
 }
 
-// DeleteAlbum 删除相册（后台）
-// DELETE /api/admin/albums/:id
+// @Summary 删除相册
+// @Tags 相册
+// @Description 后台删除相册
+// @Accept json
+// @Produce json
+// @Param id path int true "相册ID"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/albums/{id} [delete]
 func (h *PhotoAlbumHandler) DeleteAlbum(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -83,8 +119,19 @@ func (h *PhotoAlbumHandler) DeleteAlbum(c *gin.Context) {
 	util.ResponseSuccess(c, "相册已删除")
 }
 
-// ListAdminAlbums 后台相册管理列表
-// GET /api/admin/photos/albums
+// @Summary 后台相册管理列表
+// @Tags 相册
+// @Description 后台获取相册列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回相册列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/albums [get]
 func (h *PhotoAlbumHandler) ListAdminAlbums(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -99,8 +146,16 @@ func (h *PhotoAlbumHandler) ListAdminAlbums(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ListAlbumInfos 获取后台相册列表信息（用于下拉选择/移动照片，对标Java listPhotoAlbumInfosAdmin）
-// GET /api/admin/photos/albums/info
+// @Summary 获取后台相册列表信息
+// @Tags 相册
+// @Description 获取后台相册列表信息（用于下拉选择/移动照片）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回相册列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/albums/info [get]
 func (h *PhotoAlbumHandler) ListAlbumInfos(c *gin.Context) {
 	list, err := h.svc.GetAlbumInfos(c.Request.Context())
 	if err != nil {
@@ -110,8 +165,18 @@ func (h *PhotoAlbumHandler) ListAlbumInfos(c *gin.Context) {
 	util.ResponseSuccess(c, list)
 }
 
-// UploadAlbumCover 上传相册封面（对标Java PhotoAlbumController.savePhotoAlbumCover）
-// POST /api/admin/photos/albums/upload
+// @Summary 上传相册封面
+// @Tags 相册
+// @Description 上传相册封面图片
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "封面图片文件"
+// @Success 200 {object} object "成功返回图片URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/photos/albums/upload [post]
 func (h *PhotoAlbumHandler) UploadAlbumCover(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {

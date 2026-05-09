@@ -21,8 +21,19 @@ func NewRoleHandler(svc *service.RoleService) *RoleHandler {
 	return &RoleHandler{svc: svc}
 }
 
-// ListRoles 获取角色列表（后台管理，分页）
-// GET /api/admin/roles
+// @Summary 获取角色列表
+// @Tags 角色
+// @Description 获取角色列表（分页）
+// @Accept json
+// @Produce json
+// @Param keyword query string false "搜索关键词"
+// @Param current query int false "当前页码"
+// @Param size query int false "每页数量"
+// @Success 200 {object} object "成功返回角色列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/roles [get]
 func (h *RoleHandler) ListRoles(c *gin.Context) {
 	var condition dto.ConditionVO
 	c.ShouldBindQuery(&condition)
@@ -37,8 +48,16 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// ListUserRoles 获取用户角色选项列表（简化版，对标Java listUserRoles）
-// GET /api/admin/users/role
+// @Summary 获取用户角色选项列表
+// @Tags 角色
+// @Description 获取用户角色选项列表（用于授权下拉框）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回角色选项列表"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/users/role [get]
 func (h *RoleHandler) ListUserRoles(c *gin.Context) {
 	result, err := h.svc.ListUserRoles(c.Request.Context())
 	if err != nil {
@@ -48,9 +67,18 @@ func (h *RoleHandler) ListUserRoles(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// SaveOrUpdate 保存/更新角色
-// POST /api/admin/roles
-// PUT /api/admin/roles/:id
+// @Summary 保存/更新角色
+// @Tags 角色
+// @Description 后台保存或更新角色
+// @Accept json
+// @Produce json
+// @Param roleVO body vo.RoleVO true "角色信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/role [post]
 func (h *RoleHandler) SaveOrUpdate(c *gin.Context) {
 	var roleVO vo.RoleVO
 	if err := c.ShouldBindJSON(&roleVO); err != nil {
@@ -81,8 +109,18 @@ func (h *RoleHandler) SaveOrUpdate(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// DeleteRoles 批量删除角色
-// DELETE /api/admin/roles
+// @Summary 批量删除角色
+// @Tags 角色
+// @Description 后台批量删除角色
+// @Accept json
+// @Produce json
+// @Param ids body []uint true "角色ID列表"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/roles [delete]
 func (h *RoleHandler) DeleteRoles(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
@@ -95,8 +133,18 @@ func (h *RoleHandler) DeleteRoles(c *gin.Context) {
 	util.ResponseSuccess(c, "角色已删除")
 }
 
-// GetRoleById 获取角色详情（含菜单权限和资源权限）
-// GET /api/admin/roles/:id
+// @Summary 获取角色详情
+// @Tags 角色
+// @Description 获取角色详情（含菜单权限和资源权限）
+// @Accept json
+// @Produce json
+// @Param id path int true "角色ID"
+// @Success 200 {object} object "成功返回角色详情"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/roles/{id} [get]
 func (h *RoleHandler) GetRoleById(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -111,8 +159,19 @@ func (h *RoleHandler) GetRoleById(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// UpdateRoleMenu 更新角色的菜单关联
-// PUT /api/admin/roles/:id/menus
+// @Summary 更新角色的菜单关联
+// @Tags 角色
+// @Description 为角色分配菜单权限
+// @Accept json
+// @Produce json
+// @Param id path int true "角色ID"
+// @Param body body object true "菜单ID列表(menuIds)"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/roles/{id}/menus [put]
 func (h *RoleHandler) UpdateRoleMenu(c *gin.Context) {
 	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

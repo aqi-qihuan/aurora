@@ -17,8 +17,18 @@ func NewFileHandler(svc *service.FileService) *FileHandler {
 	return &FileHandler{svc: svc}
 }
 
-// UploadFile 通用文件上传
-// POST /api/admin/upload
+// @Summary 通用文件上传
+// @Tags 文件上传
+// @Description 通用文件上传接口
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "文件"
+// @Success 200 {object} object "成功返回文件URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/upload [post]
 func (h *FileHandler) UploadFile(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -34,8 +44,18 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 	util.ResponseSuccess(c, result)
 }
 
-// BatchUpload 批量文件上传
-// POST /api/admin/upload/batch
+// @Summary 批量文件上传
+// @Tags 文件上传
+// @Description 批量上传多个文件
+// @Accept multipart/form-data
+// @Produce json
+// @Param files formData file true "文件列表"
+// @Success 200 {object} object "成功返回文件URL列表"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/upload/batch [post]
 func (h *FileHandler) BatchUpload(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -56,8 +76,18 @@ func (h *FileHandler) BatchUpload(c *gin.Context) {
 	util.ResponseSuccess(c, results)
 }
 
-// UploadImage Markdown编辑器专用图片上传
-// POST /api/admin/upload/image
+// @Summary Markdown编辑器图片上传
+// @Tags 文件上传
+// @Description Markdown编辑器专用的图片上传接口
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "图片文件"
+// @Success 200 {object} object "成功返回图片URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/upload/image [post]
 func (h *FileHandler) UploadImage(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {

@@ -19,8 +19,14 @@ func NewWebsiteConfigHandler(registry *service.Registry) *WebsiteConfigHandler {
 	return &WebsiteConfigHandler{registry: registry}
 }
 
-// GetWebsiteConfig 获取网站前台配置（公开）
-// GET /api/website/config
+// @Summary 获取网站前台配置
+// @Tags 网站配置
+// @Description 获取网站前台公开配置
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回网站配置"
+// @Failure 500 {object} object "服务器内部错误"
+// @Router /api/admin/website/config [get]
 func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
 	config, err := h.registry.WebsiteConfig.GetConfig(c.Request.Context())
 	if err != nil {
@@ -30,8 +36,18 @@ func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
 	util.ResponseSuccess(c, config)
 }
 
-// UpdateWebsiteConfig 更新网站配置（后台）
-// PUT /api/admin/website/config
+// @Summary 更新网站配置
+// @Tags 网站配置
+// @Description 后台更新网站配置
+// @Accept json
+// @Produce json
+// @Param configVO body vo.WebsiteConfigVO true "网站配置信息"
+// @Success 200 {object} object "成功响应"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/website/config [put]
 func (h *WebsiteConfigHandler) UpdateWebsiteConfig(c *gin.Context) {
 	var configVO vo.WebsiteConfigVO
 	if err := c.ShouldBindJSON(&configVO); err != nil {
@@ -45,8 +61,19 @@ func (h *WebsiteConfigHandler) UpdateWebsiteConfig(c *gin.Context) {
 	util.ResponseSuccess(c, "网站配置已更新")
 }
 
-// UploadConfigImage 上传网站图片(Logo/Favicon/头像等)
-// POST /api/admin/website/config/images
+// @Summary 上传网站图片
+// @Tags 网站配置
+// @Description 上传网站配置图片（Logo/Favicon/头像等）
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "图片文件"
+// @Param type formData string false "图片类型"
+// @Success 200 {object} object "成功返回图片URL"
+// @Failure 400 {object} object "请求参数错误"
+// @Failure 401 {object} object "未授权/Token无效"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/website/config/images [post]
 func (h *WebsiteConfigHandler) UploadConfigImage(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
