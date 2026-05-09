@@ -226,6 +226,51 @@ func detectAll(cfg *config.Config, db *gorm.DB, rdb *redis.Client) []ServiceResu
 		return time.Since(start), nil
 	}))
 
+	// Nginx (通过 site_url 反向代理检测)
+	nginxURL := os.Getenv("AURORA_NGINX_URL")
+	if nginxURL == "" && cfg.Server.SiteURL != "" {
+		nginxURL = cfg.Server.SiteURL
+	}
+	results = append(results, detectService("Nginx", nginxURL, func() (time.Duration, error) {
+		if nginxURL == "" {
+			return 0, nil
+		}
+		start := time.Now()
+		resp, err := http.Get(fmt.Sprintf("%s/health", nginxURL))
+		if err != nil {
+			resp, err = http.Get(nginxURL)
+			if err != nil {
+				return 0, err
+			}
+		}
+		defer resp.Body.Close()
+		return time.Since(start), nil
+	}))
+
+	// Maxwell (通过 RabbitMQ management API 检查 maxwell exchange)
+	rmqMgmtPort := cfg.RabbitMQ.Port + 10000
+	results = append(results, detectService("Maxwell", fmt.Sprintf("http://%s:%d", cfg.RabbitMQ.Host, rmqMgmtPort), func() (time.Duration, error) {
+		if cfg.RabbitMQ.Host == "" {
+			return 0, nil
+		}
+		start := time.Now()
+		resp, err := http.Get(fmt.Sprintf("http://%s:%d/api/exchanges/%%2F/maxwell", cfg.RabbitMQ.Host, rmqMgmtPort))
+		if err != nil {
+			addr := fmt.Sprintf("%s:%d", cfg.RabbitMQ.Host, cfg.RabbitMQ.Port)
+			conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
+			if err != nil {
+				return 0, err
+			}
+			defer conn.Close()
+			return time.Since(start), nil
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusNotFound {
+			return 0, fmt.Errorf("maxwell exchange not found")
+		}
+		return time.Since(start), nil
+	}))
+
 	return results
 }
 
