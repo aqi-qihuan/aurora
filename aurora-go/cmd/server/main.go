@@ -15,6 +15,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/aurora-go/aurora/internal/agent"
+	"github.com/aurora-go/aurora/internal/banner"
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/consumer"
 	"github.com/aurora-go/aurora/internal/errors"
@@ -50,6 +51,8 @@ import (
 // @description JWT Token 认证，格式: Bearer <token>
 
 func main() {
+	startTime := time.Now()
+
 	// 0. 初始化时区为 Asia/Shanghai (CST, UTC+8)
 	// Docker alpine 镜像默认不含 tzdata，TZ 环境变量无效，time.Local 默认 UTC
 	// 必须在所有 time.Now() 调用前设置，否则日期/定时任务/MySQL loc=Local 全部偏移 8 小时
@@ -243,20 +246,23 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 10. 启动 HTTP 服务
+	// 10. 打印启动面板
+	swaggerEnabled := os.Getenv("SWAGGER_ENABLED") == "true" || cfg.Server.Mode == "debug"
+	probes := []banner.ServiceProbe{
+		banner.MySQLProbe(db),
+		banner.RedisProbe(rdb),
+	}
+	banner.PrintStartupBanner(cfg.Server.Mode, cfg.Server.Port, startTime, probes, swaggerEnabled)
+
+	// 11. 启动 HTTP 服务
 	go func() {
-		slog.Info("Aurora Go 服务启动 (HTTP)",
-			"addr", srv.Addr,
-			"mode", cfg.Server.Mode,
-			"agent_enabled", cfg.Agent.Enabled,
-		)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("HTTP服务启动失败", "error", err.Error())
 			os.Exit(1)
 		}
 	}()
 
-	// 10.1 如果启用了 TLS，同时启动 HTTPS 服务
+	// 11.1 如果启用了 TLS，同时启动 HTTPS 服务
 	if cfg.Server.TLS.Enabled {
 		slog.Info("TLS/HTTPS 配置已启用",
 			"port", cfg.Server.TLS.Port,
@@ -273,10 +279,6 @@ func main() {
 		}
 
 		go func() {
-			slog.Info("Aurora Go 服务启动 (HTTPS)",
-				"addr", srvTLS.Addr,
-				"mode", cfg.Server.Mode,
-			)
 			if err := srvTLS.ListenAndServeTLS(cfg.Server.TLS.CertFile, cfg.Server.TLS.KeyFile); err != nil && err != http.ErrServerClosed {
 				slog.Error("HTTPS服务启动失败", "error", err.Error())
 				os.Exit(1)
@@ -284,7 +286,7 @@ func main() {
 		}()
 	}
 
-	// 11. 等待关闭信号 → 优雅关闭所有基础设施
+	// 12. 等待关闭信号 → 优雅关闭所有基础设施
 	infrastructure.WaitForSignal()
 }
 
