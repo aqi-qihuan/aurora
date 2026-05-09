@@ -268,3 +268,12 @@ curl -X POST http://localhost:8080/api/admin/photos/upload \
 - 测试上传功能是否正常
 - 验证MinIO中文件是否正确存储
 - 确认前端能正确显示上传后的图片
+
+# 1. 进入项目目录
+cd C:\Users\aqi\Desktop\aurora-master\aurora-go
+
+# 2. 设置环境变量并编译
+$env:CGO_ENABLED="0"; $env:GOOS="linux"; $env:GOARCH="amd64"; go build -ldflags "-w -s" -o aurora-server ./cmd/server
+
+# 3. 检查生成的文件
+ls -l aurora-server

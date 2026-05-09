@@ -14,6 +14,8 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
+	_ "github.com/aurora-go/aurora/docs" // swag 生成的 API 文档
+
 	"github.com/aurora-go/aurora/internal/agent"
 	"github.com/aurora-go/aurora/internal/banner"
 	"github.com/aurora-go/aurora/internal/config"
@@ -22,6 +24,7 @@ import (
 	"github.com/aurora-go/aurora/internal/handler"
 	"github.com/aurora-go/aurora/internal/infrastructure"
 	"github.com/aurora-go/aurora/internal/infrastructure/mq"
+	"github.com/aurora-go/aurora/internal/infrastructure/search"
 	"github.com/aurora-go/aurora/internal/middleware"
 	"github.com/aurora-go/aurora/internal/model"
 	"github.com/aurora-go/aurora/internal/service"
@@ -91,6 +94,11 @@ func main() {
 			// 设置全局 ES 服务实例
 			service.SetGlobalESService(esService)
 			slog.Info("✅ Elasticsearch 连接成功")
+
+			// 同时初始化 search.Client（供健康检查等基础设施使用）
+			if err := search.InitElasticsearch(&cfg.ES); err != nil {
+				slog.Warn("search.Client 初始化失败，健康检查将显示 DISABLED", "error", err)
+			}
 
 			// 初始化索引并同步数据
 			db := infrastructure.GetDB()
@@ -188,6 +196,28 @@ func main() {
 	r.Static("/uploads", "./uploads")
 	slog.Info("Static file server enabled: /uploads -> ./uploads")
 
+	// 5.2 根路径引导页
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"name":    "Aurora Blog API",
+			"version": "1.0.0-go",
+			"base":    cfg.Server.GetSiteURL() + "/api",
+			"endpoints": gin.H{
+				"public": gin.H{
+					"/api/":       "首页信息聚合（文章列表、分类、标签、站点信息）",
+					"/api/about":  "关于页面",
+					"/api/report": "访客上报（POST）",
+				},
+				"docs": gin.H{
+					"/swagger/index.html": "Swagger API 文档",
+					"/swagger/doc.json":   "Swagger JSON",
+				},
+				"health":  "/health",
+				"uploads": "/uploads/*",
+			},
+		})
+	})
+
 	// 6. 健康检查端点（无需认证）- 对标 Spring Actuator /health
 	r.GET("/health", func(c *gin.Context) {
 		status := infrastructure.HealthCheck()
@@ -212,11 +242,8 @@ func main() {
 		})
 	})
 
-	// 6.1 Swagger 文档 UI（开发/调试用，可通过 SWAGGER_ENABLED 环境变量控制）
-	if os.Getenv("SWAGGER_ENABLED") == "true" || cfg.Server.Mode == "debug" {
-		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-		slog.Info("Swagger UI 已启用: http://localhost:8080/swagger/index.html")
-	}
+	// 6.1 Swagger 文档 UI（始终注册，可通过 Nginx 或防火墙控制外部访问）
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 7. 注册所有路由（公开/受保护/后台管理 - 20个Handler, 80+端点）
 	tokenSvc := registry.TokenSvc
@@ -247,8 +274,7 @@ func main() {
 	}
 
 	// 10. 打印启动面板
-	swaggerEnabled := os.Getenv("SWAGGER_ENABLED") == "true" || cfg.Server.Mode == "debug"
-	banner.PrintStartupBanner(cfg, startTime, db, rdb, swaggerEnabled)
+	banner.PrintStartupBanner(cfg, startTime, db, rdb, true)
 
 	// 11. 启动 HTTP 服务
 	go func() {
