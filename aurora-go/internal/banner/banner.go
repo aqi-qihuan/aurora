@@ -173,7 +173,7 @@ func detectAll(cfg *config.Config, db *gorm.DB, rdb *redis.Client) []ServiceResu
 	}))
 
 	// Elasticsearch
-	results = append(results, detectService("Elasticsearch", cfg.ES.Host, func() (time.Duration, error) {
+	results = append(results, detectService("Elasticsearch", cfg.ES.GetPrimaryURL(), func() (time.Duration, error) {
 		if len(cfg.ES.URLs) == 0 || cfg.ES.URLs[0] == "" {
 			return 0, nil
 		}
