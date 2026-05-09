@@ -248,11 +248,7 @@ func main() {
 
 	// 10. 打印启动面板
 	swaggerEnabled := os.Getenv("SWAGGER_ENABLED") == "true" || cfg.Server.Mode == "debug"
-	probes := []banner.ServiceProbe{
-		banner.MySQLProbe(db),
-		banner.RedisProbe(rdb),
-	}
-	banner.PrintStartupBanner(cfg.Server.Mode, cfg.Server.Port, startTime, probes, swaggerEnabled)
+	banner.PrintStartupBanner(cfg, startTime, db, rdb, swaggerEnabled)
 
 	// 11. 启动 HTTP 服务
 	go func() {
