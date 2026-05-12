@@ -1,5 +1,5 @@
 module.exports = {
-  purge: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  // purge: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'], // 临时禁用以兼容 Vite 8
   darkMode: false,
   theme: {
     extend: {

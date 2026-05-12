@@ -58,12 +58,24 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          vue: ['vue', 'vue-router', 'pinia'],
-          elementPlus: ['element-plus'],
-          markdown: ['markdown-it', 'mavon-editor'],
-          prism: ['prismjs'],
-          tocbot: ['tocbot']
+        manualChunks(id: string) {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+              return 'vue';
+            }
+            if (id.includes('element-plus')) {
+              return 'elementPlus';
+            }
+            if (id.includes('markdown-it') || id.includes('mavon-editor')) {
+              return 'markdown';
+            }
+            if (id.includes('prismjs')) {
+              return 'prism';
+            }
+            if (id.includes('tocbot')) {
+              return 'tocbot';
+            }
+          }
         }
       }
     }
