@@ -55,7 +55,7 @@
     "sass": "^1.70.0",
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@2.1.2",
     "typescript": "^6.0.3",
-    "vite": "^5.4.21",
+    "vite": "^7.3.3",
     "vite-plugin-prismjs": "^0.0.8",
     "vite-plugin-svg-icons": "^2.0.1",
     "vue-tsc": "^3.2.8"
