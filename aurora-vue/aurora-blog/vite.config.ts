@@ -3,10 +3,23 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import { prismjsPlugin } from 'vite-plugin-prismjs'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
   plugins: [
     vue(),
+    // Auto-import Vue and Element Plus components (enables tree-shaking)
+    AutoImport({
+      resolvers: [ElementPlusResolver()],
+      imports: ['vue', 'vue-router', 'pinia'],
+      dts: 'src/auto-imports.d.ts'
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()],
+      dts: 'src/components.d.ts'
+    }),
     // SVG sprite icon support (replaces svg-sprite-loader)
     createSvgIconsPlugin({
       iconDirs: [resolve(__dirname, 'src/icons/svg')],
@@ -59,21 +72,44 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          // Vue ecosystem - separate chunks for better caching
           if (id.includes('node_modules')) {
-            if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
-              return 'vue';
+            // Vue core (reactivity, runtime-core, etc.)
+            if (id.includes('vue/dist') || id.includes('@vue/')) {
+              return 'vue-core';
             }
+            // Vue Router
+            if (id.includes('vue-router')) {
+              return 'vue-router';
+            }
+            // Pinia
+            if (id.includes('pinia')) {
+              return 'pinia';
+            }
+            // Vue i18n
+            if (id.includes('vue-i18n') || id.includes('@intlify/')) {
+              return 'vue-i18n';
+            }
+            // Element Plus - separate chunk
             if (id.includes('element-plus')) {
-              return 'elementPlus';
+              return 'element-plus';
             }
-            if (id.includes('markdown-it') || id.includes('mavon-editor')) {
+            // Markdown processing
+            if (id.includes('markdown-it') || id.includes('mavon-editor') || id.includes('prismjs')) {
               return 'markdown';
             }
-            if (id.includes('prismjs')) {
-              return 'prism';
-            }
+            // Tocbot
             if (id.includes('tocbot')) {
               return 'tocbot';
+            }
+            // Axios
+            if (id.includes('axios')) {
+              return 'axios';
+            }
+            // Other node_modules - group by first-level directory
+            const match = id.match(/node_modules\/([^/]+)/);
+            if (match) {
+              return `vendor-${match[1]}`;
             }
           }
         }
