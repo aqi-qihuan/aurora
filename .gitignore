@@ -20,3 +20,7 @@ yarn-error.log*
 
 target
 aurora-springboot/src/test
+
+# Sensitive / local files
+aipan-llm-merged.env
+.workbuddy

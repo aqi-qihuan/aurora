@@ -46,13 +46,13 @@
 
 <img src="https://ws.aqi125.cn/aurora/articles/a850a2955e44fb4728efba2a51590b1f.png" alt="首页展示" width="45%" /> &nbsp; <img src="https://ws.aqi125.cn/aurora/articles/d4e0269e395ae411c2d1187f0f51844a.png" alt="文章详情" width="45%" />
 
-🏡 **首页展示** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 📄 **文章详情**
+🏠 **首页展示** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 📄 **文章详情**
 
 <br/>
 
 <img src="https://ws.aqi125.cn/aurora/articles/46a2d83d8060fcd824ebb1c6c84f9fab.png" alt="博客列表" width="45%" /> &nbsp; <img src="https://ws.aqi125.cn/aurora/articles/864628ec3af76aa3fa33d8dea209e90b.png" alt="管理后台" width="45%" />
 
-📋 **博客列表** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 🖥️ **管理后台**
+📋 **博客列表** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 🖥️ **管理后台**
 
 </div>
 
@@ -172,7 +172,7 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 
 ```
 ┌──────────┐    ┌──────────────────┐    ┌──────────────┐    ┌─────────┐
-│  Nginx   │───▶│ Spring Boot / Go │───▶│ Elasticsearch │    │  MinIO  │
+│  Nginx   │──▶│ Spring Boot / Go │──▶│ Elasticsearch │    │  MinIO  │
 │ (反向代理) │    │    (后端服务)      │    │   (全文检索)   │    │ (对象存储)│
 └──────────┘    └────┬─────────────┘    └──────────────┘    └─────────┘
                      │
@@ -222,7 +222,7 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 | 📊 资源管理 | 文件上传/管理 |
 | ⏰ 定时任务 | Cron 可视化配置、执行日志 |
 | 🌐 网站配置 | 基本信息、社交链接、功能开关 |
-| 🎨 主题设置 | 深色/浅色/自定义主题、个人化配置 |
+| 🎨 主题设置 | 深色/浅色/自定义主题、个性化配置 |
 | 🔍 全局搜索 | Ctrl+K 全局搜索 |
 | 📈 数据面板 | 访问统计、文章数据 |
 
@@ -230,25 +230,148 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 
 ## 🚀 快速开始
 
-### ☕ Spring Boot 后端
+### 环境要求
+
+| 组件 | 版本要求 | 必需 |
+|:-----|:---------|:----:|
+| JDK | 25+ | ✅ (Java 后端) |
+| Go | 1.26+ | ✅ (Go 后端) |
+| Node.js | 18+ | ✅ (前端) |
+| MySQL | 8.0+ | ✅ |
+| Redis | 7.0+ | ✅ |
+| RabbitMQ | 3.0+ | ✅ |
+| Elasticsearch | 8.x | ⚠️ (可选,搜索功能) |
+| MinIO | 8.6+ | ⚠️ (可选,对象存储) |
+
+> 💡 **快速体验**: 使用 Docker Compose 可一键启动所有中间件,无需手动安装!
+
+---
+
+### 方式 1: Docker Compose 一键部署 (推荐)
+
+#### Java 后端 + 前端
 
 ```bash
-# 1. 导入数据库
-mysql -u root -p aurora < aurora.sql
+# 1. 克隆项目
+git clone https://github.com/your-repo/aurora-master.git
+cd aurora-master
 
-# 2. 修改配置
+# 2. 启动所有服务 (MySQL + Redis + RabbitMQ + ES + MinIO + Nginx)
 cd aurora-springboot
-# 编辑 src/main/resources/application-prod.yml，填入数据库/Redis/MQ/ES/MinIO 连接信息
-
-# 3. 编译运行
-mvn clean package -DskipTests
-java -jar target/aurora-springboot-0.0.1.jar --spring.profiles.active=prod
-
-# 或 Docker 部署
 docker compose up -d
+
+# 3. 导入数据库
+docker exec -i aurora-mysql mysql -uroot -p123456 aurora < ../aurora.sql
+
+# 4. 访问
+# 前台: http://localhost
+# 后台: http://localhost:8081
 ```
 
-### 🐹 Go 后端
+#### Go 后端 + 前端
+
+```bash
+# 1. 启动所有服务
+cd aurora-go
+docker compose -f docker-compose-go.yml up -d
+
+# 2. 导入数据库
+docker exec -i aurora-mysql mysql -uroot -p123456 aurora < ../aurora.sql
+
+# 3. 访问
+# 前台: http://localhost
+# 后台: http://localhost:8081
+```
+
+---
+
+### 方式 2: 手动部署 (开发模式)
+
+#### 步骤 1: 准备数据库
+
+```bash
+# 登录 MySQL
+mysql -u root -p
+
+# 创建数据库
+CREATE DATABASE aurora CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+# 导入表结构和初始数据
+exit
+mysql -u root -p aurora < aurora.sql
+```
+
+#### 步骤 2: 配置中间件
+
+**MySQL**:
+```bash
+# 确保 MySQL 运行在 3306 端口
+# 用户名: root, 密码: 123456 (可修改)
+```
+
+**Redis**:
+```bash
+# 确保 Redis 运行在 6379 端口
+# 无密码 (可在配置中修改)
+```
+
+**RabbitMQ**:
+```bash
+# 启动 RabbitMQ
+docker run -d --name rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  rabbitmq:3.11.9-management
+
+# 默认用户: guest, 密码: guest
+```
+
+**Elasticsearch** (可选):
+```bash
+# 启动 Elasticsearch
+docker run -d --name elasticsearch \
+  -p 9200:9200 \
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  elasticsearch:8.19.14
+
+# 验证
+curl http://localhost:9200
+```
+
+**MinIO** (可选):
+```bash
+# 启动 MinIO
+docker run -d --name minio \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  bitnami/minio:2023.12.7
+```
+
+#### 步骤 3: 启动后端
+
+**选项 A: Spring Boot 后端**
+
+```bash
+cd aurora-springboot
+
+# 1. 修改配置
+# 编辑 src/main/resources/application-prod.yml
+# 填入数据库密码、Redis 密码等敏感信息
+
+# 2. 编译打包
+mvn clean package -DskipTests
+
+# 3. 运行
+java -jar target/aurora-springboot-0.0.1.jar --spring.profiles.active=prod
+
+# 或使用 Maven 插件运行 (开发模式)
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+**选项 B: Go 后端**
 
 ```bash
 cd aurora-go
@@ -256,50 +379,810 @@ cd aurora-go
 # 1. 安装依赖
 go mod download
 
-# 2. 配置
-cp configs/config.yaml configs/config.local.yaml
-# 编辑 config.local.yaml 填入中间件连接信息
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 填入数据库密码等
 
 # 3. 运行
 go run cmd/server/main.go --config configs/config.yaml
-# 或使用 Make
+
+# 或使用 Makefile
 make run
 
-# Docker 部署
-make docker-up
+# 交叉编译 (Windows → Linux)
+make build-linux
 ```
 
-### 🏠 前台
+#### 步骤 4: 启动前端
+
+**前台 (aurora-blog)**
 
 ```bash
 cd aurora-vue/aurora-blog
 
+# 1. 安装依赖
 npm install
-npm run dev      # 开发模式 → http://localhost:5173
-npm run build    # 生产构建
+# 或使用国内镜像加速
+npm install --registry=https://registry.npmmirror.com
+
+# 2. 配置后端地址
+# 编辑 .env.development
+# VITE_API_BASE_URL=http://localhost:8080
+
+# 3. 启动开发服务器
+npm run dev
+# 访问: http://localhost:5173
+
+# 4. 生产构建
+npm run build
+# 构建产物在 dist/ 目录
 ```
 
-### ⚙️ 后台
+**后台 (aurora-admin-v3)**
 
 ```bash
 cd aurora-vue/aurora-admin-v3
 
+# 1. 安装依赖
 npm install
-npm run dev      # 开发模式 → http://localhost:8080
-npm run build    # 生产构建
+
+# 2. 配置后端地址
+# 编辑 .env.development
+# VITE_API_BASE_URL=http://localhost:8080
+
+# 3. 启动开发服务器
+npm run dev
+# 访问: http://localhost:8080
+
+# 4. 生产构建
+npm run build
 ```
 
-### 🐳 Docker Compose 一键部署
+---
+
+### 方式 3: 生产环境部署
+
+#### Nginx 反向代理配置
+
+```nginx
+# /etc/nginx/sites-available/aurora
+server {
+    listen 80;
+    server_name www.aqi125.cn;
+
+    # 前台
+    location / {
+        root /var/www/aurora-blog;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 后台
+    location /admin {
+        alias /var/www/aurora-admin;
+        index index.html;
+        try_files $uri $uri/ /admin/index.html;
+    }
+
+    # 后端 API
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+#### 使用 systemd 管理 Go 后端
 
 ```bash
-# Spring Boot 全套
-cd aurora-springboot
-docker compose up -d
+# 1. 创建服务文件
+sudo tee /etc/systemd/system/aurora-go.service <<EOF
+[Unit]
+Description=Aurora Go Backend
+After=network.target mysql.service redis.service
 
-# Go 全套
-cd aurora-go
-docker compose -f docker-compose-go.yml up -d
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/aurora/go
+ExecStart=/opt/aurora/go/aurora-server --config configs/config.yaml
+Restart=always
+RestartSec=10s
+Environment="TZ=Asia/Shanghai"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 2. 启动服务
+sudo systemctl daemon-reload
+sudo systemctl enable aurora-go
+sudo systemctl start aurora-go
+
+# 3. 查看日志
+sudo journalctl -u aurora-go -f
 ```
+
+---
+
+### 验证部署
+
+```bash
+# 1. 检查后端健康检查
+curl http://localhost:8080/health
+# 预期响应: {"code":200,"message":"OK"}
+
+# 2. 测试登录
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"123456"}'
+
+# 3. 访问前台
+open http://localhost:5173
+
+# 4. 访问后台
+open http://localhost:8080
+```
+
+---
+
+## 📖 使用示例
+
+### cURL 示例
+
+#### 1. 用户登录
+
+```bash
+# 登录获取 JWT Token
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "123456"
+  }'
+
+# 响应示例:
+# {
+#   "code": 200,
+#   "data": {
+#     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#     "user": {
+#       "id": 1,
+#       "username": "admin",
+#       "nickname": "管理员",
+#       "roleList": ["admin"]
+#     }
+#   }
+# }
+```
+
+#### 2. 获取文章列表 (公开)
+
+```bash
+# 无需认证即可访问
+curl -X GET "http://localhost:8080/api/articles?current=1&size=10" \
+  -H "Content-Type: application/json"
+
+# 带关键词搜索
+curl -X GET "http://localhost:8080/api/articles?keyword=Go语言&current=1&size=10" \
+  -H "Content-Type: application/json"
+```
+
+#### 3. 发布文章 (需要认证)
+
+```bash
+# 使用获取的 Token
+TOKEN="your_jwt_token_here"
+
+curl -X POST http://localhost:8080/api/admin/articles \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "articleTitle": "Go语言入门指南",
+    "articleContent": "# Go语言简介\n\nGo是一门开源编程语言...",
+    "articleCover": "https://example.com/cover.jpg",
+    "categoryId": 1,
+    "tagName": ["Go", "后端"],
+    "status": 1,
+    "isTop": false,
+    "isFeatured": false,
+    "type": 1
+  }'
+```
+
+#### 4. 上传图片 (需要认证)
+
+```bash
+# 上传文章封面或图片
+curl -X POST http://localhost:8080/api/admin/files/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/image.jpg"
+
+# 响应示例:
+# {
+#   "code": 200,
+#   "data": {
+#     "url": "https://minio.example.com/aurora/2026/04/image.jpg",
+#     "filename": "image.jpg",
+#     "size": 102400
+#   }
+# }
+```
+
+#### 5. 搜索文章
+
+```bash
+# MySQL 搜索模式
+curl -X GET "http://localhost:8080/api/articles/search?keyword=Gin&mode=mysql" \
+  -H "Content-Type: application/json"
+
+# Elasticsearch 搜索模式 (推荐)
+curl -X GET "http://localhost:8080/api/articles/search?keyword=Go语言&mode=es" \
+  -H "Content-Type: application/json"
+```
+
+---
+
+### JavaScript/TypeScript 示例
+
+```typescript
+// api-client.ts
+class AuroraAPI {
+  private baseURL: string;
+  private token: string | null = null;
+
+  constructor(baseURL: string = 'http://localhost:8080') {
+    this.baseURL = baseURL;
+  }
+
+  // 登录
+  async login(username: string, password: string): Promise<string> {
+    const response = await fetch(`${this.baseURL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await response.json();
+    if (data.code !== 200) {
+      throw new Error(data.message);
+    }
+
+    this.token = data.data.accessToken;
+    return this.token;
+  }
+
+  // 获取文章列表
+  async getArticles(params: {
+    current?: number;
+    size?: number;
+    keyword?: string;
+    categoryId?: number;
+  } = {}) {
+    const query = new URLSearchParams();
+    if (params.current) query.set('current', params.current.toString());
+    if (params.size) query.set('size', params.size.toString());
+    if (params.keyword) query.set('keyword', params.keyword);
+    if (params.categoryId) query.set('categoryId', params.categoryId.toString());
+
+    const response = await fetch(
+      `${this.baseURL}/api/articles?${query.toString()}`
+    );
+    return response.json();
+  }
+
+  // 发布文章 (需要认证)
+  async createArticle(article: {
+    articleTitle: string;
+    articleContent: string;
+    categoryId: number;
+    tagName?: string[];
+    status?: number;
+  }) {
+    if (!this.token) throw new Error('请先登录');
+
+    const response = await fetch(`${this.baseURL}/api/admin/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.token}`,
+      },
+      body: JSON.stringify(article),
+    });
+
+    return response.json();
+  }
+}
+
+// 使用示例
+async function main() {
+  const api = new AuroraAPI();
+
+  // 登录
+  await api.login('admin', '123456');
+
+  // 获取文章列表
+  const articles = await api.getArticles({ current: 1, size: 10 });
+  console.log('文章列表:', articles);
+
+  // 发布文章
+  const result = await api.createArticle({
+    articleTitle: 'TypeScript 入门指南',
+    articleContent: '# TypeScript 简介\n\nTypeScript 是 JavaScript 的超集...',
+    categoryId: 1,
+    tagName: ['TypeScript', '前端'],
+    status: 1,
+  });
+  console.log('发布结果:', result);
+}
+
+main();
+```
+
+---
+
+### Vue 3 前端集成示例
+
+```vue
+<!-- ArticleList.vue -->
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { getArticleList } from '@/api/article'
+import type { Article } from '@/types/article'
+
+const articles = ref<Article[]>([])
+const loading = ref(false)
+
+const fetchArticles = async () => {
+  loading.value = true
+  try {
+    const res = await getArticleList({ current: 1, size: 10 })
+    if (res.code === 200) {
+      articles.value = res.data.recordList
+    }
+  } catch (error) {
+    console.error('获取文章列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchArticles()
+})
+</script>
+
+<template>
+  <div class="article-list">
+    <div v-if="loading" class="loading">加载中...</div>
+    <div v-else class="articles">
+      <div v-for="article in articles" :key="article.id" class="article-card">
+        <img :src="article.articleCover" :alt="article.articleTitle" />
+        <h2>{{ article.articleTitle }}</h2>
+        <p>{{ article.articleContent.substring(0, 100) }}...</p>
+        <div class="meta">
+          <span>浏览: {{ article.viewCount }}</span>
+          <span>点赞: {{ article.likeCount }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+```typescript
+// api/article.ts
+import request from '@/utils/request'
+import type { ArticleListResponse } from '@/types/article'
+
+export const getArticleList = (params: {
+  current: number
+  size: number
+  keyword?: string
+}) => {
+  return request.get<ArticleListResponse>('/api/articles', { params })
+}
+
+export const createArticle = (data: FormData) => {
+  return request.post('/api/admin/articles', data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+```
+
+---
+
+## 🤝 贡献指南
+
+感谢你对 Aurora 项目的关注!我们欢迎任何形式的贡献。
+
+### 📋 目录
+
+1. [行为准则](#行为准则)
+2. [如何贡献](#如何贡献)
+3. [报告 Bug](#报告-bug)
+4. [提出功能建议](#提出功能建议)
+5. [提交代码](#提交代码)
+6. [代码规范](#代码规范)
+7. [提交信息格式](#提交信息格式)
+
+---
+
+### 行为准则
+
+参与本项目的所有贡献者均须遵守以下准则:
+
+- **尊重他人**: 使用友好、包容的语言
+- **接受建设性批评**: 以专业态度对待反馈
+- **关注问题本身**: 对事不对人
+- **维护社区和谐**: 禁止骚扰、歧视、攻击性言论
+
+---
+
+### 如何贡献
+
+#### 1. Fork 项目仓库
+
+```bash
+# 在 GitHub 上 Fork 项目后,克隆你的 Fork
+git clone https://github.com/your-username/aurora-master.git
+cd aurora-master
+
+# 添加上游仓库
+git remote add upstream https://github.com/original-owner/aurora-master.git
+```
+
+#### 2. 创建功能分支
+
+```bash
+# 从 main 分支创建新分支
+git checkout main
+git pull upstream main
+git checkout -b feat/add-comment-notification
+```
+
+#### 3. 进行开发
+
+**后端 (Java)**:
+```bash
+cd aurora-springboot
+mvn clean compile
+# 编写代码并添加测试
+mvn test
+```
+
+**后端 (Go)**:
+```bash
+cd aurora-go
+go mod download
+# 编写代码并添加测试
+make test
+make lint
+```
+
+**前台 (Vue 3)**:
+```bash
+cd aurora-vue/aurora-blog
+npm install
+# 编写代码
+npm run dev
+npm run lint
+```
+
+**后台 (Vue 3)**:
+```bash
+cd aurora-vue/aurora-admin-v3
+npm install
+# 编写代码
+npm run dev
+npm run lint
+```
+
+#### 4. 提交代码
+
+```bash
+# 提交前运行格式化
+# Java: 使用 IDE 的格式化功能
+# Go: make fmt
+# Vue: npm run lint -- --fix
+
+# 提交 (使用 Conventional Commits 格式)
+git add .
+git commit -m "feat: add comment reply notification feature"
+
+# 推送到你的 Fork
+git push origin feat/add-comment-notification
+```
+
+#### 5. 创建 Pull Request
+
+- 在 GitHub 上创建 PR
+- 填写 PR 模板
+- 等待代码审查
+
+---
+
+### 报告 Bug
+
+#### 在提交 Issue 前,请确认:
+
+- [ ] 已搜索现有 Issues,确认没有重复
+- [ ] 使用的是最新版本
+- [ ] 提供了完整的复现步骤
+
+#### Issue 模板
+
+```markdown
+**Bug 描述**
+简明描述遇到的问题
+
+**复现步骤**
+1. 执行 '...'
+2. 配置 '...'
+3. 看到错误
+
+**预期行为**
+描述你期望发生什么
+
+**实际行为**
+描述实际发生了什么
+
+**环境信息**
+- OS: [e.g., Windows 11, Ubuntu 22.04]
+- 后端: [e.g., Spring Boot 4.1.0, Go 1.26]
+- 前端: [e.g., Vue 3.4]
+- 数据库: [e.g., MySQL 8.0]
+
+**日志输出**
+粘贴相关错误日志 (如有)
+
+**截图**
+如果适用,添加截图
+```
+
+---
+
+### 提出功能建议
+
+我们欢迎新功能建议!请在使用 Issues 提交时包含:
+
+- **功能描述**: 清晰描述你希望添加的功能
+- **使用场景**: 解释为什么需要这个功能
+- **替代方案**: 描述你考虑过的其他方案
+- **示例**: 如果可能,提供伪代码或示例
+
+---
+
+### 提交代码
+
+#### 分支命名规范
+
+| 类型 | 前缀 | 示例 |
+|------|------|------|
+| 新功能 | `feat/` | `feat/add-github-oauth` |
+| Bug 修复 | `fix/` | `fix/login-token-expiry` |
+| 文档 | `docs/` | `docs/update-api-reference` |
+| 性能优化 | `perf/` | `perf/optimize-article-query` |
+| 重构 | `refactor/` | `refactor/simplify-handler` |
+| 测试 | `test/` | `test/add-user-service-tests` |
+
+#### Pull Request 规范
+
+**PR 标题格式** (遵循 Conventional Commits):
+
+```
+feat: add GitHub OAuth login support
+fix: resolve article pagination issue
+docs: update API documentation for /upload endpoint
+perf: optimize Elasticsearch query performance
+```
+
+**PR 描述模板**:
+
+```markdown
+## 变更类型
+- [ ] Bug 修复
+- [ ] 新功能
+- [ ] 性能优化
+- [ ] 重构
+- [ ] 文档更新
+- [ ] 测试更新
+
+## 变更描述
+详细描述本次变更的内容
+
+## 关联 Issue
+Closes #123
+Relates to #456
+
+## 测试计划
+描述如何测试这些变更
+
+## 检查清单
+- [ ] 代码符合项目规范
+- [ ] 已添加必要的测试
+- [ ] 所有测试通过
+- [ ] 已更新相关文档
+- [ ] 没有产生新的警告
+```
+
+---
+
+### 代码规范
+
+#### Java 代码规范 (Spring Boot)
+
+1. **遵循阿里巴巴 Java 开发手册**
+   - 使用 IDEA 的 Alibaba Java Coding Guidelines 插件
+   - 命名规范: 类名 `UpperCamelCase`, 方法名 `lowerCamelCase`
+
+2. **注释规范**
+   ```java
+   /**
+    * 根据用户ID获取用户信息
+    *
+    * @param userId 用户ID
+    * @return 用户信息
+    * @throws UserNotFoundException 用户不存在时抛出
+    */
+   public User getUserByID(Long userId) throws UserNotFoundException {
+       // 实现
+   }
+   ```
+
+3. **错误处理**
+   ```java
+   // ✅ 正确: 使用自定义异常
+   try {
+       return userRepository.findById(userId)
+           .orElseThrow(() -> new UserNotFoundException("用户不存在: " + userId));
+   } catch (Exception e) {
+       log.error("获取用户失败", e);
+       throw e;
+   }
+
+   // ❌ 错误: 忽略异常
+   try {
+       return userRepository.findById(userId).get();
+   } catch (Exception e) {
+       // 空catch块
+   }
+   ```
+
+#### Go 代码规范
+
+1. **遵循 Go 官方规范**
+   - 使用 `gofmt` 或 `goimports` 格式化代码
+   - 运行 `make fmt` before提交
+
+2. **命名规范**
+   ```go
+   // ✅ 正确示例
+   type UserService interface {}
+   func GetUserByID(id int64) (*User, error) {}
+   var userCount int
+
+   // ❌ 错误示例
+   type userService interface {}
+   func getuserbyid(id int64) (*User, error) {}
+   var user_count int
+   ```
+
+3. **错误处理**
+   ```go
+   // ✅ 正确: 显式处理错误
+   user, err := userService.GetUserByID(ctx, userID)
+   if err != nil {
+       return nil, fmt.Errorf("failed to get user: %w", err)
+   }
+
+   // ❌ 错误: 忽略错误
+   user, _ := userService.GetUserByID(ctx, userID)
+   ```
+
+#### Vue 3 代码规范
+
+1. **使用 Composition API**
+   ```vue
+   <script setup lang="ts">
+   import { ref, computed } from 'vue'
+
+   // ✅ 使用 ref/reactive 管理状态
+   const count = ref(0)
+   const doubled = computed(() => count.value * 2)
+
+   // ✅ 使用 async/await
+   const fetchData = async () => {
+     loading.value = true
+     try {
+       const data = await api.getData()
+       // 处理数据
+     } finally {
+       loading.value = false
+     }
+   }
+   </script>
+   ```
+
+2. **TypeScript 类型定义**
+   ```typescript
+   // ✅ 定义清晰的接口
+   interface Article {
+     id: number
+     title: string
+     content: string
+     createTime: string
+   }
+
+   // ✅ 使用类型提示
+   const articles = ref<Article[]>([])
+   ```
+
+---
+
+### 提交信息格式
+
+遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范:
+
+#### 提交类型
+
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| `feat` | 新功能 | `feat: add user registration API` |
+| `fix` | Bug 修复 | `fix: resolve token expiry issue` |
+| `docs` | 文档更新 | `docs: update API.md with new endpoints` |
+| `style` | 代码格式 (不影响功能) | `style: format code with gofmt` |
+| `refactor` | 重构 | `refactor: simplify error handling in service` |
+| `perf` | 性能优化 | `perf: optimize article list query` |
+| `test` | 测试相关 | `test: add unit tests for UserService` |
+| `chore` | 构建/工具相关 | `chore: upgrade spring boot to 4.1.0` |
+
+#### 提交格式
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**示例**:
+
+```commit
+feat(auth): add GitHub OAuth login support
+
+- Add GitHub OAuth strategy
+- Update User model to store GitHub ID
+- Add migration for github_id column
+
+Closes #123
+```
+
+```commit
+fix(article): resolve pagination issue when page size is 0
+
+When size=0 was passed, the API returned all records instead of
+returning a validation error. Now returns 400 with error message.
+
+Fixes #456
+```
+
+---
+
+### 社区
+
+- **讨论区**: [GitHub Discussions](https://github.com/your-repo/aurora-master/discussions)
+- **QQ 群**: 338371628
+- **邮箱**: admin@aqi125.cn
+
+---
+
+### 致谢
+
+感谢所有贡献者的付出! ❤️
 
 ---
 

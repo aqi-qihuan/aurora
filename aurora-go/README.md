@@ -401,6 +401,883 @@ make help          # 查看所有命令
 
 ---
 
+## 使用示例
+
+### cURL 示例
+
+#### 1. 用户登录
+
+```bash
+# 登录获取 JWT Token
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "your_password"
+  }'
+
+# 响应示例:
+# {
+#   "code": 200,
+#   "data": {
+#     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#     "user": {
+#       "id": 1,
+#       "username": "admin",
+#       "nickname": "管理员",
+#       "roleList": ["admin"]
+#     }
+#   }
+# }
+```
+
+#### 2. 获取文章列表 (公开)
+
+```bash
+# 无需认证即可访问
+curl -X GET "http://localhost:8080/api/articles?current=1&size=10" \
+  -H "Content-Type: application/json"
+
+# 带关键词搜索
+curl -X GET "http://localhost:8080/api/articles?keyword=Go语言&current=1&size=10" \
+  -H "Content-Type: application/json"
+```
+
+#### 3. 发布文章 (需要认证)
+
+```bash
+# 使用获取的 Token
+TOKEN="your_jwt_token_here"
+
+curl -X POST http://localhost:8080/api/admin/articles \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "articleTitle": "Go语言入门指南",
+    "articleContent": "# Go语言简介\n\nGo是一门开源编程语言...",
+    "articleCover": "https://example.com/cover.jpg",
+    "categoryId": 1,
+    "tagName": ["Go", "后端"],
+    "status": 1,
+    "isTop": false,
+    "isFeatured": false,
+    "type": 1
+  }'
+```
+
+#### 4. 上传图片 (需要认证)
+
+```bash
+# 上传文章封面或图片
+curl -X POST http://localhost:8080/api/admin/files/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/image.jpg"
+
+# 响应示例:
+# {
+#   "code": 200,
+#   "data": {
+#     "url": "https://minio.example.com/aurora/2026/04/image.jpg",
+#     "filename": "image.jpg",
+#     "size": 102400
+#   }
+# }
+```
+
+#### 5. AI 对话 (需要认证 + Agent 启用)
+
+```bash
+# SSE 流式对话
+curl -X POST http://localhost:8080/api/agent/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "message": "帮我写一篇关于Gin框架的博客",
+    "model": "deepseek-chat",
+    "stream": true
+  }'
+
+# 非流式对话
+curl -X POST http://localhost:8080/api/agent/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "message": "Go语言的优缺点是什么？",
+    "stream": false
+  }'
+```
+
+#### 6. 搜索文章
+
+```bash
+# MySQL 搜索模式
+curl -X GET "http://localhost:8080/api/articles/search?keyword=Gin&mode=mysql" \
+  -H "Content-Type: application/json"
+
+# Elasticsearch 搜索模式 (推荐)
+curl -X GET "http://localhost:8080/api/articles/search?keyword=Go语言&mode=es" \
+  -H "Content-Type: application/json"
+```
+
+---
+
+### Go 客户端示例
+
+```go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+type LoginRequest struct {
+    Username string `json:"username"`
+    Password string `json:"password"`
+}
+
+type LoginResponse struct {
+    Code    int    `json:"code"`
+    Message string `json:"message"`
+    Data    struct {
+        AccessToken string `json:"accessToken"`
+        User        struct {
+            ID       int      `json:"id"`
+            Username string   `json:"username"`
+            RoleList []string `json:"roleList"`
+        } `json:"user"`
+    } `json:"data"`
+}
+
+func main() {
+    // 1. 登录获取 Token
+    loginReq := LoginRequest{
+        Username: "admin",
+        Password: "your_password",
+    }
+
+    reqBody, _ := json.Marshal(loginReq)
+    resp, err := http.Post(
+        "http://localhost:8080/api/auth/login",
+        "application/json",
+        bytes.NewBuffer(reqBody),
+    )
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    var loginResp LoginResponse
+    json.Unmarshal(body, &loginResp)
+
+    if loginResp.Code != 200 {
+        panic("登录失败: " + loginResp.Message)
+    }
+
+    token := loginResp.Data.AccessToken
+    fmt.Println("登录成功! Token:", token[:20]+"...")
+
+    // 2. 使用 Token 访问受保护接口
+    req, _ := http.NewRequest("GET", "http://localhost:8080/api/admin/articles", nil)
+    req.Header.Set("Authorization", "Bearer "+token)
+    req.Header.Set("Content-Type", "application/json")
+
+    client := &http.Client{}
+    resp, err = client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    body, _ = io.ReadAll(resp.Body)
+    fmt.Println("文章列表:", string(body))
+}
+```
+
+---
+
+### JavaScript/TypeScript 示例
+
+```typescript
+// api-client.ts
+class AuroraAPI {
+  private baseURL: string;
+  private token: string | null = null;
+
+  constructor(baseURL: string = 'http://localhost:8080') {
+    this.baseURL = baseURL;
+  }
+
+  // 登录
+  async login(username: string, password: string): Promise<string> {
+    const response = await fetch(`${this.baseURL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await response.json();
+    if (data.code !== 200) {
+      throw new Error(data.message);
+    }
+
+    this.token = data.data.accessToken;
+    return this.token;
+  }
+
+  // 获取文章列表
+  async getArticles(params: {
+    current?: number;
+    size?: number;
+    keyword?: string;
+    categoryId?: number;
+  } = {}) {
+    const query = new URLSearchParams();
+    if (params.current) query.set('current', params.current.toString());
+    if (params.size) query.set('size', params.size.toString());
+    if (params.keyword) query.set('keyword', params.keyword);
+    if (params.categoryId) query.set('categoryId', params.categoryId.toString());
+
+    const response = await fetch(
+      `${this.baseURL}/api/articles?${query.toString()}`
+    );
+    return response.json();
+  }
+
+  // 发布文章 (需要认证)
+  async createArticle(article: {
+    articleTitle: string;
+    articleContent: string;
+    categoryId: number;
+    tagName?: string[];
+    status?: number;
+  }) {
+    if (!this.token) throw new Error('请先登录');
+
+    const response = await fetch(`${this.baseURL}/api/admin/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.token}`,
+      },
+      body: JSON.stringify(article),
+    });
+
+    return response.json();
+  }
+
+  // AI 对话 (SSE 流式)
+  async chat(message: string, onToken: (token: string) => void): Promise<void> {
+    if (!this.token) throw new Error('请先登录');
+
+    const response = await fetch(`${this.baseURL}/api/agent/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.token}`,
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify({
+        message,
+        stream: true,
+      }),
+    });
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    while (reader) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const data = JSON.parse(line.slice(5));
+          if (data.type === 'token') {
+            onToken(data.content);
+          }
+        }
+      }
+    }
+  }
+}
+
+// 使用示例
+async function main() {
+  const api = new AuroraAPI();
+
+  // 登录
+  await api.login('admin', 'password123');
+
+  // 获取文章列表
+  const articles = await api.getArticles({ current: 1, size: 10 });
+  console.log('文章列表:', articles);
+
+  // AI 对话
+  await api.chat('Go语言有什么优势?', (token) => {
+    process.stdout.write(token); // 实时输出 AI 回复
+  });
+}
+
+main();
+```
+
+---
+
+### Postman/Insomnia 集合
+
+项目提供了 Postman 集合文件,可直接导入:
+
+```bash
+# 下载 Postman 集合
+curl -O https://raw.githubusercontent.com/your-repo/aurora-go/main/docs/postman_collection.json
+
+# 或手动导入 docs/postman_collection.json
+```
+
+**集合包含:**
+- 所有 API 端点
+- 自动 Token 管理 (登录后自动提取 Token)
+- 环境变量配置
+- 测试用例
+
+---
+
+## 贡献指南
+
+感谢你对 Aurora Go 项目的关注!我们欢迎任何形式的贡献,包括但不限于:提交代码、改进文档、报告 Bug、提出新功能建议。
+
+### 📋 目录
+
+1. [行为准则](#行为准则)
+2. [如何贡献](#如何贡献)
+3. [报告 Bug](#报告-bug)
+4. [提出功能建议](#提出功能建议)
+5. [提交代码](#提交代码)
+6. [代码规范](#代码规范)
+7. [测试要求](#测试要求)
+8. [提交信息格式](#提交信息格式)
+9. [代码审查](#代码审查)
+
+---
+
+### 行为准则
+
+参与本项目的所有贡献者均须遵守以下准则:
+
+- **尊重他人**: 使用友好、包容的语言
+- **接受建设性批评**: 以专业态度对待反馈
+- **关注问题本身**: 对事不对人
+- **维护社区和谐**: 禁止骚扰、歧视、攻击性言论
+
+---
+
+### 如何贡献
+
+#### 1. Fork 项目仓库
+
+```bash
+# 在 GitHub 上 Fork 项目后,克隆你的 Fork
+git clone https://github.com/your-username/aurora-go.git
+cd aurora-go
+
+# 添加上游仓库
+git remote add upstream https://github.com/original-owner/aurora-go.git
+```
+
+#### 2. 创建功能分支
+
+```bash
+# 从 develop 分支创建新分支
+git checkout develop
+git pull upstream develop
+git checkout -b feat/add-comment-reply-notification
+```
+
+#### 3. 进行开发
+
+- 编写代码并添加测试
+- 确保测试通过: `make test`
+- 确保 Lint 通过: `make lint`
+- 更新相关文档
+
+#### 4. 提交代码
+
+```bash
+# 提交前运行格式化
+make fmt
+
+# 提交 (使用 Conventional Commits 格式)
+git add .
+git commit -m "feat: add comment reply notification feature"
+
+# 推送到你的 Fork
+git push origin feat/add-comment-reply-notification
+```
+
+#### 5. 创建 Pull Request
+
+- 在 GitHub 上创建 PR
+- 填写 PR 模板
+- 等待代码审查
+
+---
+
+### 报告 Bug
+
+#### 在提交 Issue 前,请确认:
+
+- [ ] 已搜索现有 Issues,确认没有重复
+- [ ] 使用的是最新版本
+- [ ] 提供了完整的复现步骤
+
+#### Issue 模板
+
+```markdown
+**Bug 描述**
+简明描述遇到的问题
+
+**复现步骤**
+1. 执行 '...'
+2. 配置 '...'
+3. 看到错误
+
+**预期行为**
+描述你期望发生什么
+
+**实际行为**
+描述实际发生了什么
+
+**环境信息**
+- OS: [e.g., Windows 11, Ubuntu 22.04]
+- Go 版本: [e.g., 1.26]
+- Aurora Go 版本: [e.g., 1.0.0]
+- 数据库: [e.g., MySQL 8.0]
+
+**日志输出**
+粘贴相关错误日志 (如有)
+
+**截图**
+如果适用,添加截图
+```
+
+---
+
+### 提出功能建议
+
+我们欢迎新功能建议!请在使用 Issues 提交时包含:
+
+- **功能描述**: 清晰描述你希望添加的功能
+- **使用场景**: 解释为什么需要这个功能
+- **替代方案**: 描述你考虑过的其他方案
+- **示例**: 如果可能,提供伪代码或示例
+
+---
+
+### 提交代码
+
+#### 分支命名规范
+
+| 类型 | 前缀 | 示例 |
+|------|------|------|
+| 新功能 | `feat/` | `feat/add-oauth-github` |
+| Bug 修复 | `fix/` | `fix/login-token-expiry` |
+| 文档 | `docs/` | `docs/update-api-reference` |
+| 性能优化 | `perf/` | `perf/optimize-article-query` |
+| 重构 | `refactor/` | `refactor/simplify-handler` |
+| 测试 | `test/` | `test/add-user-service-tests` |
+| CI/CD | `ci/` | `ci/add-github-actions` |
+| 样式修复 | `style/` | `style/fix-golint-warnings` |
+
+#### Pull Request 规范
+
+**PR 标题格式** (遵循 Conventional Commits):
+
+```
+feat: add GitHub OAuth login support
+fix: resolve article pagination issue
+docs: update API documentation for /upload endpoint
+perf: optimize Elasticsearch query performance
+```
+
+**PR 描述模板**:
+
+```markdown
+## 变更类型
+- [ ] Bug 修复
+- [ ] 新功能
+- [ ] 性能优化
+- [ ] 重构
+- [ ] 文档更新
+- [ ] 测试更新
+
+## 变更描述
+详细描述本次变更的内容
+
+## 关联 Issue
+Closes #123
+Relates to #456
+
+## 测试计划
+描述如何测试这些变更
+
+## 检查清单
+- [ ] 代码符合项目规范
+- [ ] 已添加必要的测试
+- [ ] 所有测试通过
+- [ ] 已更新相关文档
+- [ ] 没有产生新的警告
+```
+
+---
+
+### 代码规范
+
+#### Go 代码规范
+
+1. **遵循 Go 官方规范**
+   - 使用 `gofmt` 或 `goimports` 格式化代码
+   - 运行 `make fmt`  before提交
+
+2. **命名规范**
+   ```go
+   // ✅ 正确示例
+   type UserService interface {}
+   func GetUserByID(id int64) (*User, error)
+   var userCount int
+   
+   // ❌ 错误示例
+   type userService interface {}
+   func getuserbyid(id int64) (*User, error)
+   var user_count int
+   ```
+
+3. **注释规范**
+   ```go
+   // UserService defines business logic for user management.
+   // It provides methods for creating, updating, and retrieving users.
+   type UserService interface {
+       // GetUserByID retrieves a user by their unique identifier.
+       // Returns ErrUserNotFound if the user does not exist.
+       GetUserByID(ctx context.Context, id int64) (*User, error)
+   }
+   ```
+
+4. **错误处理**
+   ```go
+   // ✅ 正确: 显式处理错误
+   user, err := userService.GetUserByID(ctx, userID)
+   if err != nil {
+       return nil, fmt.Errorf("failed to get user: %w", err)
+   }
+   
+   // ❌ 错误: 忽略错误
+   user, _ := userService.GetUserByID(ctx, userID)
+   ```
+
+5. **依赖注入**
+   ```go
+   // ✅ 正确: 使用接口 + 依赖注入
+   type ArticleHandler struct {
+       articleService service.ArticleService
+       logger        *zap.Logger
+   }
+   
+   func NewArticleHandler(as service.ArticleService, logger *zap.Logger) *ArticleHandler {
+       return &ArticleHandler{
+           articleService: as,
+           logger:        logger,
+       }
+   }
+   ```
+
+#### Gin 处理规范
+
+```go
+// Handler 示例
+func (h *ArticleHandler) GetArticle(c *gin.Context) {
+    // 1. 提取路径参数
+    articleID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+    if err != nil {
+        util.ResponseError(c, ErrInvalidArticleID)
+        return
+    }
+
+    // 2. 调用 Service 层
+    article, err := h.articleService.GetArticleByID(c.Request.Context(), articleID)
+    if err != nil {
+        util.ResponseError(c, err)
+        return
+    }
+
+    // 3. 返回成功响应
+    util.ResponseSuccess(c, article)
+}
+```
+
+#### 数据库模型规范
+
+```go
+// Model 示例
+type Article struct {
+    ID            int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+    ArticleTitle   string    `gorm:"type:varchar(200);not null" json:"articleTitle" binding:"required,max=200"`
+    ArticleContent string    `gorm:"type:text" json:"articleContent"`
+    ArticleCover   string    `gorm:"type:varchar(500)" json:"articleCover"`
+    CategoryID    int64     `gorm:"index" json:"categoryId"`
+    Status        int       `gorm:"default:1" json:"status"` // 1-公开 2-草稿 3-密码
+    IsTop         bool      `gorm:"default:false" json:"isTop"`
+    IsFeatured    bool      `gorm:"default:false" json:"isFeatured"`
+    ViewCount     int       `gorm:"default:0" json:"viewCount"`
+    LikeCount     int       `gorm:"default:0" json:"likeCount"`
+    CreatedAt     time.Time `json:"createTime"`
+    UpdatedAt     time.Time `json:"updateTime"`
+}
+```
+
+---
+
+### 测试要求
+
+#### 1. 单元测试
+
+- **覆盖率要求**: 核心业务逻辑覆盖率 ≥ 80%
+- **测试文件命名**: `*.test.go` (e.g., `article_service_test.go`)
+- **测试函数命名**: `Test<FunctionName>_<Scenario>` (e.g., `TestGetUserByID_NotFound`)
+
+**测试示例**:
+
+```go
+func TestGetArticleByID_Success(t *testing.T) {
+    // Arrange
+    mockRepo := new(MockArticleRepository)
+    mockRepo.On("FindByID", int64(1)).Return(&Article{
+        ID:          1,
+        ArticleTitle: "Test Article",
+    }, nil)
+
+    service := NewArticleService(mockRepo)
+
+    // Act
+    article, err := service.GetArticleByID(context.Background(), 1)
+
+    // Assert
+    assert.NoError(t, err)
+    assert.Equal(t, int64(1), article.ID)
+    assert.Equal(t, "Test Article", article.ArticleTitle)
+    mockRepo.AssertExpectations(t)
+}
+
+func TestGetArticleByID_NotFound(t *testing.T) {
+    // Arrange
+    mockRepo := new(MockArticleRepository)
+    mockRepo.On("FindByID", int64(999)).Return(nil, ErrArticleNotFound)
+
+    service := NewArticleService(mockRepo)
+
+    // Act
+    article, err := service.GetArticleByID(context.Background(), 999)
+
+    // Assert
+    assert.Error(t, err)
+    assert.Nil(t, article)
+    assert.Equal(t, ErrArticleNotFound, err)
+    mockRepo.AssertExpectations(t)
+}
+```
+
+#### 2. 集成测试
+
+```go
+// integration_test.go
+func TestArticleAPI_E2E(t *testing.T) {
+    // 启动测试服务器
+    router := setupTestRouter()
+    defer cleanupTestDB()
+
+    // 登录获取 Token
+    token := loginTestUser(t, router)
+
+    // 测试创建文章
+    req := httptest.NewRequest("POST", "/api/admin/articles", strings.NewReader(`{
+        "articleTitle": "Test Article",
+        "articleContent": "Content here",
+        "categoryId": 1
+    }`))
+    req.Header.Set("Authorization", "Bearer "+token)
+    req.Header.Set("Content-Type", "application/json")
+
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    assert.Equal(t, 200, w.Code)
+}
+```
+
+#### 3. 运行测试
+
+```bash
+# 运行所有测试
+make test
+
+# 运行特定测试
+go test -v ./internal/service -run TestGetArticleByID
+
+# 查看覆盖率
+go test -cover ./...
+
+# 生成覆盖率报告
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out -o coverage.html
+
+# 运行基准测试
+make bench
+```
+
+---
+
+### 提交信息格式
+
+遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范:
+
+#### 提交类型
+
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| `feat` | 新功能 | `feat: add user registration API` |
+| `fix` | Bug 修复 | `fix: resolve token expiry issue` |
+| `docs` | 文档更新 | `docs: update API.md with new endpoints` |
+| `style` | 代码格式 (不影响功能) | `style: format code with gofmt` |
+| `refactor` | 重构 | `refactor: simplify error handling in service` |
+| `perf` | 性能优化 | `perf: optimize article list query` |
+| `test` | 测试相关 | `test: add unit tests for UserService` |
+| `chore` | 构建/工具相关 | `chore: upgrade gin to v1.10` |
+| `ci` | CI/CD 相关 | `ci: add GitHub Actions workflow` |
+
+#### 提交格式
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**示例**:
+
+```commit
+feat(auth): add GitHub OAuth login support
+
+- Add GitHub OAuth strategy
+- Update User model to store GitHub ID
+- Add migration for github_id column
+
+Closes #123
+```
+
+```commit
+fix(article): resolve pagination issue when page size is 0
+
+When size=0 was passed, the API returned all records instead of
+returning a validation error. Now returns 400 with error message.
+
+Fixes #456
+```
+
+---
+
+### 代码审查
+
+#### 审查者在审查代码时应关注:
+
+1. **功能正确性**
+   - 代码是否实现了预期功能?
+   - 边界条件是否处理?
+   - 错误处理是否完善?
+
+2. **代码质量**
+   - 命名是否清晰?
+   - 函数是否过长? (建议 ≤ 50 行)
+   - 是否有重复代码可以抽取?
+
+3. **性能**
+   - 是否有 N+1 查询问题?
+   - 是否有不必要的内存分配?
+   - 数据库查询是否优化?
+
+4. **安全性**
+   - 是否有 SQL 注入风险?
+   - 输入验证是否充分?
+   - 敏感信息是否泄露?
+
+5. **测试**
+   - 是否有足够的测试覆盖?
+   - 测试用例是否合理?
+   - 是否包含边界情况?
+
+#### 审查流程
+
+1. **提交 PR** → 2. **自动检查** (CI/CD) → 3. **代码审查** → 4. **修改反馈** → 5. **批准合并**
+
+#### 审查建议语气
+
+- ✅ "建议考虑使用 `errors.Is()` 来检查错误,更符合 Go 习惯"
+- ❌ "你这样写错误检查是错的"
+
+- ✅ "这个函数有点长,是否可以拆分成几个小函数以提高可读性?"
+- ❌ "函数太长了,重写"
+
+---
+
+### 发布流程
+
+#### 版本号规则 (Semantic Versioning)
+
+```
+MAJOR.MINOR.PATCH (e.g., 1.2.3)
+
+MAJOR: 不兼容的 API 修改
+MINOR: 向后兼容的功能新增
+PATCH: 向后兼容的 bug 修复
+```
+
+#### 发布步骤
+
+1. 更新 `CHANGELOG.md`
+2. 创建版本标签: `git tag -a v1.2.0 -m "Release v1.2.0"`
+3. 推送标签: `git push origin v1.2.0`
+4. GitHub Actions 自动构建并发布 Release
+
+---
+
+### 联系
+
+- **作者**: 七七
+- **QQ**: 2316364297
+- **网站**: https://www.aqi125.cn
+- **GitHub**: [aqi-qihuan/aurora: 基于SpringBoot4.1.X+Vue3开发的个人博客系统](https://github.com/aqi-qihuan/aurora))
+
+---
+
+### 致谢
+
+感谢所有贡献者的付出! ❤️
+
+<a href="https://github.com/your-repo/aurora-go/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=your-repo/aurora-go" />
+</a>
+
+---
+
 ## 数据库注意事项
 
 | 表 | 列 | 类型 | 说明 |
