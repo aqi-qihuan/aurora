@@ -423,18 +423,22 @@ func (h *ArticleHandler) UpdateArticlePassword(c *gin.Context) {
 // @Router /api/articles/access [post]
 func (h *ArticleHandler) VerifyArticlePassword(c *gin.Context) {
 	var body struct {
-		ArticleID      uint   `json:"articleId"`
+		ArticleID      string `json:"articleId"`      // 改为 string 类型，兼容前端传字符串或数字
 		ArticlePassword string `json:"articlePassword"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg(err.Error()))
 		return
 	}
-	if body.ArticleID == 0 {
+	
+	// 将 string 类型的 ArticleID 转换为 uint
+	articleID, err := strconv.ParseUint(body.ArticleID, 10, 64)
+	if err != nil || articleID == 0 {
 		util.ResponseError(c, errors.ErrInvalidParams.WithMsg("无效的文章ID"))
 		return
 	}
-	verified := h.svc.VerifyPassword(c.Request.Context(), body.ArticleID, body.ArticlePassword)
+	
+	verified := h.svc.VerifyPassword(c.Request.Context(), uint(articleID), body.ArticlePassword)
 	util.ResponseSuccess(c, map[string]interface{}{
 		"verified": verified,
 	})

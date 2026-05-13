@@ -240,10 +240,10 @@ func (s *ArticleService) GetArticleByID(ctx context.Context, id uint) (*dto.Arti
 	// 转换主文章 DTO
 	result := s.toArticleDTO(&article)
 
-	// 查询上一篇文章 (ID < 当前ID 的最大值, 只查已发布非删除的公开文章)
+	// 查询上一篇文章 (ID < 当前ID 的最大值, 只查已发布非删除的文章)
 	var preArt model.Article
 	preErr := s.db.WithContext(ctx).
-		Where("is_delete = 0 AND status = 1 AND id < ?", id).
+		Where("is_delete = 0 AND status IN (1, 2) AND id < ?", id).
 		Preload("Tags").
 		Preload("Category").
 		Preload("UserInfo").
@@ -255,10 +255,10 @@ func (s *ArticleService) GetArticleByID(ctx context.Context, id uint) (*dto.Arti
 		result.PreArticleCard = &card
 	}
 
-	// 查询下一篇文章 (ID > 当前ID 的最小值, 只查已发布非删除的公开文章)
+	// 查询下一篇文章 (ID > 当前ID 的最小值, 查已发布非删除的文章)
 	var nextArt model.Article
 	nextErr := s.db.WithContext(ctx).
-		Where("is_delete = 0 AND status = 1 AND id > ?", id).
+		Where("is_delete = 0 AND status IN (1, 2) AND id > ?", id).
 		Preload("Tags").
 		Preload("Category").
 		Preload("UserInfo").
@@ -280,7 +280,7 @@ func (s *ArticleService) ListArticles(ctx context.Context, cond dto.ConditionVO,
 
 	baseQuery := s.db.WithContext(ctx).
 		Model(&model.Article{}).
-		Where("is_delete = 0 AND status = 1") // 前台只展示公开文章
+		Where("is_delete = 0 AND status IN (1, 2)") // 前台展示公开和私密文章（私密需密码）
 
 	// 动态条件构建
 	if cond.Keywords != "" {
@@ -743,7 +743,7 @@ func (s *ArticleService) GetArchives(ctx context.Context, current, size int) (*d
 	var totalCount int64
 	if err := s.db.WithContext(ctx).
 		Model(&model.Article{}).
-		Where("is_delete = 0 AND status = 1").
+		Where("is_delete = 0 AND status IN (1, 2)").
 		Count(&totalCount).Error; err != nil {
 		return nil, fmt.Errorf("统计文章数失败: %w", err)
 	}
@@ -752,7 +752,7 @@ func (s *ArticleService) GetArchives(ctx context.Context, current, size int) (*d
 	var articles []model.Article
 	offset := (current - 1) * size
 	if err := s.db.WithContext(ctx).
-		Where("is_delete = 0 AND status = 1").
+		Where("is_delete = 0 AND status IN (1, 2)").
 		Preload("Category").
 		Preload("UserInfo").
 		Preload("Tags").

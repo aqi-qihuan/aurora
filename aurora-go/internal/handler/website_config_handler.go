@@ -28,12 +28,24 @@ func NewWebsiteConfigHandler(registry *service.Registry) *WebsiteConfigHandler {
 // @Failure 500 {object} object "服务器内部错误"
 // @Router /api/admin/website/config [get]
 func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
-	config, err := h.registry.WebsiteConfig.GetConfig(c.Request.Context())
+	// 获取首页聚合数据（包含统计数据和网站配置）
+	info, err := h.registry.AuroraInfo.GetHomeInfo(c.Request.Context())
 	if err != nil {
 		util.ResponseError(c, err)
 		return
 	}
-	util.ResponseSuccess(c, config)
+	
+	// 构建前端期望的数据结构
+	result := map[string]interface{}{
+		"viewCount":         info.ViewCount,
+		"articleCount":      info.ArticleCount,
+		"categoryCount":     info.CategoryCount,
+		"tagCount":          info.TagCount,
+		"talkCount":         info.TalkCount,
+		"websiteConfigDTO":  info.WebsiteConfig,
+	}
+	
+	util.ResponseSuccess(c, result)
 }
 
 // @Summary 更新网站配置

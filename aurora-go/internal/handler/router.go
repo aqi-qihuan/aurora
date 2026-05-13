@@ -148,7 +148,7 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 	rg.GET("/", r.AuroraInfoHandler.GetHomeInfo)
 
 	// --- 网站配置（AuroraInfoController 前台只读） ---
-	rg.GET("/admin/website/config", r.WebsiteConfigHandler.GetWebsiteConfig)
+	rg.GET("/website/config", r.WebsiteConfigHandler.GetWebsiteConfig)
 
 	// --- 访客上报（AuroraInfoController） ---
 	rg.POST("/report", r.AuroraInfoHandler.Report)
