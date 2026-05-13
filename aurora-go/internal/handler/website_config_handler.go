@@ -19,14 +19,14 @@ func NewWebsiteConfigHandler(registry *service.Registry) *WebsiteConfigHandler {
 	return &WebsiteConfigHandler{registry: registry}
 }
 
-// @Summary 获取网站前台配置
+// @Summary 获取网站前台配置（C端公开接口）
 // @Tags 网站配置
-// @Description 获取网站前台公开配置
+// @Description 获取网站前台公开配置（包含统计数据和配置信息）
 // @Accept json
 // @Produce json
 // @Success 200 {object} object "成功返回网站配置"
 // @Failure 500 {object} object "服务器内部错误"
-// @Router /api/admin/website/config [get]
+// @Router /api/website/config [get]
 func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
 	// 获取首页聚合数据（包含统计数据和网站配置）
 	info, err := h.registry.AuroraInfo.GetHomeInfo(c.Request.Context())
@@ -34,8 +34,8 @@ func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
 		util.ResponseError(c, err)
 		return
 	}
-	
-	// 构建前端期望的数据结构
+
+	// 构建C端前端期望的数据结构（包含统计数据和嵌套配置）
 	result := map[string]interface{}{
 		"viewCount":         info.ViewCount,
 		"articleCount":      info.ArticleCount,
@@ -44,8 +44,30 @@ func (h *WebsiteConfigHandler) GetWebsiteConfig(c *gin.Context) {
 		"talkCount":         info.TalkCount,
 		"websiteConfigDTO":  info.WebsiteConfig,
 	}
-	
+
 	util.ResponseSuccess(c, result)
+}
+
+// @Summary 获取网站配置（Admin后台接口）
+// @Tags 网站配置
+// @Description 获取网站配置（与C端数据源一致，直接返回配置对象）
+// @Accept json
+// @Produce json
+// @Success 200 {object} object "成功返回网站配置"
+// @Failure 500 {object} object "服务器内部错误"
+// @Security BearerAuth
+// @Router /api/admin/website/config [get]
+func (h *WebsiteConfigHandler) GetAdminWebsiteConfig(c *gin.Context) {
+	// 复用C端数据源，确保数据一致性
+	info, err := h.registry.AuroraInfo.GetHomeInfo(c.Request.Context())
+	if err != nil {
+		util.ResponseError(c, err)
+		return
+	}
+
+	// 直接返回 websiteConfigDTO 对象（不包装）
+	// 这样前端 data.data 就是配置对象，可以直接展开到表单
+	util.ResponseSuccess(c, info.WebsiteConfig)
 }
 
 // @Summary 更新网站配置

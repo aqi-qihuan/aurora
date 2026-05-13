@@ -175,6 +175,7 @@ func (r *Router) registerProtectedRoutes(rg *gin.RouterGroup) {
 func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	// --- 系统信息（AuroraInfoController） ---
 	rg.GET("/", r.AuroraInfoHandler.GetAdminInfo)
+	rg.GET("/website/config", r.WebsiteConfigHandler.GetAdminWebsiteConfig) // Admin获取平铺配置（*int转0）
 	rg.PUT("/website/config", r.WebsiteConfigHandler.UpdateWebsiteConfig)
 	rg.PUT("/about", r.AboutHandler.SaveOrUpdate)
 	rg.POST("/config/images", r.WebsiteConfigHandler.UploadConfigImage)
