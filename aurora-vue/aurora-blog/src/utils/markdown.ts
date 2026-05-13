@@ -1,6 +1,6 @@
 import MarkdownIt from 'markdown-it'
 import markdownItKatexExternal from 'markdown-it-katex-external'
-import * as markdownItEmoji from 'markdown-it-emoji'
+import { full as markdownItEmoji } from 'markdown-it-emoji'
 import markdownItContainer from 'markdown-it-container'
 import markdownItSup from 'markdown-it-sup'
 import markdownItSub from 'markdown-it-sub'
