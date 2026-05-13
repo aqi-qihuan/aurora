@@ -14,7 +14,8 @@ import { registerObSkeleton } from '@/components/LoadingSkeleton'
 import 'virtual:svg-icons-register'
 import 'prismjs/themes/prism.css'
 import 'prismjs'
-import 'element-plus/theme-chalk/index.css'
+import 'element-plus/dist/index.css'
+import ElementPlus from 'element-plus'
 import { components, plugins } from './plugins/element-plus'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import infiniteScroll from 'vue3-infinite-scroll-better'
@@ -38,6 +39,7 @@ export const app = createApp(App)
     loading: defaultCover,
     error: defaultCover
   })
+  .use(ElementPlus)
 const userStore = useUserStore()
 axios.interceptors.request.use((config: any) => {
   config.headers['Authorization'] = 'Bearer ' + sessionStorage.getItem('token')

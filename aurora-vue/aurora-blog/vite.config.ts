@@ -2,35 +2,26 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
-import { prismjsPlugin } from 'vite-plugin-prismjs'
 import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
   plugins: [
     vue(),
-    // Auto-import Vue and Element Plus components (enables tree-shaking)
+    // Auto-import Vue Composition API (ref, computed, etc.) - lightweight
     AutoImport({
-      resolvers: [ElementPlusResolver()],
       imports: ['vue', 'vue-router', 'pinia'],
       dts: 'src/auto-imports.d.ts'
     }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-      dts: 'src/components.d.ts'
-    }),
-    // SVG sprite icon support (replaces svg-sprite-loader)
+    // SVG sprite icon support - optimized for faster build
     createSvgIconsPlugin({
       iconDirs: [resolve(__dirname, 'src/icons/svg')],
-      symbolId: 'icon-[name]'
-    }),
-    // PrismJS syntax highlighting
-    prismjsPlugin({
-      languages: ['javascript', 'css', 'sql', 'java', 'c', 'cpp', 'nginx', 'markup', 'shell', 'json'],
-      plugins: ['line-numbers', 'toolbar', 'copy-to-clipboard'],
-      theme: 'okaidia',
-      css: true
+      symbolId: 'icon-[name]',
+      // Inject sprite at end of body for better loading
+      inject: 'body-last',
+      customDomId: '__svg_icon_dom__',
+      // Skip CSS file generation to speed up build
+      // Note: Icons are still available via <svg-icon> component
+      styleId: undefined
     })
   ],
   resolve: {
