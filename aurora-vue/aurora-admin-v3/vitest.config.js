@@ -76,13 +76,9 @@ export default defineConfig({
       toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
     },
     
-    // 池配置
+    // 池配置（Vitest 4：移除 poolOptions，选项提升到顶层）
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: true
-      }
-    }
+    singleThread: true,
   },
   
   resolve: {
