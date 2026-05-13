@@ -165,6 +165,7 @@ import Reward from '@/components/Reward.vue'
 import '@/styles/prism-aurora-future.css'
 import { useCommonStore } from '@/stores/common'
 import { useCommentStore } from '@/stores/comment'
+import { useUserStore } from '@/stores/user'
 import Sticky from '@/components/Sticky.vue'
 import Prism from 'prismjs'
 import tocbot from 'tocbot'
@@ -180,6 +181,7 @@ export default defineComponent({
     const proxy: any = getCurrentInstance()?.appContext.config.globalProperties
     const commonStore = useCommonStore()
     const commentStore = useCommentStore()
+    const userStore = useUserStore()
     const route = useRoute()
     const router = useRouter()
     const { t } = useI18n()
@@ -248,6 +250,9 @@ export default defineComponent({
     emitter.on('articleFetchReplies', (index) => {
       fetchReplies(index)
     })
+    emitter.on('articlePasswordVerified', () => {
+      fetchArticle()
+    })
 
     emitter.on('articleLoadMore', () => {
       fetchComments()
@@ -311,6 +316,23 @@ export default defineComponent({
         if (data.data === null) {
           router.push({ path: '/出错啦' })
           return
+        }
+        // 检查文章是否需要密码
+        if (data.data.status === 2 && !userStore.accessArticles.includes(reactiveData.articleId)) {
+          if (userStore.userInfo === '') {
+            proxy.$notify({
+              title: 'Warning',
+              message: '该文章受密码保护,请登录后访问',
+              type: 'warning'
+            })
+            router.push({ path: '/' })
+            return
+          } else {
+            // 触发密码对话框
+            emitter.emit('changeArticlePasswordDialogVisible', reactiveData.articleId)
+            loading.value = false
+            return
+          }
         }
         commonStore.setHeaderImage(data.data.articleCover)
         new Promise((resolve) => {

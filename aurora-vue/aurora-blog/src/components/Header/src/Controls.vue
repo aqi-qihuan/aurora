@@ -349,7 +349,8 @@ export default defineComponent({
           if (data.flag) {
             reactiveDate.articlePasswordDialogVisible = false
             userStore.accessArticles.push(reactiveDate.articleId)
-            router.push({ path: '/articles/' + reactiveDate.articleId })
+            // 触发事件让 Article.vue 重新获取文章
+            emitter.emit('articlePasswordVerified')
           }
         })
     }
