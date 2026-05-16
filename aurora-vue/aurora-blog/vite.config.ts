@@ -21,7 +21,6 @@ export default defineConfig({
       customDomId: '__svg_icon_dom__',
       // Skip CSS file generation to speed up build
       // Note: Icons are still available via <svg-icon> component
-      styleId: undefined
     })
   ],
   resolve: {

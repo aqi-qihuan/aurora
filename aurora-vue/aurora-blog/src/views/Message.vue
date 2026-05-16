@@ -77,7 +77,7 @@ export default defineComponent({
       reactiveData.isReload = true
       fetchComments()
     })
-    emitter.on('messageFetchReplies', (index) => {
+    emitter.on('messageFetchReplies', (index: number) => {
       fetchReplies(index)
     })
     emitter.on('messageLoadMore', () => {

@@ -14,7 +14,7 @@
             :name="tag.tagName"
             :count="tag.count"
             size="xl"
-            :style="{ animationDelay: index * 0.04 + 's' }"
+            :style="{ animationDelay: Number(index) * 0.04 + 's' }"
           />
         </transition-group>
         <div v-else class="tags-empty">

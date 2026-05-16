@@ -40,7 +40,7 @@
         <transition-group name="stagger-fade" tag="ul" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           <template v-if="haveArticles === true">
             <li v-for="(article, index) in articles" :key="article.id">
-              <ArticleCard class="home-article" :data="article" :style="{ animationDelay: index * 0.06 + 's' }" />
+              <ArticleCard class="home-article" :data="article" :style="{ animationDelay: Number(index) * 0.06 + 's' }" />
             </li>
           </template>
           <template v-else>

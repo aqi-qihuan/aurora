@@ -1,7 +1,7 @@
 import router from '@/router'
 import { useAppStore } from '@/stores/app'
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (_: any, __: any, next: any) => {
   const appStore = useAppStore()
   appStore.startLoading()
   next()

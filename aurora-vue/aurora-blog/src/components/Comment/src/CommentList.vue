@@ -49,8 +49,8 @@ export default defineComponent({
       }
     }
     return {
-      comments: inject('comments'),
-      haveMore: inject('haveMore'),
+      comments: inject('comments') as Ref<any[]>,
+      haveMore: inject('haveMore') as Ref<boolean>,
       loadMore
     }
   }

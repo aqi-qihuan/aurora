@@ -12,7 +12,7 @@
               class="bg-ob-deep-800 flex p-4 lg:p-8 rounded-2xl shadow-xl mb-0 talk-item"
               v-for="(item, index) in talks"
               :key="item.id"
-              :style="{ animationDelay: index * 0.05 + 's' }"
+              :style="{ animationDelay: Number(index) * 0.05 + 's' }"
               @click="toTalk(item.id)">
               <Avatar :url="item.avatar" />
               <div class="talk-info">

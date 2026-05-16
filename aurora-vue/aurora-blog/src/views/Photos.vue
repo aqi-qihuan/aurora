@@ -26,7 +26,7 @@
                   class="photo"
                   :key="item"
                   :src="item"
-                  :style="{ animationDelay: index * 0.04 + 's' }"
+                  :style="{ animationDelay: Number(index) * 0.04 + 's' }"
                   loading="lazy"
                   @click="handlePreview(index)" />
               </transition-group>
@@ -71,7 +71,7 @@ export default defineComponent({
       size: 10,
       albumId: route.params.albumId
     })
-    onBeforeRouteUpdate((to) => {
+    onBeforeRouteUpdate((to: any) => {
       reactiveData.photoAlbumName = ''
       reactiveData.photos = []
       reactiveData.noResult = false

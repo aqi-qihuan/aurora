@@ -10,7 +10,7 @@
           <div class="bg-ob-deep-800 p-4 lg:p-14 rounded-2xl shadow-xl mb-8 lg:mb-0">
             <el-row :gutter="36">
               <transition-group name="link-stagger">
-                <el-col v-for="(link, index) in links" :key="link.id" :span="8" :xs="{ span: 20, offset: 2 }" class="mb-3" :style="{ animationDelay: index * 0.05 + 's' }">
+                <el-col v-for="(link, index) in links" :key="link.id" :span="8" :xs="{ span: 20, offset: 2 }" class="mb-3" :style="{ animationDelay: Number(index) * 0.05 + 's' }">
                   <a :href="link.linkAddress" target="_blank" rel="noopener noreferrer" class="link-card">
                     <el-card shadow="never" class="link-inner">
                       <div class="link-avatar-wrap">
@@ -90,7 +90,7 @@ export default defineComponent({
       reactiveData.isReload = true
       fetchComments()
     })
-    emitter.on('friendLinkFetchReplies', (index) => {
+    emitter.on('friendLinkFetchReplies', (index: number) => {
       fetchReplies(index)
     })
     emitter.on('friendLinkLoadMore', () => {

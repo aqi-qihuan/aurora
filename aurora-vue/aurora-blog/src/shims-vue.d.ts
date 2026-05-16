@@ -29,3 +29,6 @@ declare module 'pinia-plugin-persistedstate'
 declare module 'tocbot'
 declare module 'vue-i18n'
 declare module 'nprogress'
+
+// 虚拟模块声明
+declare module 'virtual:svg-icons-register'

@@ -120,7 +120,7 @@ export default defineComponent({
       reactiveData.isReload = true
       fetchComments()
     })
-    emitter.on('aboutFetchReplies', (index) => {
+    emitter.on('aboutFetchReplies', (index: number) => {
       fetchReplies(index)
     })
     emitter.on('aboutLoadMore', () => {
@@ -147,7 +147,7 @@ export default defineComponent({
         headingSelector: 'h1, h2, h3',
         collapseDepth: 3,
         disableTocScrollSync: true,
-        onClick: function (e) {
+        onClick: function (e: MouseEvent) {
           e.preventDefault()
         }
       })

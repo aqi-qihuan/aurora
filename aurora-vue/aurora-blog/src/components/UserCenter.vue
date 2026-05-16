@@ -109,7 +109,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, toRef, ref, reactive, toRefs, getCurrentInstance, computed, onMounted, onUnmounted } from 'vue'
+import { defineComponent, toRef, ref, reactive, toRefs, getCurrentInstance, computed, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import AvatarCropper from 'vue-avatar-cropper'
 import api from '@/api/api'
@@ -209,7 +209,7 @@ export default defineComponent({
         proxy.$notify({ title: 'Error', message: '发送失败，请重试', type: 'error' })
       })
     }
-    const beforeChange = () => {
+    const beforeChange = (): boolean | Promise<boolean> => {
       reactiveData.switchState = true
       reactiveData.loading = true
       return new Promise((resolve, reject) => {

@@ -99,7 +99,7 @@ export default defineComponent({
       reactiveData.isReload = true
       fetchComments()
     })
-    emitter.on('talkFetchReplies', (index) => {
+    emitter.on('talkFetchReplies', (index: number) => {
       fetchReplies(index)
     })
     emitter.on('talkLoadMore', () => {

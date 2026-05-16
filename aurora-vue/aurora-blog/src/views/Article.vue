@@ -219,7 +219,7 @@ export default defineComponent({
       imageClickHandlers.forEach(cleanup => cleanup())
       imageClickHandlers = []
     })
-    onBeforeRouteUpdate((to) => {
+    onBeforeRouteUpdate((to: any) => {
       reactiveData.article = ''
       reactiveData.readTime = ''
       reactiveData.wordNum = ''
@@ -247,7 +247,7 @@ export default defineComponent({
       reactiveData.isReload = true
       fetchComments()
     })
-    emitter.on('articleFetchReplies', (index) => {
+    emitter.on('articleFetchReplies', (index: number) => {
       fetchReplies(index)
     })
     emitter.on('articlePasswordVerified', () => {
@@ -279,7 +279,7 @@ export default defineComponent({
         headingSelector: 'h1, h2, h3',
         collapseDepth: 3,
         disableTocScrollSync: true,
-        onClick: function (e) {
+        onClick: function (e: MouseEvent) {
           e.preventDefault()
         }
       })

@@ -6,8 +6,8 @@
     <Dropdown v-if="multiLanguage === 1" @command="handleClick">
       <span class="ob-drop-shadow" data-dia="language">
         <svg-icon icon-class="globe" />
-        <span v-if="$i18n.locale == 'cn'">中文</span>
-        <span v-if="$i18n.locale == 'en'">EN</span>
+        <span v-if="locale === 'cn' || locale === 'zh-CN'">中文</span>
+        <span v-if="locale === 'en'">EN</span>
       </span>
       <DropdownMenu>
         <DropdownItem name="en">English</DropdownItem>
@@ -153,7 +153,7 @@ import { Dropdown, DropdownMenu, DropdownItem } from '@/components/Dropdown'
 import { useAppStore } from '@/stores/app'
 import { useCommonStore } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import ThemeToggle from '@/components/ToggleSwitch/ThemeToggle.vue'
 import api from '@/api/api'
 import SearchModel from '@/components/SearchModel.vue'
@@ -172,14 +172,13 @@ export default defineComponent({
     SearchModel
   },
   setup() {
-    const { t } = useI18n()
+    const { t, locale } = useI18n()
     const proxy: any = getCurrentInstance()?.appContext.config.globalProperties
     const appStore = useAppStore()
     const commonStore = useCommonStore()
     const userStore = useUserStore()
     const searchStore = useSearchStore()
     const route = useRoute()
-    const router = useRouter()
     const loginInfo = reactive({
       username: '' as any,
       password: '' as any,
@@ -377,7 +376,8 @@ export default defineComponent({
         let websiteConfig: any = appStore.websiteConfig
         return websiteConfig.multiLanguage
       }),
-      t
+      t,
+      locale
     }
   }
 })
