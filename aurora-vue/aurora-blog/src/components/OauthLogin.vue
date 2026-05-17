@@ -26,9 +26,7 @@ export default defineComponent({
     const route = useRoute()
     const router = useRouter()
     if (route.path === '/oauth/login/qq') {
-      //@ts-ignore
       if (QC.Login.check()) {
-        //@ts-ignore
         QC.Login.getMe(function (openId, accessToken) {
           let params = {
             openId: openId,

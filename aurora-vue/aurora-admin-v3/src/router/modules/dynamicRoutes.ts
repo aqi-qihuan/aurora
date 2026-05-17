@@ -8,16 +8,16 @@ import Layout from '@/layout/index.vue'
  * 动态导入视图组件
  * 使用 Vite 的 import.meta.glob 实现动态导入
  */
-const modules = import.meta.glob('../views/**/*.vue')
+const modules: Record<string, () => Promise<any>> = import.meta.glob('../views/**/*.vue')
 
 /**
  * 根据组件路径动态加载组件
  * @param {string} componentPath - 组件路径,如 '/article/ArticleList.vue'
  * @returns {Function} 组件加载函数
  */
-export const loadView = (componentPath) => {
+export const loadView = (componentPath: string | null): (() => Promise<any>) => {
   // 确保路径格式正确
-  let path = componentPath
+  let path = componentPath || ''
   
   // 处理不同的路径格式
   if (!path.startsWith('/')) {
@@ -41,11 +41,11 @@ export const loadView = (componentPath) => {
  * @param {Array} menus - 后端返回的菜单数据
  * @returns {Array} 路由配置数组
  */
-export const generateRoutes = (menus) => {
-  const routes = []
+export const generateRoutes = (menus: any[]): any[] => {
+  const routes: any[] = []
   
   menus.forEach(menu => {
-    const route = {
+    const route: any = {
       path: menu.path,
       name: menu.name,
       meta: {
@@ -84,8 +84,8 @@ export const generateRoutes = (menus) => {
  * @param {Array} routes - 路由配置数组
  * @returns {Array} 扁平化的路由路径数组
  */
-export const flattenRoutes = (routes) => {
-  const result = []
+export const flattenRoutes = (routes: any[]): string[] => {
+  const result: string[] = []
   
   routes.forEach(route => {
     if (route.path) {
@@ -104,10 +104,10 @@ export const flattenRoutes = (routes) => {
  * @param {Array} menus - 菜单数据
  * @returns {Set} 路由路径集合
  */
-export const getAllRoutePaths = (menus) => {
-  const paths = new Set()
+export const getAllRoutePaths = (menus: any[]): Set<string> => {
+  const paths = new Set<string>()
   
-  const traverse = (menuList) => {
+  const traverse = (menuList: any[]) => {
     menuList.forEach(menu => {
       if (menu.path) {
         paths.add(menu.path)

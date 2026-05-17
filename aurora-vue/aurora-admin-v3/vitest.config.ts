@@ -39,10 +39,10 @@ export default defineConfig({
         'src/**/*.{js,ts,vue}'
       ],
       exclude: [
-        'src/main.js',
+        'src/main.ts',
         'src/App.vue',
-        'src/**/*.test.js',
-        'src/**/*.spec.js'
+        'src/**/*.test.ts',
+        'src/**/*.spec.ts'
       ],
       // 覆盖率阈值
       thresholds: {
@@ -69,14 +69,14 @@ export default defineConfig({
     reporters: ['default'],
     
     // 设置文件
-    // setupFiles: ['./tests/setup.js'],
+    // setupFiles: ['./tests/setup.ts'],
     
     // 模拟日期
     fakeTimers: {
       toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
     },
     
-    // 池配置（Vitest 4：移除 poolOptions，选项提升到顶层）
+    // 池配置（Vitest 4+：移除 poolOptions，选项提升到顶层）
     pool: 'threads',
     singleThread: true,
   },

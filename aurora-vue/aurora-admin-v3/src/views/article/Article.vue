@@ -502,12 +502,17 @@ onUnmounted(() => {
   margin-right: 1rem;
   margin-bottom: 1rem;
   cursor: pointer;
+  background: #ecf5ff !important;
+  border-color: #d9ecff !important;
+  color: #409eff !important;
 }
 .tag-item-select {
   margin-right: 1rem;
   margin-bottom: 1rem;
   cursor: not-allowed;
-  color: #ccccd8 !important;
+  background: #f5f7fa !important;
+  border-color: #e4e7ed !important;
+  color: #c0c4cc !important;
 }
 .category-item {
   cursor: pointer;

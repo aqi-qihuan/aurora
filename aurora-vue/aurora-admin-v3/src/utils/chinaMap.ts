@@ -1,7 +1,7 @@
 /**
  * 中国地图 ES Module
- * 优先使用本地打包的地图数据，确保云端可用
- * 
+ * 优先使用本地打包的地图数据，确保云端可用。
+ *
  * 数据源: https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json
  */
 
@@ -9,8 +9,10 @@ import * as echarts from 'echarts'
 // 直接导入本地地图数据 JSON (会被 Vite 打包)
 import localChinaMapData from '@/assets/json/china-map.json'
 
-// 省份坐标映射（用于散点图）
-export const provinceCoordinates = {
+/**
+ * 省份坐标映射（用于散点图）
+ */
+export const provinceCoordinates: Record<string, [number, number]> = {
   '北京': [116.4, 39.9],
   '天津': [117.2, 39.1],
   '河北': [114.5, 38.0],
@@ -48,25 +50,48 @@ export const provinceCoordinates = {
 }
 
 // 地图数据缓存 (用于远程加载的缓存)
-let remoteMapDataCache = null
+let remoteMapDataCache: Record<string, unknown> | null = null
 let chinaMapRegistered = false
 
 /**
- * 从阿里云 DataV 加载中国地图 GeoJSON 数据
- * @returns {Promise<Object>} GeoJSON 数据
+ * GeoJSON Feature 接口
  */
-async function fetchChinaMapData() {
-  if (remoteMapDataCache) {
-    return remoteMapDataCache
+interface GeoFeature {
+  type: 'Feature'
+  properties: {
+    name: string
+    cp: [number, number]
   }
-  
+  geometry: {
+    type: string
+    coordinates: number[] | number[][]
+  }
+}
+
+/**
+ * GeoJSON FeatureCollection 接口
+ */
+interface GeoFeatureCollection {
+  type: 'FeatureCollection'
+  features: GeoFeature[]
+}
+
+/**
+ * 从阿里云 DataV 加载中国地图 GeoJSON 数据
+ * @returns {Promise<GeoFeatureCollection>} GeoJSON 数据
+ */
+async function fetchChinaMapData(): Promise<GeoFeatureCollection> {
+  if (remoteMapDataCache) {
+    return remoteMapDataCache as unknown as GeoFeatureCollection
+  }
+
   try {
     const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    remoteMapDataCache = await response.json()
-    return remoteMapDataCache
+    remoteMapDataCache = await response.json() as Record<string, unknown>
+    return remoteMapDataCache as unknown as GeoFeatureCollection
   } catch (error) {
     console.error('加载中国地图数据失败:', error)
     throw error
@@ -78,33 +103,33 @@ async function fetchChinaMapData() {
  * 直接使用本地打包的 JSON 数据，确保云端可用
  * @returns {Promise<boolean>} 是否注册成功
  */
-export async function registerChinaMap() {
+export async function registerChinaMap(): Promise<boolean> {
   if (chinaMapRegistered) {
     return true
   }
-  
+
   try {
     // 直接使用导入的本地地图数据 (优先，确保云端可用)
-    echarts.registerMap('china', localChinaMapData)
+    echarts.registerMap('china', localChinaMapData as any)
     chinaMapRegistered = true
     console.log('✅ 中国地图注册成功 (本地数据)')
     return true
   } catch (localError) {
-    console.warn('⚠️ 本地地图加载失败，尝试在线加载:', localError.message)
-    
+    console.warn('⚠️ 本地地图加载失败，尝试在线加载:', (localError as Error).message)
+
     try {
       // 降级方案: 从在线加载完整的省份边界数据
       const geoJSON = await fetchChinaMapData()
-      
+
       // 注册到 ECharts
-      echarts.registerMap('china', geoJSON)
+      echarts.registerMap('china', geoJSON as any)
       chinaMapRegistered = true
-      
+
       console.log('✅ 中国地图注册成功 - 在线数据')
       return true
     } catch (onlineError) {
-      console.warn('⚠️ 在线地图加载失败，使用简化版:', onlineError.message)
-      
+      console.warn('⚠️ 在线地图加载失败，使用简化版:', (onlineError as Error).message)
+
       // 最终降级: 使用简化版地图
       registerSimplifiedChinaMap()
       return true
@@ -116,76 +141,77 @@ export async function registerChinaMap() {
  * 注册简化版中国地图（省份多边形）
  * 用于网络失败时的降级方案
  */
-function registerSimplifiedChinaMap() {
-  const features = Object.entries(provinceCoordinates).map(([name, coords]) => ({
-    type: 'Feature',
-    properties: { 
+function registerSimplifiedChinaMap(): void {
+  const features: GeoFeature[] = Object.entries(provinceCoordinates).map(([name, coords]) => ({
+    type: 'Feature' as const,
+    properties: {
       name,
       cp: coords
     },
     geometry: {
-      type: 'Point',
+      type: 'Point' as const,
       coordinates: coords
     }
   }))
-  
+
   echarts.registerMap('china', {
     type: 'FeatureCollection',
     features
-  })
+  } as any)
   chinaMapRegistered = true
   console.log('✅ 简化版中国地图注册成功')
 }
 
 /**
  * 获取省份坐标
- * @param {string} provinceName 省份名称
- * @returns {Array<number>} [经度, 纬度]
+ * @param provinceName 省份名称
+ * @returns {[number, number] | null} [经度, 纬度]
  */
-export function getProvinceCoordinate(provinceName) {
+export function getProvinceCoordinate(provinceName: string): [number, number] | null {
   // 处理省份名称（移除"省"、"市"、"自治区"等后缀）
   const normalizedName = provinceName
     .replace(/省|市|自治区|特别行政区|壮族|回族|维吾尔/g, '')
-  
+
   // 直接匹配
   if (provinceCoordinates[provinceName]) {
     return provinceCoordinates[provinceName]
   }
-  
+
   // 标准化后匹配
   if (provinceCoordinates[normalizedName]) {
     return provinceCoordinates[normalizedName]
   }
-  
+
   // 模糊匹配
   for (const [name, coords] of Object.entries(provinceCoordinates)) {
     if (name.includes(normalizedName) || normalizedName.includes(name)) {
       return coords
     }
   }
-  
+
   console.warn(`未找到省份坐标: ${provinceName}`)
   return null
 }
 
 /**
  * 将用户地域数据转换为散点图数据
- * @param {Array<{province: string, count: number}>} areaData 用户地域数据
- * @returns {Array<{name: string, value: Array<number|number>}>} 散点图数据
+ * @param areaData 用户地域数据数组
+ * @returns 散点图数据数组
  */
-export function convertToScatterData(areaData) {
-  return areaData
-    .map(item => {
-      const coords = getProvinceCoordinate(item.province)
-      if (coords) {
-        return {
-          name: item.province,
-          value: [...coords, item.count]
-        }
-      }
-      return null
-    })
-    .filter(Boolean)
+export function convertToScatterData(areaData: Array<{ province: string; count: number }>): Array<{ name: string; value: number[] }> {
+  const result: Array<{ name: string; value: number[] }> = []
+
+  areaData.forEach(item => {
+    const coords = getProvinceCoordinate(item.province)
+    if (coords) {
+      result.push({
+        name: item.province,
+        value: [...coords, item.count]
+      })
+    }
+  })
+
+  return result
 }
 
 export default {

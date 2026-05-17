@@ -26,7 +26,7 @@ const whiteList = ['/login', '/404', '/403']
  * 添加固定静态路由（不受动态路由通配符影响）
  * 必须在通配符路由之前注册
  */
-const addStaticRoutes = () => {
+const addStaticRoutes = (): void => {
   // 文章编辑/发布页面 + 定时任务调度日志 - 添加到 Layout 的子路由中
   router.addRoute({
     path: '/',
@@ -67,7 +67,7 @@ const addStaticRoutes = () => {
     name: 'TalkWrite',
     component: Layout,
     children: [
-      { path: '', component: () => import('@/views/talk/Talk.vue'), meta: { title: '发布说说' } }
+      { path: '', component: () => import('@/views/talk/talk.vue'), meta: { title: '发布说说' } }
     ]
   })
   router.addRoute({
@@ -75,7 +75,7 @@ const addStaticRoutes = () => {
     name: 'TalkEdit',
     component: Layout,
     children: [
-      { path: '', component: () => import('@/views/talk/Talk.vue'), meta: { title: '编辑说说' } }
+      { path: '', component: () => import('@/views/talk/talk.vue'), meta: { title: '编辑说说' } }
     ]
   })
 
@@ -105,7 +105,7 @@ let dynamicRoutesLoaded = false
  * 动态导入视图组件
  * 显式导入所有需要动态加载的组件（避免 Windows 路径问题）
  */
-const modules = {
+const modules: Record<string, () => Promise<any>> = {
   // 文章模块
   '/src/views/article/Article.vue': () => import('@/views/article/Article.vue'),
   '/src/views/article/ArticleList.vue': () => import('@/views/article/ArticleList.vue'),
@@ -145,7 +145,7 @@ const modules = {
  * 根据组件路径动态加载组件
  * @param {string} componentPath - 后端返回的组件路径
  */
-const loadView = (componentPath) => {
+const loadView = (componentPath: string | null): (() => Promise<any>) | null => {
   if (!componentPath) return null
 
   // 规范化路径：移除开头的斜杠，确保有.vue后缀
@@ -191,7 +191,7 @@ const loadView = (componentPath) => {
 /**
  * 处理菜单数据并生成路由
  */
-const processMenuData = (menus) => {
+const processMenuData = (menus: any[]): any[] => {
   return menus.map(menu => {
     const route = { ...menu }
     
@@ -235,7 +235,7 @@ const processMenuData = (menus) => {
 /**
  * 加载动态路由
  */
-const loadDynamicRoutes = async (userStore) => {
+const loadDynamicRoutes = async (userStore: any): Promise<boolean> => {
   try {
     const { data } = await request.get('/admin/user/menus')
     
@@ -246,13 +246,13 @@ const loadDynamicRoutes = async (userStore) => {
       const processedMenus = processMenuData(data.data)
       
       // 保存菜单到 store（用于侧边栏显示）
-      const menusForStore = data.data.map(menu => {
+      const menusForStore = data.data.map((menu: any) => {
         const m = { ...menu }
         if (m.icon) {
           m.icon = m.icon.replace('iconfont ', '')
         }
         if (m.children && m.children.length > 0) {
-          m.children = m.children.map(child => {
+          m.children = m.children.map((child: any) => {
             const c = { ...child }
             if (c.icon) {
               c.icon = c.icon.replace('iconfont ', '')
@@ -297,12 +297,12 @@ const loadDynamicRoutes = async (userStore) => {
 /**
  * 重置动态路由
  */
-export const resetDynamicRoutes = () => {
+export const resetDynamicRoutes = (): void => {
   dynamicRoutesLoaded = false
 }
 
 // 全局前置守卫
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to: any, from: any, next: any) => {
   NProgress.start()
 
   const userStore = useUserStore()

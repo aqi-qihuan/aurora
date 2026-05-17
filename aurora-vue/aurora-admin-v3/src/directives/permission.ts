@@ -8,7 +8,7 @@ import { permissionDirective, roleDirective } from '@/utils/auth'
  * 注册全局指令
  * @param {App} app - Vue 应用实例
  */
-export function setupDirectives(app) {
+export function setupDirectives(app: any): void {
   // 注册权限指令
   app.directive('permission', permissionDirective)
   

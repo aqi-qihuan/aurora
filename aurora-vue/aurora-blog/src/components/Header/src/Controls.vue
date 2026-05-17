@@ -302,7 +302,6 @@ export default defineComponent({
       userStore.currentUrl = route.path
       reactiveDate.loginDialogVisible = false
       if (commonStore.isMobile) {
-        //@ts-ignore
         QC.Login.showPopup({
           appId: config.qqLogin.QQ_APP_ID,
           redirectURI: config.qqLogin.QQ_REDIRECT_URI
