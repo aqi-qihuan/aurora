@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0.3-3178C6.svg)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4.19-06B6D4.svg)](https://tailwindcss.com/)
 
-Aurora Blog 是一个基于 Vue 3 + Vite 8 + Element Plus 的现代化个人博客系统，支持 Markdown 渲染、国际化、代码高亮、数学公式等丰富功能。
+> 一个基于 Vue 3 + Vite 8 + Element Plus 的现代化个人博客系统，支持 Markdown 渲染、国际化、代码高亮、数学公式等丰富功能。
 
 ## ✨ 特性
 
@@ -21,65 +21,21 @@ Aurora Blog 是一个基于 Vue 3 + Vite 8 + Element Plus 的现代化个人博�
 - 💬 **评论系统** - 完整的文章评论和回复功能
 - 🏷️ **标签归档** - 文章分类、标签、归档功能
 
-## 🛠️ 技术栈
+## 🚀 快速开始
 
-### 核心框架
-- **Vue 3.5.34** - 渐进式 JavaScript 框架
-- **Vite 8.0.12** - 下一代前端构建工具（基于 Rolldown）
-- **TypeScript 6.0.3** - 类型安全的 JavaScript 超集
-
-### UI 组件
-- **Element Plus 2.14.0** - Vue 3 组件库
-- **Tailwind CSS 3.4.19** - 实用优先的 CSS 框架
-- **@element-plus/icons-vue 2.3.2** - Element Plus 图标集
-
-### 状态管理
-- **Pinia 3.0.4** - Vue 3 官方状态管理
-- **pinia-plugin-persistedstate 4.7.1** - 状态持久化插件
-
-### 路由
-- **Vue Router 5.0.6** - Vue 3 官方路由
-
-### Markdown 支持
-- **markdown-it 14.1.1** - Markdown 解析器
-- **markdown-it-mermaid 1.1.0** - Mermaid 图表支持
-- **markdown-it-katex 4.0.1** - KaTeX 数学公式
-- **markdown-it-emoji 3.0.0** - Emoji 表情
-- **markdown-it-container 4.0.0** - 自定义容器
-- **markdown-it-footnote 4.0.0** - 脚注
-- **markdown-it-abbr 2.0.0** - 缩写
-- **markdown-it-ins 4.0.0** - 插入线
-- **markdown-it-mark 4.0.0** - 标记
-- **markdown-it-sub 2.0.0** - 下标
-- **markdown-it-sup 2.0.0** - 上标
-- **mavon-editor 3.0.1** - Markdown 编辑器
-
-### 代码高亮
-- **Prism.js 1.30.0** - 代码语法高亮
-- **vite-plugin-prismjs 0.0.11** - Vite Prism 集成
-
-### 其他功能
-- **Axios 1.15.1** - HTTP 客户端
-- **vue-i18n 11.4.2** - 国际化
-- **tocbot 4.36.6** - 文章目录生成
-- **nprogress 0.2.0** - 页面加载进度条
-- **vue3-img-preview 1.1.16** - 图片预览
-- **vue-avatar-cropper 6.1.1** - 头像裁剪
-- **vue3-lazy 1.0.0-alpha.1** - 图片懒加载
-- **vue3-infinite-scroll-better 2.2.0** - 无限滚动
-- **vue3-click-away 1.2.4** - 点击外部指令
-
-## 📦 安装
-
-### 环境要求
+### 前置条件
 
 - **Node.js** >= 22.0.0（推荐 v24.15.0）
 - **npm** >= 9.0.0
+- **Git**
+- **Aurora 后端服务**（需要 `aurora-go` 或 `aurora-springboot` 后端运行）
 
-### 使用 nvm 管理 Node.js 版本（推荐）
+### 完整安装步骤
+
+#### 1. 安装 Node.js（使用 nvm 管理版本 - 推荐）
 
 ```bash
-# 安装 nvm (Windows)
+# Windows 安装 nvm
 # 下载并安装 nvm-windows: https://github.com/coreybutler/nvm-windows/releases
 
 # 安装 Node.js v24.15.0
@@ -93,14 +49,15 @@ node -v  # v24.15.0
 npm -v   # 对应版本
 ```
 
-### 克隆项目
+#### 2. 克隆项目
 
 ```bash
-git clone https://github.com/nicepkg/aurora.git
+# 克隆主仓库
+git clone https://github.com/nicenkg/aurora.git
 cd aurora/aurora-vue/aurora-blog
 ```
 
-### 安装依赖
+#### 3. 安装依赖
 
 ```bash
 # 使用 npm 安装
@@ -110,15 +67,64 @@ npm install
 pnpm install
 ```
 
-#### 注意事项
+**⚠️ 注意事项：**
 
 1. **Postinstall 脚本**: 项目包含 `patch-cytoscape.js` 脚本，会在 `npm install` 后自动运行，用于修复 Cytoscape.js 在 Vite 8 中的兼容性问题。
 
 2. **可选依赖**: `@rolldown/binding-win32-x64-msvc` 是 Vite 8 (Rolldown) 的 native binding，Windows 系统会自动安装。
 
-## 🚀 使用
+#### 4. 配置环境变量
 
-### 开发模式
+创建 `.env.local` 文件（不要提交到 Git）：
+
+```bash
+# 复制示例文件（如果有的话）
+cp .env.example .env.local
+
+# 或手动创建 .env.local
+```
+
+**.env.local 配置示例：**
+
+```ini
+# API 基础路径（后端服务地址）
+VITE_AURORA_PATH=http://localhost:8080
+
+# 网站标题
+VITE_SITE_TITLE=Aurora Blog
+
+# 其他配置...
+```
+
+**环境变量说明：**
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `VITE_AURORA_PATH` | 后端 API 地址 | `http://localhost:8080` |
+| `VITE_SITE_TITLE` | 网站标题 | `Aurora Blog` |
+
+#### 5. 启动后端服务
+
+Aurora Blog 需要后端服务支持。你可以选择：
+
+- **aurora-go** (推荐)：https://github.com/nicenkg/aurora-go
+- **aurora-springboot**：https://github.com/nicenkg/aurora
+
+按照后端项目的 README 启动服务。
+
+**快速启动后端（以 aurora-go 为例）：**
+
+```bash
+# 克隆后端项目
+git clone https://github.com/nicenkg/aurora-go.git
+cd aurora-go
+
+# 配置 config.yaml
+# 启动服务
+go run main.go
+```
+
+#### 6. 启动开发服务器
 
 ```bash
 npm run dev
@@ -126,7 +132,19 @@ npm run dev
 
 启动后访问: http://localhost:5173
 
-### 生产构建
+## 📦 使用指南
+
+### 基础命令
+
+#### 开发模式
+
+```bash
+npm run dev
+```
+
+启动后访问: http://localhost:5173
+
+#### 生产构建
 
 ```bash
 npm run build
@@ -134,19 +152,209 @@ npm run build
 
 构建产物将输出到 `dist/` 目录。
 
-### 预览生产构建
+#### 预览生产构建
 
 ```bash
 npm run preview
 ```
 
-### 部署
+#### 部署
 
 ```bash
 npm run deploy
 ```
 
-使用 `deploy.js` 脚本进行自动化部署。
+使用 `deploy.js` 脚本进行自动化部署（需要配置 `.env.local` 中的服务器信息）。
+
+### 实际使用示例
+
+#### 1. 配置博客信息
+
+编辑 `src/config/` 目录下的配置文件：
+
+```typescript
+// src/config/site.ts
+export const siteConfig = {
+  title: '我的博客',
+  description: '基于 Aurora 的个人博客',
+  author: 'Your Name',
+  logo: '/logo.png',
+  // ... 更多配置
+}
+```
+
+#### 2. 写文章（Markdown 示例）
+
+在后端管理面板中创建文章，Markdown 内容支持以下扩展：
+
+````markdown
+# 文章标题
+
+## Mermaid 图表
+
+```mermaid
+graph TD
+    A[开始] --> B{判断条件}
+    B -->|是| C[执行操作]
+    B -->|否| D[结束]
+```
+
+## 数学公式
+
+行内公式：$E = mc^2$
+
+块级公式：
+$$
+\frac{d}{dx}\left( \int_{a}^{x} f(t) dt \right) = f(x)
+$$
+
+## Emoji
+
+:smile: :heart: :thumbsup:
+
+## 自定义容器
+
+::: info
+这是一个信息提示
+:::
+
+::: warning
+这是一个警告
+:::
+
+::: danger
+这是一个危险提示
+:::
+
+## 代码高亮
+
+```javascript
+const greeting = 'Hello, World!';
+console.log(greeting);
+```
+
+## 脚注
+
+这是一个脚注示例[^1]。
+
+[^1]: 这是脚注的内容。
+````
+
+#### 3. 自定义主题
+
+编辑 `src/styles/` 目录下的样式文件，或修改 `tailwind.config.cjs` 自定义主题色：
+
+```javascript
+// tailwind.config.cjs
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        // 自定义颜色
+        primary: '#your-color',
+        secondary: '#your-secondary-color',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      }
+    }
+  }
+}
+```
+
+#### 4. 配置国际化
+
+编辑 `src/locales/` 目录下的语言文件：
+
+```json
+// src/locales/zh-CN.json
+{
+  "home": "首页",
+  "articles": "文章",
+  "archives": "归档",
+  "tags": "标签",
+  "about": "关于"
+}
+```
+
+```json
+// src/locales/en.json
+{
+  "home": "Home",
+  "articles": "Articles",
+  "archives": "Archives",
+  "tags": "Tags",
+  "about": "About"
+}
+```
+
+#### 5. 添加自定义页面
+
+1. 在 `src/views/` 创建 Vue 组件：
+
+```vue
+<!-- src/views/CustomPage.vue -->
+<template>
+  <div class="custom-page">
+    <h1>自定义页面</h1>
+    <p>这是一个自定义页面</p>
+  </div>
+</template>
+
+<script setup>
+// 页面逻辑
+</script>
+
+<style scoped>
+.custom-page {
+  padding: 2rem;
+}
+</style>
+```
+
+2. 在 `src/router/index.ts` 添加路由：
+
+```typescript
+// src/router/index.ts
+const routes = [
+  // ... 其他路由
+  {
+    path: '/custom',
+    name: 'CustomPage',
+    component: () => import('@/views/CustomPage.vue')
+  }
+]
+```
+
+#### 6. 使用 API 接口
+
+在 `src/api/` 创建 API 文件：
+
+```typescript
+// src/api/custom.ts
+import request from '@/utils/request'
+
+export const customAPI = {
+  // 获取自定义数据
+  getCustomData: () => request.get('/api/custom'),
+  
+  // 创建自定义数据
+  createCustomData: (data: any) => request.post('/api/custom', data)
+}
+```
+
+在组件中使用：
+
+```vue
+<script setup>
+import { customAPI } from '@/api/custom'
+
+const fetchData = async () => {
+  const { data } = await customAPI.getCustomData()
+  console.log(data)
+}
+</script>
+```
 
 ## 📁 项目结构
 
@@ -222,7 +430,7 @@ TypeScript 6.0.3 配置位于 `tsconfig.json`，支持：
 
 - Vue 3 类型检查
 - 严格模式
-- 路径别名配置
+- 路径别名配置（`@/` 映射到 `src/`）
 
 ### Tailwind CSS 配置
 
@@ -318,7 +526,7 @@ Tailwind CSS 3.4.19 配置位于 `tailwind.config.cjs`，可自定义主题、�
 2. **创建特性分支**
 
    ```bash
-   git checkout -b feature/AmazingFeature
+   git checkout -b feature/amazing-feature
    ```
 
 3. **提交更改**
@@ -330,7 +538,7 @@ Tailwind CSS 3.4.19 配置位于 `tailwind.config.cjs`，可自定义主题、�
 4. **推送到分支**
 
    ```bash
-   git push origin feature/AmazingFeature
+   git push origin feature/amazing-feature
    ```
 
 5. **打开 Pull Request**
@@ -460,6 +668,168 @@ Closes #123
 - **TypeScript 6.0.3** - 最新 TypeScript 版本
 - **依赖全面升级** - 所有依赖升级到最新版本
 
+## 🔧 故障排查
+
+### Node.js 版本问题
+
+**问题**: `npm install` 或 `npm run dev` 失败，报错版本不兼容。
+
+**解决方案**:
+```bash
+# 检查 Node.js 版本
+node -v
+
+# 如果版本低于 22.0.0，使用 nvm 安装推荐版本
+nvm install 24.15.0
+nvm use 24.15.0
+```
+
+### 依赖安装失败
+
+**问题**: `npm install` 报错 `ETIMEDOUT` 或 `ENETUNREACH`。
+
+**解决方案**:
+```bash
+# 使用国内镜像
+npm install --registry=https://registry.npmmirror.com
+
+# 或使用 pnpm
+pnpm install
+```
+
+### 后端 API 连接失败
+
+**问题**: 前端启动后，API 请求失败，控制台报错 `ECONNREFUSED` 或 `404`。
+
+**解决方案**:
+1. 确认后端服务已启动（aurora-go 或 aurora-springboot）
+2. 检查 `.env.local` 中的 `VITE_AURORA_PATH` 是否正确
+3. 检查 Vite 开发服务器代理配置（`vite.config.ts` 中的 `server.proxy`）
+
+```bash
+# 测试后端 API 是否可访问
+curl http://localhost:8080/api/articles/topAndFeatured
+```
+
+### TypeScript 类型错误
+
+**问题**: 运行 `npm run build` 时 TypeScript 类型检查失败。
+
+**解决方案**:
+```bash
+# 查看具体错误
+npx vue-tsc --noEmit
+
+# 临时跳过类型检查（不推荐）
+# 修改 vite.config.ts，设置 ignoreBuildErrors: true
+```
+
+### 图片预览不工作
+
+**问题**: 文章中的图片无法点击预览。
+
+**原因**: 图片点击事件监听器未正确绑定。
+
+**解决方案**: 检查 `Article.vue` 中的 `addImageClickListeners()` 函数是否正确执行。
+
+### 国际化不工作
+
+**问题**: 切换语言后，页面文字没有更新。
+
+**解决方案**:
+1. 检查 `src/locales/` 目录下是否有对应的语言文件
+2. 检查 `vue-i18n` 配置是否正确
+3. 确保组件中使用 `$t()` 或 `t()` 函数
+
+```vue
+<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+console.log(t('home'))  // 调试输出
+</script>
+```
+
+### 构建产物过大
+
+**问题**: `npm run build` 后 `dist/` 目录体积过大。
+
+**解决方案**:
+1. 检查 `vite.config.ts` 中的 `build.rollupOptions.output.manualChunks` 配置
+2. 使用 `vite-plugin-compression` 开启 Gzip 压缩
+3. 检查是否有未使用的依赖被打包
+
+```bash
+# 分析打包体积
+npm install -D rollup-plugin-visualizer
+# 然后在 vite.config.ts 中配置 visualizer 插件
+```
+
+---
+
+## 💡 常见问题 (FAQ)
+
+### Q: 如何自定义主题颜色？
+
+**A**: 编辑 `tailwind.config.cjs`，在 `theme.extend.colors` 中添加自定义颜色：
+
+```javascript
+// tailwind.config.cjs
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: '#your-color',
+        secondary: '#your-secondary-color',
+      }
+    }
+  }
+}
+```
+
+### Q: 如何添加新的页面？
+
+**A**: 3 步完成：
+
+1. 在 `src/views/` 创建 Vue 组件
+2. 在 `src/router/index.ts` 添加路由
+3. 如果需要，在后端添加对应的 API 接口
+
+### Q: 如何修改网站标题和 Logo？
+
+**A**: 编辑 `src/config/site.ts`（或类似配置文件），修改 `title`、`logo` 等字段。
+
+### Q: 如何部署到生产环境？
+
+**A**: 参考 [使用指南 - 部署](#部署) 部分，或使用 `deploy.js` 脚本：
+
+```bash
+# 配置 .env.local 中的服务器信息
+npm run deploy
+```
+
+### Q: 为什么我的 Markdown 公式不渲染？
+
+**A**: 确保：
+1. 后端返回的文章内容包含正确的 KaTeX 语法（`$inline$` 或 `$$block$$`）
+2. 前端已安装并配置 `markdown-it-katex` 插件
+3. 已引入 KaTeX CSS 样式
+
+### Q: 如何优化网站性能？
+
+**A**: 参考以下建议：
+1. 开启图片懒加载（已内置）
+2. 使用路由懒加载（`() => import('@/views/...')`）
+3. 开启 Gzip 压缩（`vite-plugin-compression`）
+4. 使用 CDN 加速静态资源
+5. 优化图片大小（使用 `image-conversion` 压缩）
+
+### Q: 如何贡献代码？
+
+**A**: 参考 [贡献指南](#-贡献指南) 部分，遵循 Conventional Commits 规范提交 PR。
+
+---
+
 ## 📄 开源协议
 
 本项目采用 MIT 协议开源 - 查看 [LICENSE](LICENSE) 文件了解详情。
@@ -478,7 +848,7 @@ Closes #123
 - **作者**: 七七
 - **QQ**: 2316364297
 - **网站**: https://www.aqi125.cn
-- **GitHub**: [aqi-qihuan/aurora: 基于SpringBoot4.1.X+Vue3开发的个人博客系统](https://github.com/aqi-qihuan/aurora))
+- **GitHub**: [aqi-qihuan/aurora: 基于SpringBoot4.1.X+Vue3开发的个人博客系统](https://github.com/aqi-qihuan/aurora)
 
 ---
 

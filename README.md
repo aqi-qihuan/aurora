@@ -186,6 +186,203 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 
 ---
 
+## 🎨 前端架构
+
+Aurora 采用 **前后端分离** 架构，前端包含两个独立项目：
+
+### 项目结构
+
+| 项目 | 用途 | 技术栈 | 端口 |
+|:-----|:-----|:-------|:-----|
+| `aurora-blog` | 用户端博客 | Vue 3 + Vite 8 + Element Plus + Tailwind CSS | 5173 |
+| `aurora-admin-v3` | 管理端后台 | Vue 3 + Vite 8 + Element Plus + ECharts | 8080 |
+
+### 前端通信机制
+
+```
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│  aurora-blog │────▶│  Nginx      │────▶│  Spring Boot │
+│  (用户端)    │      │  (反向代理)  │      │  / Go       │
+└─────────────┘      └─────────────┘      └─────────────┘
+                         │
+┌─────────────┐      ┌─────────────┐      │
+│ aurora-admin │────▶│  Nginx      │─────┘
+│  (管理端)    │      │  (反向代理)  │
+└─────────────┘      └─────────────┘
+```
+
+### 状态管理 (Pinia)
+
+两个前端项目都使用 **Pinia** 进行状态管理：
+
+| Store | 用途 | 持久化 |
+|:------|:-----|:---------|
+| `useAppStore` | 应用全局状态（主题、侧边栏、语言） | ✅ |
+| `useUserStore` | 用户状态（登录信息、权限） | ✅ |
+| `useCommentStore` | 评论状态（类型、分页） | ❌ |
+
+**持久化配置** (`pinia-plugin-persistedstate`):
+```typescript
+// stores/app.ts
+export const useAppStore = defineStore('app', {
+  state: () => ({
+    sidebarOpen: true,
+    theme: 'light',
+    locale: 'zh-CN'
+  }),
+  persist: {
+    storage: sessionStorage,  // 或 localStorage
+  }
+})
+```
+
+### 路由系统 (Vue Router)
+
+**路由守卫** (`src/router/guard/`):
+- `authGuard.ts` - 登录状态检查
+- `permissionGuard.ts` - 权限检查（管理端）
+- `progressGuard.ts` - 页面加载进度条
+
+**动态路由** (仅管理端):
+```typescript
+// src/router/modules/dynamicRoutes.ts
+// 根据用户权限动态生成路由
+export const generateDynamicRoutes = (permissions: string[]) => {
+  // 根据权限过滤路由
+}
+```
+
+### API 集成模式
+
+两个项目都使用统一的 API 封装模式：
+
+```typescript
+// src/utils/request.ts
+import axios from 'axios'
+
+const request = axios.create({
+  baseURL: import.meta.env.VITE_AURORA_PATH,
+  timeout: 10000
+})
+
+// 请求拦截器
+request.interceptors.request.use(config => {
+  const token = sessionStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// 响应拦截器
+request.interceptors.response.use(
+  response => response.data,
+  error => {
+    // 统一错误处理
+    return Promise.reject(error)
+  }
+)
+
+export default request
+```
+
+**API 文件示例**:
+```typescript
+// src/api/article.ts
+import request from '@/utils/request'
+
+export const articleAPI = {
+  getList: (params: any) => request.get('/api/articles', { params }),
+  getById: (id: string) => request.get(`/api/articles/${id}`),
+  create: (data: any) => request.post('/api/admin/articles', data),
+  update: (id: string, data: any) => request.put(`/api/admin/articles/${id}`, data),
+  delete: (id: string) => request.delete(`/api/admin/articles/${id}`)
+}
+```
+
+### 组件通信
+
+**事件总线** (`mitt`):
+```typescript
+// src/utils/emitter.ts
+import mitt from 'mitt'
+
+export const emitter = mitt()
+```
+
+**使用示例**:
+```vue
+<!-- 组件 A: 触发事件 -->
+<script setup>
+import { emitter } from '@/utils/emitter'
+
+const handleClick = () => {
+  emitter.emit('article-password-verified')
+}
+</script>
+
+<!-- 组件 B: 监听事件 -->
+<script setup>
+import { emitter } from '@/utils/emitter'
+import { onMounted, onUnmounted } from 'vue'
+
+const handleVerified = () => {
+  // 重新获取文章
+}
+
+onMounted(() => {
+  emitter.on('article-password-verified', handleVerified)
+})
+
+onUnmounted(() => {
+  emitter.off('article-password-verified', handleVerified)
+})
+</script>
+```
+
+### 构建与部署
+
+**开发模式**:
+```bash
+# aurora-blog
+cd aurora-vue/aurora-blog
+npm run dev  # http://localhost:5173
+
+# aurora-admin-v3
+cd aurora-vue/aurora-admin-v3
+npm run dev  # http://localhost:8080
+```
+
+**生产构建**:
+```bash
+# 构建
+npm run build
+
+# 产物在 dist/ 目录
+# 使用 Nginx 部署
+```
+
+**Docker 部署**:
+```dockerfile
+# Dockerfile 示例
+FROM nginx:alpine
+
+COPY dist/ /usr/share/nginx/html
+
+COPY nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### 前端详细文档
+
+- **aurora-blog 详细文档**: [aurora-vue/aurora-blog/README.md](../aurora-vue/aurora-blog/README.md)
+- **aurora-admin-v3 详细文档**: [aurora-vue/aurora-admin-v3/README.md](../aurora-vue/aurora-admin-v3/README.md)
+
+---
+
 ## 📋 功能模块
 
 ### 🏠 前台功能
@@ -1042,7 +1239,7 @@ Relates to #456
        log.error("获取用户失败", e);
        throw e;
    }
-
+   
    // ❌ 错误: 忽略异常
    try {
        return userRepository.findById(userId).get();
@@ -1063,7 +1260,7 @@ Relates to #456
    type UserService interface {}
    func GetUserByID(id int64) (*User, error) {}
    var userCount int
-
+   
    // ❌ 错误示例
    type userService interface {}
    func getuserbyid(id int64) (*User, error) {}
@@ -1077,7 +1274,7 @@ Relates to #456
    if err != nil {
        return nil, fmt.Errorf("failed to get user: %w", err)
    }
-
+   
    // ❌ 错误: 忽略错误
    user, _ := userService.GetUserByID(ctx, userID)
    ```
@@ -1088,11 +1285,11 @@ Relates to #456
    ```vue
    <script setup lang="ts">
    import { ref, computed } from 'vue'
-
+   
    // ✅ 使用 ref/reactive 管理状态
    const count = ref(0)
    const doubled = computed(() => count.value * 2)
-
+   
    // ✅ 使用 async/await
    const fetchData = async () => {
      loading.value = true
@@ -1115,7 +1312,7 @@ Relates to #456
      content: string
      createTime: string
    }
-
+   
    // ✅ 使用类型提示
    const articles = ref<Article[]>([])
    ```
@@ -1218,6 +1415,5 @@ Fixes #456
 
 <div align="center">
 
-[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
 
 </div>
