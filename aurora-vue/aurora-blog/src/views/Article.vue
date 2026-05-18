@@ -206,7 +206,7 @@ export default defineComponent({
     })
     commentStore.type = 1
     onMounted(() => {
-      reactiveData.articleId = route.params.articleId
+      reactiveData.articleId = String(route.params.articleId)
       toPageTop()
       fetchArticle()
       fetchComments()
@@ -227,7 +227,7 @@ export default defineComponent({
       reactiveData.images = []
       reactiveData.preArticleCard = ''
       reactiveData.nextArticleCard = ''
-      reactiveData.articleId = to.params.articleId
+      reactiveData.articleId = String(to.params.articleId)
       pageInfo.current = 1
       reactiveData.isReload = true
       toPageTop()

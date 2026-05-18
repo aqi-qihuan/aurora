@@ -340,13 +340,13 @@ export default defineComponent({
       }
       api
         .accessArticle({
-          articleId: reactiveDate.articleId,
+          articleId: String(reactiveDate.articleId),
           articlePassword: reactiveDate.articlePassword
         })
         .then(({ data }) => {
           if (data.flag) {
             reactiveDate.articlePasswordDialogVisible = false
-            userStore.accessArticles.push(reactiveDate.articleId)
+            userStore.accessArticles.push(String(reactiveDate.articleId))
             // 触发事件让 Article.vue 重新获取文章
             emitter.emit('articlePasswordVerified')
           }

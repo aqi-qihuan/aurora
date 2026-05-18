@@ -127,7 +127,7 @@ export default defineComponent({
             type: 'warning'
           })
         } else {
-          emitter.emit('changeArticlePasswordDialogVisible', article.id)
+          emitter.emit('changeArticlePasswordDialogVisible', String(article.id))
         }
       } else {
         router.push({ path: '/articles/' + article.id })
