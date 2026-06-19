@@ -1,0 +1,82 @@
+{
+  "menu": {
+    "home": "ホーム",
+    "about": "について",
+    "archives": "アーカイブ",
+    "categories": "カテゴリ",
+    "tags": "タグ",
+    "post": "記事",
+    "talks": "つぶやき",
+    "message": "メッセージ",
+    "friends": "友達",
+    "album": "アルバム",
+    "search": "検索結果",
+    "not-found": "ページが見つかりません"
+  },
+  "home": {
+    "recommended": "おすすめ記事"
+  },
+  "titles": {
+    "articles": "記事一覧",
+    "talks": "つぶやき",
+    "about": "について",
+    "category_list": "カテゴリ一覧",
+    "tag_list": "タグ一覧",
+    "message": "メッセージ",
+    "friends": "友達",
+    "toc": "目次",
+    "comment": "コメント",
+    "recent_comment": "最近のコメント",
+    "website_info": "サイト情報",
+    "notice": "お知らせ"
+  },
+  "settings": {
+    "months": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+    "articles": "記事",
+    "talks": "つぶやき",
+    "categories": "カテゴリ",
+    "tags": "タグ",
+    "words": "文字",
+    "visitor_count": "総訪問者数",
+    "visit_count": "総閲覧数",
+    "button-all": "すべて",
+    "paginator": {
+      "newer": "新しい",
+      "older": "過去",
+      "pre": "前の記事",
+      "next": "次の記事"
+    },
+    "more-tags": "もっと見る",
+    "admin-user": "管理者",
+    "shared-on": "公開日",
+    "recently-search": "最近の検索",
+    "search-result": "[total] 件見つかりました",
+    "no-recent-search": "最近の検索履歴はありません。",
+    "no-search-result": "結果が見つかりませんでした。",
+    "cmd-to-select": "選択",
+    "cmd-to-navigate": "移動",
+    "cmd-to-close": "閉じる",
+    "searched-by": "検索エンジン",
+    "tips-back-to-top": "トップに戻る",
+    "tips-open-menu": "メニューを開く",
+    "tips-back-to-home": "ホームに戻る",
+    "tips-open-search": "検索を開く",
+    "default-category": "記事",
+    "default-tag": "未分類",
+    "empty-tag": "タグがありません",
+    "pinned": "ピン留め",
+    "featured": "おすすめ",
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "personal-center": "マイページ",
+    "running-time": "稼働時間",
+    "view-count": "閲覧数"
+  },
+  "copyright": {
+    "title": "著作権情報",
+    "author": "著者",
+    "link": "記事リンク",
+    "license": "ライセンス",
+    "default_license": "この記事の著作権は著者に帰属します。転載は歓迎しますが、著者の同意なしに元のリンクを記載してください。そうでない場合、法的責任を追及する場合があります。"
+  }
+}

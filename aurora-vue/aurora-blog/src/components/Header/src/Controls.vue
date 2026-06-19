@@ -8,10 +8,12 @@
         <svg-icon icon-class="globe" />
         <span v-if="locale === 'cn' || locale === 'zh-CN'">中文</span>
         <span v-if="locale === 'en'">EN</span>
+        <span v-if="locale === 'ja'">JP</span>
       </span>
       <DropdownMenu>
         <DropdownItem name="en">English</DropdownItem>
         <DropdownItem name="cn">中文</DropdownItem>
+        <DropdownItem name="ja">日本語</DropdownItem>
       </DropdownMenu>
     </Dropdown>
     <template v-if="userInfo === ''">

@@ -9,7 +9,8 @@ export default {
       path: '/',
       i18n: {
         cn: '首页',
-        en: 'Home'
+        en: 'Home',
+        ja: 'ホーム'
       },
       children: []
     },
@@ -18,7 +19,8 @@ export default {
       path: '/talks',
       i18n: {
         cn: '说说',
-        en: 'talks'
+        en: 'talks',
+        ja: 'つぶやき'
       },
       children: []
     },
@@ -27,7 +29,8 @@ export default {
       path: '/about',
       i18n: {
         cn: '关于',
-        en: 'About'
+        en: 'About',
+        ja: 'について'
       },
       children: []
     },
@@ -36,7 +39,8 @@ export default {
       path: '/archives',
       i18n: {
         cn: '归档',
-        en: 'Archives'
+        en: 'Archives',
+        ja: 'アーカイブ'
       },
       children: []
     },
@@ -45,7 +49,8 @@ export default {
       path: '/tags',
       i18n: {
         cn: '标签',
-        en: 'Tags'
+        en: 'Tags',
+        ja: 'タグ'
       },
       children: []
     },
@@ -54,7 +59,8 @@ export default {
       path: '/message',
       i18n: {
         cn: '留言',
-        en: 'Message'
+        en: 'Message',
+        ja: 'メッセージ'
       },
       children: []
     },
@@ -63,7 +69,8 @@ export default {
       path: '/friends',
       i18n: {
         cn: '友链',
-        en: 'Friends'
+        en: 'Friends',
+        ja: '友達'
       },
       children: []
     }

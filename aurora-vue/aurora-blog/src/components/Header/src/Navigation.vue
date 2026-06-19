@@ -16,6 +16,9 @@
           <span class="relative z-50" v-else-if="locale === 'en' && route.i18n.en">
             {{ route.i18n.en }}
           </span>
+          <span class="relative z-50" v-else-if="locale === 'ja' && route.i18n.ja">
+            {{ route.i18n.ja }}
+          </span>
           <span class="relative z-50" v-else>{{ route.name }}</span>
         </div>
         <Dropdown
@@ -29,6 +32,9 @@
           <span class="relative z-50" v-else-if="locale === 'en' && route.i18n.en">
             {{ route.i18n.en }}
           </span>
+          <span class="relative z-50" v-else-if="locale === 'ja' && route.i18n.ja">
+            {{ route.i18n.ja }}
+          </span>
           <span class="relative z-50" v-else>{{ route.name }}</span>
           <DropdownMenu>
             <DropdownItem v-for="sub in route.children" :key="sub.path" :name="sub.path">
@@ -37,6 +43,9 @@
               </span>
               <span class="relative z-50" v-else-if="locale === 'en' && sub.i18n.en">
                 {{ sub.i18n.en }}
+              </span>
+              <span class="relative z-50" v-else-if="locale === 'ja' && sub.i18n.ja">
+                {{ sub.i18n.ja }}
               </span>
               <span class="relative z-50" v-else>{{ sub.name }}</span>
             </DropdownItem>
@@ -49,6 +58,7 @@
         <Dropdown hover class="nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase transition-all duration-200 ease-out">
           <span class="relative z-50" v-if="locale === 'cn'"> 相册 </span>
           <span class="relative z-50" v-else-if="locale === 'en'"> PhotoAlbums </span>
+          <span class="relative z-50" v-else-if="locale === 'ja'"> アルバム </span>
           <DropdownMenu>
             <template v-for="item in albums" :key="item.id">
               <DropdownItem @click="pushPage(`/photos/${item.id}`)" :name="item.albumName">

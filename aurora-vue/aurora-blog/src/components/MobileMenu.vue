@@ -57,6 +57,9 @@
         <span class="relative z-50" v-else-if="locale === 'en' && route.i18n.en">
           {{ route.i18n.en }}
         </span>
+        <span class="relative z-50" v-else-if="locale === 'ja' && route.i18n.ja">
+          {{ route.i18n.ja }}
+        </span>
         <span class="relative z-50" v-else>{{ route.name }}</span>
       </div>
       <Dropdown
@@ -69,6 +72,9 @@
         <span class="relative z-50" v-else-if="locale === 'en' && route.i18n.en">
           {{ route.i18n.en }}
         </span>
+        <span class="relative z-50" v-else-if="locale === 'ja' && route.i18n.ja">
+          {{ route.i18n.ja }}
+        </span>
         <span class="relative z-50" v-else>{{ route.name }}</span>
         <DropdownMenu expand>
           <DropdownItem v-for="sub in route.children" :key="sub.path" :name="sub.path">
@@ -77,6 +83,9 @@
             </span>
             <span class="relative z-50" v-else-if="locale === 'en' && sub.i18n.en">
               {{ sub.i18n.en }}
+            </span>
+            <span class="relative z-50" v-else-if="locale === 'ja' && sub.i18n.ja">
+              {{ sub.i18n.ja }}
             </span>
             <span class="relative z-50" v-else>{{ sub.name }}</span>
           </DropdownItem>
@@ -88,6 +97,7 @@
         class="flex flex-col justify-center items-center nav-link text-sm block px-1.5 py-0.5 rounded-md relative uppercase">
         <span class="relative z-50" v-if="locale === 'cn'"> 相册 </span>
         <span class="relative z-50" v-else-if="locale === 'en'"> PhotoAlbums </span>
+        <span class="relative z-50" v-else-if="locale === 'ja'"> アルバム </span>
         <DropdownMenu expand>
           <template v-for="item in albums" :key="item.id">
             <DropdownItem @click="pushPage(`/photos/${item.id}`)" :name="item.albumName">
@@ -96,6 +106,28 @@
           </template>
         </DropdownMenu>
       </Dropdown>
+    </li>
+    <li class="mt-4 pt-4 border-t border-ob-dim/10 w-full">
+      <div class="flex justify-center items-center gap-4">
+        <button
+          class="lang-btn"
+          :class="{ active: locale === 'cn' || locale === 'zh-CN' }"
+          @click="changeLocale('cn')">
+          中文
+        </button>
+        <button
+          class="lang-btn"
+          :class="{ active: locale === 'en' }"
+          @click="changeLocale('en')">
+          EN
+        </button>
+        <button
+          class="lang-btn"
+          :class="{ active: locale === 'ja' }"
+          @click="changeLocale('ja')">
+          日本語
+        </button>
+      </div>
     </li>
   </ul>
 </template>
@@ -202,6 +234,10 @@ export default defineComponent({
       target.style.opacity = '1'
     }
     
+    const changeLocale = (lang: string): void => {
+      appStore.changeLocale(lang)
+    }
+    
     return {
       ...toRefs(reactiveData),
       themeConfig: computed(() => appStore.themeConfig),
@@ -216,6 +252,7 @@ export default defineComponent({
       tagCount: computed(() => appStore.tagCount),
       t,
       locale,
+      changeLocale,
       handleTouchStart,
       handleTouchMove,
       handleTouchEnd,
@@ -304,6 +341,34 @@ ul {
     &:active {
       transform: scale(0.95);
     }
+  }
+}
+
+// 语言切换按钮
+.lang-btn {
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--text-dim);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
+  &.active {
+    opacity: 1;
+    color: #fff;
+    background: var(--text-accent);
+    border-color: var(--text-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: scale(0.95);
   }
 }
 </style>
