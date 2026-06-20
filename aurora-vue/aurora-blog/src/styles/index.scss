@@ -32,27 +32,16 @@ html::-webkit-scrollbar {
   height: 12px;
 }
 
-html::-webkit-scrollbar-thumb {
-  background: #434343;
-  border-radius: 16px;
-  box-shadow: inset 2px 2px 2px rgba(100, 100, 100, 0.25), inset -2px -2px 2px rgba(0, 0, 0, 0.25);
-}
+html::-webkit-scrollbar-thumb { background: rgba(200, 170, 110, 0.4); border-radius: 10px; box-shadow: inset 1px 1px 1px rgba(200, 170, 110, 0.3), inset -1px -1px 1px rgba(0, 0, 0, 0.3); }
 
-html::-webkit-scrollbar-track {
-  border: none;
-  background: linear-gradient(90deg, #434343, #434343 1px, #111 0, #111);
-}
+html::-webkit-scrollbar-track { border: none; background: transparent; }
 
 div::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-div::-webkit-scrollbar-thumb {
-  background: #434343;
-  border-radius: 16px;
-  box-shadow: inset 2px 2px 2px rgba(100, 100, 100, 0.25), inset -2px -2px 2px rgba(0, 0, 0, 0.25);
-}
+div::-webkit-scrollbar-thumb { background: rgba(200, 170, 110, 0.3); border-radius: 8px; }
 
 div::-webkit-scrollbar-track {
   border: none;

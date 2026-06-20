@@ -221,9 +221,15 @@ export default defineComponent({
 }
 .el-drawer {
   background-color: var(--background-primary) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 .el-dialog {
-  background-color: var(--background-primary) !important;
+  background-color: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 1rem !important;
 }
 body {
   background: var(--background-primary-alt);
@@ -235,7 +241,7 @@ body {
 
 #app {
   @apply relative min-w-full min-h-screen h-full;
-  font-family: Rubik, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   .app-wrapper {
     @apply bg-ob-deep-900 min-w-full h-full pb-12;
     transition-property: transform, border-radius;

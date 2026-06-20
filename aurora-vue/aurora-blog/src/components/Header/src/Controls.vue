@@ -387,6 +387,11 @@ export default defineComponent({
 .auth-dialog .el-dialog {
   border-radius: 1rem !important;
   overflow: hidden;
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.4) !important;
 }
 
 .auth-dialog .el-dialog__header {
@@ -402,7 +407,8 @@ export default defineComponent({
 }
 
 .el-input-group__append {
-  background-color: var(--background-primary-alt) !important;
+  background-color: var(--background-primary) !important;
+  border: 1px solid var(--glass-border) !important;
 }
 
 .el-form-item__label {
@@ -413,15 +419,15 @@ export default defineComponent({
 
 .el-input__inner {
   color: var(--text-normal) !important;
-  background-color: var(--background-primary-alt) !important;
+  background-color: var(--background-primary) !important;
   transition: border-color 0.25s ease !important;
 }
 
 .el-input__wrapper {
-  background: var(--background-primary-alt) !important;
+  background: var(--background-primary) !important;
   border-radius: 0.5rem !important;
   box-shadow: none !important;
-  border: 1px solid transparent !important;
+  border: 1px solid var(--glass-border) !important;
   transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
@@ -431,7 +437,7 @@ export default defineComponent({
 
 .el-input__wrapper.is-focus {
   border-color: var(--text-accent) !important;
-  box-shadow: 0 0 0 2px rgba(var(--text-accent-rgb, 100, 149, 237), 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(200, 170, 110, 0.15) !important;
 }
 </style>
 <style lang="scss" scoped>
@@ -496,16 +502,16 @@ export default defineComponent({
 }
 
 .auth-btn-primary {
-  background: var(--main-gradient);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  background: var(--text-accent);
+  color: var(--background-primary);
+  box-shadow: 0 4px 14px rgba(200, 170, 110, 0.3);
 
   &:hover {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 20px rgba(200, 170, 110, 0.4), var(--glow-gold);
   }
 
   &:active {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 8px rgba(200, 170, 110, 0.2);
   }
 }
 
