@@ -14,10 +14,15 @@
     "not-found": "ページが見つかりません"
   },
   "home": {
-    "recommended": "おすすめ記事"
+    "recommended": "おすすめ記事",
+    "featured": "注目",
+    "view_repo": "リポジトリ",
+    "demo": "デモ",
+    "unknown_lang": "コード"
   },
   "titles": {
     "articles": "記事一覧",
+    "portfolio": "オープンソース",
     "talks": "つぶやき",
     "about": "について",
     "category_list": "カテゴリ一覧",

@@ -14,10 +14,15 @@
     "not-found": "Page not found"
   },
   "home": {
-    "recommended": "Feature Articles"
+    "recommended": "Feature Articles",
+    "featured": "Featured",
+    "view_repo": "View Repo",
+    "demo": "Live Demo",
+    "unknown_lang": "Code"
   },
   "titles": {
     "articles": "Articles",
+    "portfolio": "Open Source",
     "talks":"talks",
     "about": "About",
     "category_list": "Categories",

@@ -3,6 +3,10 @@
     <Feature v-if="themeConfig.feature">
       <FeatureList />
     </Feature>
+    <Portfolio v-if="portfolios && portfolios.length > 0">
+      <Title id="portfolio-list" :title="'titles.portfolio'" icon="project" />
+      <PortfolioList :list="portfolios" />
+    </Portfolio>
     <span v-if="themeConfig.feature">
       <Title id="article-list" :title="'titles.articles'" icon="article" />
     </span>
@@ -71,6 +75,8 @@
 <script lang="ts">
 import { computed, defineComponent, onMounted, ref, toRefs, toRef, reactive } from 'vue'
 import { Feature, FeatureList } from '@/components/Feature'
+import { Portfolio, PortfolioList } from '@/components/Portfolio'
+import type { PortfolioItem } from '@/components/Portfolio'
 import { ArticleCard, HorizontalArticle } from '@/components/ArticleCard'
 import { Title } from '@/components/Title'
 import { Sidebar, Profile, RecentComment, TagBox, Notice, WebsiteInfo } from '@/components/Sidebar'
@@ -88,6 +94,8 @@ export default defineComponent({
   components: {
     Feature,
     FeatureList,
+    Portfolio,
+    PortfolioList,
     ArticleCard,
     HorizontalArticle,
     Title,
@@ -123,17 +131,27 @@ export default defineComponent({
       total: 0,
       current: 1
     })
+    const portfolios = ref<PortfolioItem[]>([])
     let nowCategoryId = 0
     onMounted(() => {
       fetchTopAndFeatured()
+      fetchPortfolios()
       fetchCategories()
       fetchArticles()
       const articleListEl = document.getElementById('article-list')
       articleOffset.value = articleListEl && articleListEl instanceof HTMLElement ? articleListEl.offsetTop + 120 : 0
     })
+    const fetchPortfolios = () => {
+      api.getPortfoliosFeatured().then(({ data }) => {
+        if (data && data.code === 200 && Array.isArray(data.data)) {
+          portfolios.value = data.data
+        }
+      }).catch((err: Error) => {
+        console.warn('获取作品集失败:', err)
+      })
+    }
     const fetchTopAndFeatured = () => {
-      api.getTopAndFeaturedArticles().then(({ data }) => {
-        // 添加安全检查
+      api.getTopAndFeaturedArticles().then(({ data }) => {        // 添加安全检查
         if (!data || !data.data) {
           console.warn('置顶/推荐文章数据为空:', data)
           return
@@ -261,6 +279,7 @@ export default defineComponent({
       ...toRefs(reactiveData),
       ...toRefs(articleStore.$state),
       categories: toRef(categoryStore.$state, 'categories'),
+      portfolios,
       gradientText: computed(() => appStore.themeConfig.background_gradient_style),
       gradientBackground: computed(() => {
         return { background: appStore.themeConfig.header_gradient_css }

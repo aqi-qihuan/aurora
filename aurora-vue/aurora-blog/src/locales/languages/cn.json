@@ -14,10 +14,15 @@
     "not-found": "无法找到页面"
   },
   "home": {
-    "recommended": "推荐文章"
+    "recommended": "推荐文章",
+    "featured": "精选",
+    "view_repo": "查看仓库",
+    "demo": "在线演示",
+    "unknown_lang": "代码"
   },
   "titles": {
     "articles": "文章列表",
+    "portfolio": "开源项目",
     "talks":"说说",
     "about": "关于",
     "category_list": "分类目录",

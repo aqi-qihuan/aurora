@@ -112,5 +112,11 @@ export default {
   },
   accessArticle: (params: any) => {
     return axios.post('/api/articles/access', params)
+  },
+  getPortfoliosFeatured: () => {
+    return axios.get('/api/portfolios/featured')
+  },
+  getPortfolios: (params: any) => {
+    return axios.get('/api/portfolios', { params: params })
   }
 }
