@@ -102,6 +102,10 @@ var (
 	// 说说相关 (890-899)
 	ErrTalkNotFound = New(890, "说说不存在")
 
+	// 作品集相关 (910-919)
+	ErrPortfolioNotFound   = New(910, "作品不存在")
+	ErrPortfolioSyncFailed = New(911, "GitHub作品集同步失败")
+
 	// Agent 相关 (900-999) - Agent模块专属
 	ErrAgentDisabled       = New(900, "AI Agent功能未启用")
 	ErrAgentLLMFailed      = New(901, "LLM调用失败")

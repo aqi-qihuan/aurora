@@ -5,6 +5,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/infrastructure"
+	"github.com/aurora-go/aurora/internal/scheduler"
 	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -40,6 +41,7 @@ type Registry struct {
 	File          *FileService
 	Resource      *ResourceService
 	About         *AboutService
+	Portfolio     *PortfolioService // 作品集（GitHub 同步）
 	StatsService  *RedisStatsService // Redis 统计服务（访客上报用）
 
 	// 安全/认证服务 (P0-6新增)
@@ -83,6 +85,9 @@ func NewRegistry(db *gorm.DB, rdb *redis.Client, cfg config.Config, logger *slog
 	r.StatsService = statsService // 暴露给 Handler 使用
 	r.Resource = NewResourceService(db)
 	r.About = NewAboutService(db)
+	r.Portfolio = NewPortfolioService(db, rdb, cfg.GitHub)
+	// 注入 GitHub 同步函数到调度器（避免 scheduler→service 循环依赖）
+	scheduler.GitHubSyncFunc = r.Portfolio.SyncFromGitHub
 	
 	// ===== 安全认证服务 (依赖DB+Redis+配置) =====
 	r.TokenSvc = NewTokenService(cfg.JWT, rdb, logger)

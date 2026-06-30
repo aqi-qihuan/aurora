@@ -23,6 +23,7 @@ type Config struct {
 	Search    SearchConfig    `mapstructure:"search"`        // 搜索模式配置 (对标Java search.mode)
 	Upload    UploadConfig    `mapstructure:"upload"`        // 上传模式配置 (对标Java upload.mode)
 	QQ        QQConfig        `mapstructure:"qq"`         // QQ OAuth登录配置
+	GitHub    GitHubConfig    `mapstructure:"github"`     // GitHub作品集同步配置
 	IP2Region IP2RegionConfig `mapstructure:"ip2region"` // IP归属地数据库配置
 	Agent     AgentConfig     `mapstructure:"agent"`       // 可选Agent配置
 }
@@ -228,6 +229,14 @@ type LLMProvider struct {
 type AgentMemoryConfig struct {
 	Type     string `mapstructure:"type"`      // inmemory/redis
 	MaxTurns int    `mapstructure:"max_turns"`  // 最大对话轮数
+}
+
+// GitHubConfig GitHub作品集同步配置（用于首页作品集自动同步仓库）
+type GitHubConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`  // 是否启用作品集同步
+	Username string `mapstructure:"username"` // GitHub 用户名
+	Token    string `mapstructure:"token"`    // Personal Access Token（建议通过 AURORA_GITHUB_TOKEN 环境变量注入）
+	Exclude  string `mapstructure:"exclude"`  // 排除的仓库名（逗号分隔）
 }
 
 // QQConfig QQ OAuth登录配置 (对标Java QQConfigProperties)

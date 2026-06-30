@@ -28,6 +28,7 @@ func InitTaskRegistry(scheduler *Scheduler) {
 	TaskRegistry[prefix+".baiduSeo"] = NewBaiduSeoJob(scheduler.db, scheduler.siteURL).Run
 	TaskRegistry[prefix+".clearJobLogs"] = NewCleanLogJob(scheduler.db).Run
 	TaskRegistry[prefix+".importDataIntoES"] = NewESSyncJob(scheduler.db).Run
+	TaskRegistry[prefix+".syncGitHubRepos"] = NewGitHubSyncJob().Run
 	
 	slog.Info("任务函数注册表初始化完成", "count", len(TaskRegistry))
 }

@@ -129,3 +129,12 @@ agent:
   memory:
     type: redis
     max_turns: 20
+
+# ==================== GitHub 作品集同步 (可选) ====================
+# 用于首页作品集自动同步 GitHub 仓库，需配合定时任务 auroraQuartz.syncGitHubRepos
+# 初始化脚本见 scripts/portfolio.sql
+github:
+  enabled: false              # 是否启用作品集同步
+  username: ""                # GitHub 用户名（如 zhouyqxy）
+  token: ""                   # Personal Access Token，建议通过 AURORA_GITHUB_TOKEN 注入（无 token 限额 60/h，有 token 5000/h）
+  exclude: ""                 # 排除的仓库名，逗号分隔（如 test,demo,xxx.github.io）

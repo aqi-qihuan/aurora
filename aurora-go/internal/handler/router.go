@@ -33,6 +33,7 @@ type Router struct {
 	FileHandler          *FileHandler
 	ResourceHandler      *ResourceHandler
 	AboutHandler         *AboutHandler
+	PortfolioHandler     *PortfolioHandler
 	// JWT认证服务（用于admin路由）
 	tokenSvc *service.TokenService
 	logger   *slog.Logger
@@ -62,6 +63,7 @@ func NewRouter(registry *service.Registry, tokenSvc *service.TokenService, logge
 		FileHandler:          NewFileHandler(registry.File),
 		ResourceHandler:      NewResourceHandler(registry.Resource),
 		AboutHandler:         NewAboutHandler(registry.About),
+		PortfolioHandler:     NewPortfolioHandler(registry.Portfolio),
 		tokenSvc:             tokenSvc,
 		logger:               logger,
 	}
@@ -149,6 +151,10 @@ func (r *Router) registerPublicRoutes(rg *gin.RouterGroup) {
 
 	// --- 网站配置（AuroraInfoController 前台只读） ---
 	rg.GET("/website/config", r.WebsiteConfigHandler.GetWebsiteConfig)
+
+	// --- 作品集（PortfolioController 前台只读） ---
+	rg.GET("/portfolios/featured", r.PortfolioHandler.ListFeatured)
+	rg.GET("/portfolios", r.PortfolioHandler.ListAll)
 
 	// --- 访客上报（AuroraInfoController） ---
 	rg.POST("/report", r.AuroraInfoHandler.Report)
@@ -298,4 +304,10 @@ func (r *Router) registerAdminRoutes(rg *gin.RouterGroup) {
 	rg.POST("/upload", r.FileHandler.UploadFile)
 	rg.POST("/upload/batch", r.FileHandler.BatchUpload)
 	rg.POST("/upload/image", r.FileHandler.UploadImage)
+
+	// --- 作品集管理（PortfolioController） ---
+	rg.GET("/portfolios", r.PortfolioHandler.ListAdmin)
+	rg.PUT("/portfolios", r.PortfolioHandler.Update)
+	rg.DELETE("/portfolios", r.PortfolioHandler.Delete)
+	rg.POST("/portfolios/sync", r.PortfolioHandler.Sync)
 }

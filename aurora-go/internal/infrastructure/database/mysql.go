@@ -9,6 +9,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/aurora-go/aurora/internal/config"
+	"github.com/aurora-go/aurora/internal/model"
 )
 
 var DB *gorm.DB
@@ -44,6 +45,16 @@ func InitMySQL(cfg *config.MySQLConfig) error {
 		"max_open_conns", cfg.MaxOpenConns,
 		"max_idle_conns", cfg.MaxIdleConns,
 	)
+
+	// AutoMigrate 所有模型（自动建表/更新表结构）
+	if err := DB.AutoMigrate(
+		&model.Portfolio{},
+	); err != nil {
+		slog.Warn("AutoMigrate partial failed", "error", err)
+	} else {
+		slog.Info("AutoMigrate completed")
+	}
+
 	return nil
 }
 
