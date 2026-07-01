@@ -45,7 +45,7 @@ lint:
 
 # 格式化代码
 fmt:
-	@echo "=== 格式化代码 ===
+	@echo "=== 格式化代码 ==="
 	gofmt -w .
 	goimports -w .
 
@@ -64,12 +64,12 @@ docker-build:
 # Docker Compose 编排启动 (含所有中间件)
 docker-up:
 	@echo "=== Docker Compose 启动 ==="
-	docker compose -f scripts/docker-compose.go.yml up -d
+	docker compose -f docker-compose-go.yml up -d
 
 # Docker Compose 停止
 docker-down:
 	@echo "=== Docker Compose 停止 ==="
-	docker compose -f scripts/docker-compose.go.yml down
+	docker compose -f docker-compose-go.yml down
 
 # 交叉编译 (Linux amd64)
 build-linux:
@@ -82,7 +82,7 @@ build-arm64:
 # Swagger 文档生成
 docs:
 	@echo "=== 生成 Swagger 文档 ==="
-	swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal
+	swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 
 # 帮助信息
 help:
