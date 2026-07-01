@@ -68,6 +68,7 @@
 | 全文搜索 | — | ✅ | — | MySQL/ES 策略 |
 | 日志记录 | ✅ | ✅ | ✅ | 操作日志 + 异常日志 |
 | AI Agent | ✅ | — | — | tRPC-Agent-Go 对话 |
+| 作品集 Portfolio | ✅ | ✅ | ✅ | GitHub 仓库同步 + 后台覆盖封面/排序/置顶/可见性 |
 
 ---
 
@@ -84,7 +85,7 @@ aurora-go/
 │   ├── consumer/                   # 📨 MQ 消费者 (Maxwell 文章同步等)
 │   ├── dto/                        # 📦 数据传输对象
 │   ├── errors/                     # ❌ 错误码定义
-│   ├── handler/                    # 🌐 Gin HTTP 处理器 (23 files)
+│   ├── handler/                    # 🌐 Gin HTTP 处理器 (24 files)
 │   │   └── router.go              #    路由注册中心
 │   ├── infrastructure/             # 🏗️ 基础设施 (DB/Redis/ES/MinIO 初始化)
 │   ├── middleware/                  # 🔐 中间件 (9 files)
@@ -95,22 +96,28 @@ aurora-go/
 │   │   ├── recovery.go            #    异常恢复
 │   │   ├── access_log.go          #    访问日志
 │   │   └── nocache.go             #    禁缓存
-│   ├── model/                      # 📊 GORM 数据模型 (16 files, 16张表)
-│   ├── scheduler/                  # ⏰ 定时任务 (cron)
-│   ├── service/                    # 💼 业务逻辑层 (27 files)
+│   ├── model/                      # 📊 GORM 数据模型 (17 files, 17张表)
+│   ├── scheduler/                  # ⏰ 定时任务 (cron, 9 files)
+│   ├── service/                    # 💼 业务逻辑层 (28 files)
 │   │   └── registry.go            #    服务注册表
 │   ├── strategy/                   # 🎯 策略模式 (9 files)
 │   │   ├── search/                #    搜索策略 (MySQL/ES)
 │   │   └── upload/                #    上传策略 (MinIO/OSS)
 │   ├── util/                       # 🔧 工具函数 (10 files)
-│   └── vo/                         # 📤 视图对象 (请求参数校验)
+│   └── vo/                         # 📤 视图对象 (请求参数校验, 4 files)
+├── cmd/
+│   ├── server/main.go              # 入口文件
+│   └── diag/                       # 🔍 诊断工具 (4 files)
 ├── configs/
 │   └── config.yaml                 # 主配置文件
 ├── scripts/
-│   └── ip/ip2region.xdb           # IP 归属地数据库
+│   ├── ip/ip2region.xdb           # IP 归属地数据库
+│   ├── portfolio.sql              # 作品集模块初始化脚本
+│   └── portfolio_menu_fix.sql     # 作品集菜单修复脚本
 ├── docs/                           # 📖 文档
 │   ├── API.md                      # API 接口文档
 │   ├── AGENT_GUIDE.md             # Agent 使用指南
+│   ├── PORTFOLIO_GUIDE.md         # 作品集模块指南
 │   ├── MIGRATION_GUIDE.md         # Java → Go 迁移指南
 │   └── TEST_REPORT.md             # 测试报告
 ├── .env.example                    # 环境变量模板
@@ -225,6 +232,10 @@ docker run -d --name aurora-go \
 | `search.mode` | `AURORA_SEARCH_MODE` | elasticsearch | 搜索: mysql/elasticsearch |
 | `upload.mode` | `AURORA_UPLOAD_MODE` | minio | 上传: minio/oss |
 | `agent.enabled` | `AURORA_AGENT_ENABLED` | false | AI Agent 开关 |
+| `github.enabled` | `AURORA_GITHUB_ENABLED` | false | GitHub 作品集同步开关 |
+| `github.username` | `AURORA_GITHUB_USERNAME` | — | GitHub 用户名 |
+| `github.token` | `AURORA_GITHUB_TOKEN` | — | GitHub PAT（建议环境变量注入） |
+| `github.exclude` | `AURORA_GITHUB_EXCLUDE` | — | 排除仓库名（逗号分隔） |
 
 ### 环境变量模板
 
@@ -251,6 +262,8 @@ docker run -d --name aurora-go \
 | GET | `/api/comments` | 评论列表 | 否 |
 | GET | `/api/website/config` | 网站配置 | 否 |
 | GET | `/api/about` | 关于页面 | 否 |
+| GET | `/api/portfolios/featured` | 首页置顶作品集 | 否 |
+| GET | `/api/portfolios` | 作品集分页列表 | 否 |
 | POST | `/api/auth/login` | 登录 | 否 |
 | POST | `/api/auth/register` | 注册 | 否 |
 | POST | `/api/auth/qqLogin` | QQ 登录 | 否 |
@@ -275,6 +288,8 @@ docker run -d --name aurora-go \
 | GET/POST/PUT/DELETE | `/api/admin/menus` | 菜单管理 | JWT+RBAC |
 | GET/PUT | `/api/admin/website/config` | 网站配置 | JWT+RBAC |
 | GET/PUT | `/api/admin/about` | 关于配置 | JWT+RBAC |
+| GET/PUT/DELETE | `/api/admin/portfolios` | 作品集管理（编辑/批量删除/列表） | JWT+RBAC |
+| POST | `/api/admin/portfolios/sync` | 手动触发 GitHub 同步 | JWT+RBAC |
 | GET/POST/PUT/DELETE | `/api/admin/jobs` | 定时任务管理 | JWT+RBAC |
 | GET/DELETE | `/api/admin/jobLogs` | 任务日志 | JWT+RBAC |
 | POST | `/api/admin/files/upload` | 文件上传 | JWT |
@@ -1293,6 +1308,7 @@ PATCH: 向后兼容的 bug 修复
 |:-----|:-----|
 | [`docs/API.md`](docs/API.md) | 完整 API 接口文档 |
 | [`docs/AGENT_GUIDE.md`](docs/AGENT_GUIDE.md) | AI Agent 使用指南 |
+| [`docs/PORTFOLIO_GUIDE.md`](docs/PORTFOLIO_GUIDE.md) | 作品集模块指南 |
 | [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) | Java → Go 迁移指南 |
 | [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md) | 测试报告 |
 | [`.env.example`](.env.example) | 环境变量模板 |
