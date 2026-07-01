@@ -139,3 +139,9 @@ github:
   username: ""                # GitHub 用户名（如 zhouyqxy）
   token: ""                   # Personal Access Token，建议通过 AURORA_GITHUB_TOKEN 注入（无 token 限额 60/h，有 token 5000/h）
   exclude: ""                 # 排除的仓库名，逗号分隔（如 test,demo,xxx.github.io）
+
+# 限流中间件（基于 Redis 滑动窗口，默认关闭）
+# 生产环境建议开启，需 Redis 连接可用
+# 规则: 登录5次/分、注册3次/分、验证码1次/分、评论10次/分、后台60QPS、搜索20QPS、其他100QPS
+rate_limit:
+  enabled: false  # 通过 AURORA_RATE_LIMIT_ENABLED 覆盖

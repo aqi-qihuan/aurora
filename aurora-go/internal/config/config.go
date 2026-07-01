@@ -26,6 +26,7 @@ type Config struct {
 	GitHub    GitHubConfig    `mapstructure:"github"`     // GitHub作品集同步配置
 	IP2Region IP2RegionConfig `mapstructure:"ip2region"` // IP归属地数据库配置
 	Agent     AgentConfig     `mapstructure:"agent"`       // 可选Agent配置
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"` // 限流中间件配置
 }
 
 // Load 从YAML/ENV加载配置
@@ -72,6 +73,12 @@ func (c *ServerConfig) GetSiteURL() string {
 		return c.SiteURL
 	}
 	return "https://www.aurora.blog"
+}
+
+// RateLimitConfig 限流中间件配置（基于 Redis 滑动窗口）
+// 默认关闭，生产环境建议通过 AURORA_RATE_LIMIT_ENABLED=true 开启
+type RateLimitConfig struct {
+	Enabled bool `mapstructure:"enabled"` // 是否启用限流（默认 false）
 }
 
 // MySQLConfig 数据库配置

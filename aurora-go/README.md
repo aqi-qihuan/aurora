@@ -236,6 +236,7 @@ docker run -d --name aurora-go \
 | `github.username` | `AURORA_GITHUB_USERNAME` | — | GitHub 用户名 |
 | `github.token` | `AURORA_GITHUB_TOKEN` | — | GitHub PAT（建议环境变量注入） |
 | `github.exclude` | `AURORA_GITHUB_EXCLUDE` | — | 排除仓库名（逗号分隔） |
+| `rate_limit.enabled` | `AURORA_RATE_LIMIT_ENABLED` | false | 限流中间件开关（生产建议开启） |
 
 ### 环境变量模板
 

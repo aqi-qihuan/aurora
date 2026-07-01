@@ -190,7 +190,19 @@ func main() {
 	r.Use(middleware.Logger(slogLogger))
 	r.Use(middleware.CORS())
 	r.Use(middleware.NoCache()) // 禁用缓存，确保前端路由切换时获取最新数据
-	// r.Use(middleware.RateLimiter(rdb, slog.Default())) // P0-6 限流需Redis客户端
+
+	// 限流中间件（基于 Redis 滑动窗口，默认关闭，生产环境通过 rate_limit.enabled=true 开启）
+	// 规则: 登录5次/分、注册3次/分、验证码1次/分、评论10次/分、后台60QPS、搜索20QPS、其他100QPS
+	if cfg.RateLimit.Enabled {
+		if rdb != nil {
+			r.Use(middleware.RateLimiter(rdb, slogLogger))
+			slog.Info("限流中间件已启用", "mode", "redis-sliding-window", "rules", len(middleware.DefaultRateLimits)-1)
+		} else {
+			slog.Warn("rate_limit.enabled=true 但 Redis 未初始化，限流中间件未启用（请检查 Redis 连接配置）")
+		}
+	} else {
+		slog.Info("限流中间件未启用（rate_limit.enabled=false，生产环境建议开启）")
+	}
 
 	// 5.1 静态文件服务 (上传的图片等资源)
 	r.Static("/uploads", "./uploads")
