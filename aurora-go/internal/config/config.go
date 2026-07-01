@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -45,6 +46,19 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("解析配置: %w", err)
+	}
+
+	// 兜底：viper AutomaticEnv 对 []string slice 类型支持有限
+	// 手动读取 AURORA_ELASTICSEARCH_URLS 环境变量（逗号分隔），覆盖 cfg.ES.URLs
+	if esURLs := os.Getenv("AURORA_ELASTICSEARCH_URLS"); esURLs != "" {
+		parts := strings.Split(esURLs, ",")
+		cfg.ES.URLs = make([]string, 0, len(parts))
+		for _, u := range parts {
+			u = strings.TrimSpace(u)
+			if u != "" {
+				cfg.ES.URLs = append(cfg.ES.URLs, u)
+			}
+		}
 	}
 
 	return &cfg, nil
