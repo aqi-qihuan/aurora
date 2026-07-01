@@ -106,9 +106,11 @@ func ContainsSensitiveWord(text, word string) bool {
 
 // MaskEmail 邮箱脱敏显示
 // 示例: user@example.com → u***@example.com
+// 单字符前缀也会脱敏: a@b.com → a***@b.com
+// 无 @ 或 @ 在首位时不脱敏: @b.com → @b.com
 func MaskEmail(email string) string {
 	atIndex := strings.Index(email, "@")
-	if atIndex <= 1 {
+	if atIndex < 1 {
 		return email
 	}
 	return email[:1] + "***" + email[atIndex:]

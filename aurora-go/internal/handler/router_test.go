@@ -1,20 +1,35 @@
 package handler
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/aurora-go/aurora/internal/service"
 )
 
 // ===== 路由注册完整性测试 =====
+// 使用零值 Registry 构造 Router：所有 Handler 创建为非 nil 指针（svc 字段为 nil），
+// 路由注册阶段不 panic；请求到达时 Handler 方法体访问 nil svc 会 panic，
+// gin.Recovery 中间件捕获后返回 500，测试只校验状态码非 404。
+// admin 路由的 JWTAuthEnhanced 中间件在无 Token 时直接返回 401，不访问 tokenSvc（nil 安全）。
+//
+// 注意: /api/ (GetHomeInfo) 路由未纳入测试，因其内部启动 goroutine 聚合数据，
+// goroutine panic 无法被 gin.Recovery 捕获，会导致测试进程崩溃。
+
+func newTestRouter() *Router {
+	return NewRouter(&service.Registry{}, nil, slog.Default())
+}
 
 func TestRouter_RegisterRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(gin.Recovery()) // 捕获 nil svc panic，返回 500 而非崩溃
 
-	router := NewRouter(nil) // registry can be nil for route registration test
+	router := newTestRouter()
 	router.RegisterRoutes(r)
 
 	// 验证关键公开路由已注册（对齐 Java 原始路径）
@@ -42,13 +57,14 @@ func TestRouter_RegisterRoutes(t *testing.T) {
 		{http.MethodGet, "/api/talks"},
 		// 相册
 		{http.MethodGet, "/api/photos/albums"},
-		// 首页信息
-		{http.MethodGet, "/api/"},
 		// 评论
 		{http.MethodGet, "/api/comments/topSix"},
 		{http.MethodPost, "/api/comments/save"},
 		// 关于
 		{http.MethodGet, "/api/about"},
+		// 作品集
+		{http.MethodGet, "/api/portfolios/featured"},
+		{http.MethodGet, "/api/portfolios"},
 	}
 
 	for _, route := range publicRoutes {
@@ -67,8 +83,9 @@ func TestRouter_RegisterRoutes(t *testing.T) {
 func TestRouter_AdminRoutes_RequireAuth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(gin.Recovery())
 
-	router := NewRouter(nil)
+	router := newTestRouter()
 	router.RegisterRoutes(r)
 
 	// 验证管理路由需要认证（对齐 Java 路径）
@@ -80,6 +97,8 @@ func TestRouter_AdminRoutes_RequireAuth(t *testing.T) {
 		{http.MethodGet, "/api/admin/roles"},
 		{http.MethodGet, "/api/admin/menus"},
 		{http.MethodGet, "/api/admin/"},
+		// 作品集后台路由
+		{http.MethodGet, "/api/admin/portfolios"},
 	}
 
 	for _, route := range adminRoutes {
@@ -87,9 +106,9 @@ func TestRouter_AdminRoutes_RequireAuth(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(route.method, route.path, nil)
 			r.ServeHTTP(w, req)
-			// 无Token应该返回401
+			// 无Token应该返回401（JWTAuthEnhanced 在 authHeader=="" 时直接 Abort，不访问 tokenSvc）
 			if w.Code != http.StatusUnauthorized {
-				t.Errorf("admin route %s %s should require auth, got status %d",
+				t.Errorf("admin route %s %s should require auth (401), got status %d",
 					route.method, route.path, w.Code)
 			}
 		})
@@ -126,7 +145,7 @@ func BenchmarkRouterRegistration(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r := gin.New()
-		router := NewRouter(nil)
+		router := newTestRouter()
 		router.RegisterRoutes(r)
 	}
 }
