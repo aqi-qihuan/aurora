@@ -8,6 +8,7 @@
 #   环境变量值会覆盖此文件中的同名字段
 #
 # 敏感信息请通过环境变量注入，不要直接写在此文件中！
+# host/endpoint 默认指向本机（开发环境），生产环境通过 AURORA_*_HOST 等环境变量覆盖
 
 server:
   port: 8080
@@ -16,7 +17,7 @@ server:
   enable_scheduler: true  # 是否启用定时任务调度器
 
 mysql:
-  host: 134.175.206.158
+  host: 127.0.0.1               # 生产环境通过 AURORA_MYSQL_HOST 覆盖
   port: 3306
   user: root
   password: ""                    # 由 .env (AURORA_MYSQL_PASSWORD) 覆盖
@@ -26,30 +27,30 @@ mysql:
   max_lifetime: 1800
 
 redis:
-  host: 134.175.206.158
+  host: 127.0.0.1               # 生产环境通过 AURORA_REDIS_HOST 覆盖
   port: 6379
   password: ""                    # 由 .env (AURORA_REDIS_PASSWORD) 覆盖
   db: 1
   pool_size: 100
 
 rabbitmq:
-  host: 134.175.206.158
+  host: 127.0.0.1               # 生产环境通过 AURORA_RABBITMQ_HOST 覆盖
   port: 5672
-  user: myroot             # 通过 AURORA_RABBITMQ_USER 覆盖
+  user: guest                     # 通过 AURORA_RABBITMQ_USER 覆盖
   password: ""                    # 由 .env (AURORA_RABBITMQ_PASSWORD) 覆盖
   vhost: /
   prefetch_count: 10
 
 elasticsearch:
   urls:
-    - "http://134.175.206.158:9200"
+    - "http://127.0.0.1:9200"    # 生产环境通过 AURORA_ELASTICSEARCH_URLS 覆盖
   index_name: article
   username: ""                    # 由 .env (AURORA_ELASTICSEARCH_USERNAME) 覆盖
   password: ""                    # 由 .env (AURORA_ELASTICSEARCH_PASSWORD) 覆盖
   sniff_enabled: false
 
 minio:
-  endpoint: "http://134.175.206.158:9000"
+  endpoint: "http://127.0.0.1:9000"  # 生产环境通过 AURORA_MINIO_ENDPOINT 覆盖
   url: "https://ws.aqi125.cn"          # 外部访问URL (对标Java minio.url, 用于前端加载图片)
   access_key: ""                  # 由 .env (AURORA_MINIO_ACCESS_KEY) 覆盖
   secret_key: ""                  # 由 .env (AURORA_MINIO_SECRET_KEY) 覆盖
