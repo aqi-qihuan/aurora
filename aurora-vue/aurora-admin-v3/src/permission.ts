@@ -137,6 +137,7 @@ const modules: Record<string, () => Promise<any>> = {
   // 其他
   '/src/views/about/About.vue': () => import('@/views/about/About.vue'),
   '/src/views/album/Delete.vue': () => import('@/views/album/Delete.vue'),
+  '/src/views/portfolio/Portfolio.vue': () => import('@/views/portfolio/Portfolio.vue'),
   '/src/views/error/404.vue': () => import('@/views/error/404.vue'),
   '/src/views/error/403.vue': () => import('@/views/error/403.vue')
 }
