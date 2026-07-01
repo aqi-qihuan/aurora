@@ -155,10 +155,11 @@ func (s *PortfolioService) SyncFromGitHub(ctx context.Context) error {
 	}
 
 	exclude := parseExcludeSet(s.githubCfg.Exclude)
+	syncedRepoIDs := make([]int64, 0, len(repos))
 	synced := 0
 	for _, r := range repos {
-		// 过滤 fork 与 archived 仓库，只保留原创活跃项目
-		if r.Fork || r.Archived {
+		// 仅过滤 archived 仓库；fork 仓库由 exclude 配置决定是否排除
+		if r.Archived {
 			continue
 		}
 		if _, ok := exclude[strings.ToLower(r.Name)]; ok {
@@ -168,11 +169,19 @@ func (s *PortfolioService) SyncFromGitHub(ctx context.Context) error {
 			slog.Warn("upsert作品失败", "repo", r.FullName, "error", err)
 			continue
 		}
+		syncedRepoIDs = append(syncedRepoIDs, r.ID)
 		synced++
 	}
 
+	// 删除数据库中已不在 GitHub 仓库列表里的陈旧记录（仓库被删除/改名/exclude 后自动清理）
+	if len(syncedRepoIDs) > 0 {
+		if err := s.db.WithContext(ctx).Where("repo_id NOT IN ?", syncedRepoIDs).Delete(&model.Portfolio{}).Error; err != nil {
+			slog.Warn("清理陈旧作品记录失败", "error", err)
+		}
+	}
+
 	s.invalidateCache(ctx)
-	slog.Info("GitHub作品集同步完成", "username", s.githubCfg.Username, "fetched", len(repos), "synced", synced)
+	slog.Info("GitHub作品集同步完成", "username", s.githubCfg.Username, "fetched", len(repos), "synced", synced, "kept_ids", len(syncedRepoIDs))
 	return nil
 }
 

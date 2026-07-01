@@ -7755,6 +7755,7 @@ INSERT INTO `t_role_menu` VALUES (2950, 1, 20);
 INSERT INTO `t_role_menu` VALUES (2951, 1, 225);
 INSERT INTO `t_role_menu` VALUES (2952, 1, 220);
 INSERT INTO `t_role_menu` VALUES (2953, 1, 5);
+INSERT INTO `t_role_menu` VALUES (2954, 1, 226);
 
 -- ----------------------------
 -- Table structure for t_role_resource
