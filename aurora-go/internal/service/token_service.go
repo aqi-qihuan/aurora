@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -184,7 +185,14 @@ func ExtractToken(authHeader string) string {
 
 func generateUUID() string {
 	b := make([]byte, 16)
-	// 使用时间戳+随机数模拟UUID (生产环境可用google/uuid)
+	// 优先使用 crypto/rand 生成随机 UUID（线程安全，纳秒级调用不重复）
+	if _, err := rand.Read(b); err == nil {
+		// 设置 RFC 4122 v4 标记位（与 google/uuid 行为一致）
+		b[6] = (b[6] & 0x0f) | 0x40 // version 4
+		b[8] = (b[8] & 0x3f) | 0x80 // variant 10
+		return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	}
+	// 退化路径：crypto/rand 失败时回退到时间戳方案（极端情况，不应发生）
 	for i := range b {
 		b[i] = byte(time.Now().UnixNano()>>uint(i*3)) ^ byte(i*37+5)
 	}
