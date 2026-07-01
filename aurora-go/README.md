@@ -247,60 +247,236 @@ docker run -d --name aurora-go \
 
 ## API 端点
 
-### 前台 API
+> 路径与 `internal/handler/router.go` 完全对齐，分三类：公开（无需认证）/ 受保护（JWT 登录）/ 后台（JWT + RBAC）。
 
-| 方法 | 路径 | 说明 | 认证 |
-|:-----|:-----|:-----|:-----|
-| GET | `/health` | 健康检查 | 否 |
-| GET | `/api/articles` | 文章列表 | 否 |
-| GET | `/api/articles/:id` | 文章详情 | 否 |
-| GET | `/api/categories` | 分类列表 | 否 |
-| GET | `/api/tags` | 标签列表 | 否 |
-| GET | `/api/links` | 友链列表 | 否 |
-| GET | `/api/talks` | 说说列表 | 否 |
-| GET | `/api/photos/albums` | 相册列表 | 否 |
-| GET | `/api/comments` | 评论列表 | 否 |
-| GET | `/api/website/config` | 网站配置 | 否 |
-| GET | `/api/about` | 关于页面 | 否 |
-| GET | `/api/portfolios/featured` | 首页置顶作品集 | 否 |
-| GET | `/api/portfolios` | 作品集分页列表 | 否 |
-| POST | `/api/auth/login` | 登录 | 否 |
-| POST | `/api/auth/register` | 注册 | 否 |
-| POST | `/api/auth/qqLogin` | QQ 登录 | 否 |
-| POST | `/api/search` | 全文搜索 | 否 |
+#### 健康检查（根路径）
 
-### 后台 API
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/health` | 健康检查（无需认证） |
 
-| 方法 | 路径 | 说明 | 认证 |
-|:-----|:-----|:-----|:-----|
-| GET | `/api/admin/articles` | 后台文章列表 | JWT |
-| POST | `/api/admin/articles` | 发布文章 | JWT+RBAC |
-| PUT | `/api/admin/articles` | 更新文章 | JWT+RBAC |
-| DELETE | `/api/admin/articles` | 删除文章 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/categories` | 分类管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/tags` | 标签管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/comments` | 评论管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/links` | 友链管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/talks` | 说说管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/photos/albums` | 相册管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/resources` | 资源管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/roles` | 角色管理 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/menus` | 菜单管理 | JWT+RBAC |
-| GET/PUT | `/api/admin/website/config` | 网站配置 | JWT+RBAC |
-| GET/PUT | `/api/admin/about` | 关于配置 | JWT+RBAC |
-| GET/PUT/DELETE | `/api/admin/portfolios` | 作品集管理（编辑/批量删除/列表） | JWT+RBAC |
-| POST | `/api/admin/portfolios/sync` | 手动触发 GitHub 同步 | JWT+RBAC |
-| GET/POST/PUT/DELETE | `/api/admin/jobs` | 定时任务管理 | JWT+RBAC |
-| GET/DELETE | `/api/admin/jobLogs` | 任务日志 | JWT+RBAC |
-| POST | `/api/admin/files/upload` | 文件上传 | JWT |
+### 公开 API（`/api`，无需认证）
 
-### Agent API (可选)
+#### 文章 / 归档
 
-| 方法 | 路径 | 说明 | 认证 |
-|:-----|:-----|:-----|:-----|
-| POST | `/api/agent/chat` | AI 对话 (SSE 流式) | JWT (Agent) |
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/articles/topAndFeatured` | 置顶 + 推荐文章 |
+| GET | `/api/articles/all` | 文章列表（分页） |
+| GET | `/api/articles/categoryId` | 按分类查询文章 |
+| GET | `/api/articles/tagId` | 按标签查询文章 |
+| GET | `/api/articles/search` | 搜索文章 |
+| GET | `/api/articles/:id` | 文章详情 |
+| POST | `/api/articles/access` | 验证加密文章密码 |
+| GET | `/api/archives/all` | 归档列表 |
 
-> 📖 完整 API 文档见 [`docs/API.md`](docs/API.md)
+#### 用户认证
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| POST | `/api/users/login` | 登录 |
+| POST | `/api/users/register` | 注册 |
+| GET | `/api/users/code` | 发送邮箱验证码 |
+| PUT | `/api/users/password` | 修改密码（通过 code 区分重置/修改） |
+| POST | `/api/users/password/reset` | 重置密码 |
+| POST | `/api/users/oauth/qq` | QQ OAuth 登录 |
+
+#### 评论 / 分类 / 标签
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/comments` | 评论列表 |
+| GET | `/api/comments/topSix` | 最新 6 条评论 |
+| GET | `/api/comments/:id/replies` | 评论回复列表 |
+| GET | `/api/categories/all` | 分类列表 |
+| GET | `/api/tags/all` | 标签列表 |
+| GET | `/api/tags/topTen` | Top 10 标签 |
+
+#### 友链 / 说说 / 相册
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/links` | 友链列表 |
+| GET | `/api/talks` | 说说列表 |
+| GET | `/api/talks/:id` | 说说详情 |
+| GET | `/api/photos/albums` | 相册列表 |
+| GET | `/api/albums/:albumId/photos` | 相册照片列表 |
+
+#### 首页 / 关于 / 配置 / 作品集
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/` | 首页信息聚合 |
+| GET | `/api/about` | 关于页 |
+| GET | `/api/website/config` | 网站配置（前台只读） |
+| GET | `/api/portfolios/featured` | 首页置顶作品集（6 条） |
+| GET | `/api/portfolios` | 作品集分页列表 |
+| POST | `/api/report` | 访客上报 |
+
+### 受保护 API（`/api`，需 JWT 登录）
+
+#### 评论互动
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| POST | `/api/comments/save` | 新增评论 |
+| POST | `/api/comments/:id/reply` | 回复评论 |
+| POST | `/api/comments/:id/like` | 点赞评论 |
+
+#### 用户信息
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| PUT | `/api/users/info` | 更新用户信息 |
+| POST | `/api/users/avatar` | 更新头像 |
+| PUT | `/api/users/email` | 绑定邮箱 |
+| PUT | `/api/users/subscribe` | 更新订阅状态 |
+| POST | `/api/users/logout` | 登出 |
+| GET | `/api/users/info/:id` | 获取用户信息 |
+
+### 后台 API（`/api/admin`，需 JWT + RBAC）
+
+#### 系统信息 / 配置
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/` | 后台首页信息 |
+| GET | `/api/admin/website/config` | 获取网站配置（平铺） |
+| PUT | `/api/admin/website/config` | 更新网站配置 |
+| PUT | `/api/admin/about` | 更新关于页 |
+| POST | `/api/admin/config/images` | 上传配置图片 |
+
+#### 用户管理
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/users` | 用户列表 |
+| GET | `/api/admin/users/area` | 用户地域统计 |
+| POST | `/api/admin/users/area/trigger` | 手动触发地域统计 |
+| PUT | `/api/admin/users/password` | 修改密码 |
+| PUT | `/api/admin/users/role` | 修改用户角色 |
+| PUT | `/api/admin/users/disable` | 禁用/启用用户 |
+| GET | `/api/admin/users/online` | 在线用户列表 |
+| DELETE | `/api/admin/users/:id/online` | 踢用户下线 |
+| GET | `/api/admin/users/role` | 角色列表（编辑用户用） |
+
+#### 文章管理
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/articles` | 后台文章列表 |
+| POST | `/api/admin/articles` | 保存文章（统一入口，按 id 区分新增/更新） |
+| POST | `/api/admin/articles/save` | 新增文章（兼容 Vue3 前端） |
+| POST | `/api/admin/articles/update` | 更新文章（兼容 Vue3 前端） |
+| PUT | `/api/admin/articles/topAndFeatured` | 更新置顶/推荐 |
+| PUT | `/api/admin/articles` | 更新删除状态（软删除） |
+| DELETE | `/api/admin/articles/delete` | 物理删除文章 |
+| POST | `/api/admin/articles/images` | 上传文章图片 |
+| GET | `/api/admin/articles/:id` | 文章详情 |
+| POST | `/api/admin/articles/import` | 导入文章 |
+| POST | `/api/admin/articles/export` | 导出文章 |
+
+#### 分类 / 标签 / 评论管理
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/categories` | 分类列表 |
+| GET | `/api/admin/categories/search` | 搜索分类 |
+| POST | `/api/admin/categories` | 新增/更新分类 |
+| DELETE | `/api/admin/categories` | 删除分类 |
+| GET | `/api/admin/tags` | 标签列表 |
+| GET | `/api/admin/tags/search` | 搜索标签 |
+| POST | `/api/admin/tags` | 新增/更新标签 |
+| DELETE | `/api/admin/tags` | 删除标签 |
+| GET | `/api/admin/comments` | 评论列表 |
+| PUT | `/api/admin/comments/review` | 审核评论 |
+| DELETE | `/api/admin/comments` | 删除评论 |
+
+#### 友链 / 说说 / 相册 / 照片管理
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/links` | 友链列表 |
+| POST | `/api/admin/links` | 新增/更新友链 |
+| PUT | `/api/admin/links` | 更新友链（兼容前端） |
+| DELETE | `/api/admin/links` | 删除友链 |
+| GET | `/api/admin/talks` | 说说列表 |
+| GET | `/api/admin/talks/:id` | 说说详情 |
+| POST | `/api/admin/talks` | 新增/更新说说 |
+| POST | `/api/admin/talks/images` | 上传说说图片 |
+| DELETE | `/api/admin/talks` | 删除说说 |
+| GET | `/api/admin/photos/albums` | 相册列表 |
+| GET | `/api/admin/photos/albums/info` | 相册信息列表 |
+| GET | `/api/admin/photos/albums/:id/info` | 相册详情 |
+| POST | `/api/admin/photos/albums` | 新增/更新相册 |
+| POST | `/api/admin/photos/albums/upload` | 上传相册封面 |
+| DELETE | `/api/admin/photos/albums/:id` | 删除相册 |
+| GET | `/api/admin/photos` | 照片列表 |
+| POST | `/api/admin/photos/upload` | 上传照片 |
+| POST | `/api/admin/photos` | 批量保存照片 |
+| PUT | `/api/admin/photos` | 更新照片 |
+| PUT | `/api/admin/photos/album` | 移动照片到相册 |
+| PUT | `/api/admin/photos/delete` | 更新照片删除状态 |
+| DELETE | `/api/admin/photos` | 删除照片 |
+
+#### 角色 / 资源 / 菜单管理
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/roles` | 角色列表 |
+| POST | `/api/admin/role` | 新增/更新角色 |
+| DELETE | `/api/admin/roles` | 删除角色 |
+| GET | `/api/admin/role/menus` | 菜单选项（编辑角色用） |
+| GET | `/api/admin/role/resources` | 资源选项（编辑角色用） |
+| GET | `/api/admin/resources` | 资源列表 |
+| POST | `/api/admin/resources` | 新增/更新资源 |
+| DELETE | `/api/admin/resources/:id` | 删除资源 |
+| GET | `/api/admin/menus` | 菜单列表 |
+| POST | `/api/admin/menus` | 新增/更新菜单 |
+| PUT | `/api/admin/menus/isHidden` | 更新菜单隐藏状态 |
+| DELETE | `/api/admin/menus/:id` | 删除菜单 |
+| GET | `/api/admin/user/menus` | 当前用户菜单 |
+
+#### 定时任务 / 日志
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| GET | `/api/admin/jobs` | 任务列表 |
+| POST | `/api/admin/jobs` | 新增任务 |
+| PUT | `/api/admin/jobs` | 更新任务 |
+| DELETE | `/api/admin/jobs` | 删除任务 |
+| GET | `/api/admin/jobs/:id` | 任务详情 |
+| PUT | `/api/admin/jobs/status` | 更新任务状态 |
+| PUT | `/api/admin/jobs/run` | 立即运行一次 |
+| GET | `/api/admin/jobs/jobGroups` | 任务分组列表 |
+| GET | `/api/admin/jobLogs` | 任务日志列表 |
+| DELETE | `/api/admin/jobLogs` | 删除任务日志 |
+| DELETE | `/api/admin/jobLogs/clean` | 清空任务日志 |
+| GET | `/api/admin/jobLogs/jobGroups` | 日志分组列表 |
+| GET | `/api/admin/operation/logs` | 操作日志列表 |
+| DELETE | `/api/admin/operation/logs` | 删除操作日志 |
+| GET | `/api/admin/exception/logs` | 异常日志列表 |
+| DELETE | `/api/admin/exception/logs` | 删除异常日志 |
+
+#### 文件上传 / 作品集管理
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| POST | `/api/admin/upload` | 上传文件 |
+| POST | `/api/admin/upload/batch` | 批量上传 |
+| POST | `/api/admin/upload/image` | 上传图片 |
+| GET | `/api/admin/portfolios` | 作品集列表（含隐藏项） |
+| PUT | `/api/admin/portfolios` | 编辑作品集（封面/排序/置顶/可见性） |
+| DELETE | `/api/admin/portfolios` | 批量删除作品集 |
+| POST | `/api/admin/portfolios/sync` | 手动触发 GitHub 同步 |
+
+### Agent API（可选，`/api/agent`，需 JWT + Agent 启用）
+
+| 方法 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| POST | `/api/agent/chat` | AI 对话（SSE 流式） |
+
+> 📖 完整 API 文档见 [`docs/API.md`](docs/API.md)，作品集详情见 [`docs/PORTFOLIO_GUIDE.md`](docs/PORTFOLIO_GUIDE.md)
 
 ---
 
@@ -424,7 +600,7 @@ make help          # 查看所有命令
 
 ```bash
 # 登录获取 JWT Token
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/users/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -450,11 +626,11 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ```bash
 # 无需认证即可访问
-curl -X GET "http://localhost:8080/api/articles?current=1&size=10" \
+curl -X GET "http://localhost:8080/api/articles/all?current=1&size=10" \
   -H "Content-Type: application/json"
 
 # 带关键词搜索
-curl -X GET "http://localhost:8080/api/articles?keyword=Go语言&current=1&size=10" \
+curl -X GET "http://localhost:8080/api/articles/all?keyword=Go语言&current=1&size=10" \
   -H "Content-Type: application/json"
 ```
 
@@ -484,7 +660,7 @@ curl -X POST http://localhost:8080/api/admin/articles \
 
 ```bash
 # 上传文章封面或图片
-curl -X POST http://localhost:8080/api/admin/files/upload \
+curl -X POST http://localhost:8080/api/admin/upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@/path/to/image.jpg"
 
@@ -577,7 +753,7 @@ func main() {
 
     reqBody, _ := json.Marshal(loginReq)
     resp, err := http.Post(
-        "http://localhost:8080/api/auth/login",
+        "http://localhost:8080/api/users/login",
         "application/json",
         bytes.NewBuffer(reqBody),
     )
@@ -630,7 +806,7 @@ class AuroraAPI {
 
   // 登录
   async login(username: string, password: string): Promise<string> {
-    const response = await fetch(`${this.baseURL}/api/auth/login`, {
+    const response = await fetch(`${this.baseURL}/api/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
