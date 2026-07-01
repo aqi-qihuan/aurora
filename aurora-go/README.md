@@ -1309,6 +1309,7 @@ PATCH: 向后兼容的 bug 修复
 | [`docs/API.md`](docs/API.md) | 完整 API 接口文档 |
 | [`docs/AGENT_GUIDE.md`](docs/AGENT_GUIDE.md) | AI Agent 使用指南 |
 | [`docs/PORTFOLIO_GUIDE.md`](docs/PORTFOLIO_GUIDE.md) | 作品集模块指南 |
+| [`docs/DIAG_TOOLS.md`](docs/DIAG_TOOLS.md) | cmd/diag 诊断工具集说明 |
 | [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) | Java → Go 迁移指南 |
 | [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md) | 测试报告 |
 | [`.env.example`](.env.example) | 环境变量模板 |
