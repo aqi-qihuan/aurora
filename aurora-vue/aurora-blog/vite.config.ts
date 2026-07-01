@@ -47,8 +47,7 @@ export default defineConfig({
       '/api': {
         target: 'https://www.aqi125.cn',
         changeOrigin: true,
-        // 不要移除 /api 前缀，后端路由需要完整的路径
-        // rewrite: (path) => path.replace(/^\/api/, '') // 错误：这会移除 /api 导致请求变成首页
+        // 本地联调可临时改为 http://localhost:8080 指向 Go 后端
       }
     }
   },

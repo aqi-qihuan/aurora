@@ -18,7 +18,8 @@
     "featured": "注目",
     "view_repo": "リポジトリ",
     "demo": "デモ",
-    "unknown_lang": "コード"
+    "unknown_lang": "コード",
+    "project_label": "プロジェクト"
   },
   "titles": {
     "articles": "記事一覧",

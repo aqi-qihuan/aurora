@@ -1,25 +1,38 @@
 <template>
   <div class="portfolio-card group" @click="openRepo">
+    <!-- 切角装饰 -->
+    <span class="corner corner-tl"></span>
+    <span class="corner corner-br"></span>
+
+    <!-- 封面 -->
     <div class="portfolio-cover">
       <img v-if="data.cover" v-lazy="data.cover" :alt="data.name" />
       <div v-else class="cover-fallback" :style="coverStyle">
         <span class="cover-letter">{{ firstLetter }}</span>
-        <span class="cover-lang">{{ data.language || 'Code' }}</span>
+        <span class="cover-lang">{{ (data.language || 'CODE').toUpperCase() }}</span>
       </div>
+      <!-- 渐变遮罩增强可读性 -->
+      <div class="cover-overlay"></div>
+      <!-- star 角标 -->
       <span class="star-badge">
         <svg-icon icon-class="star" />
         {{ formatCount(data.stargazersCount) }}
       </span>
+      <!-- 语言色条 -->
+      <span class="lang-bar" :style="{ background: langColor }"></span>
     </div>
 
+    <!-- 内容区 -->
     <div class="portfolio-content">
       <div class="portfolio-header">
-        <svg-icon icon-class="github" class="repo-icon" />
-        <h3 class="portfolio-name">{{ data.name || placeholder.name }}</h3>
+        <span class="header-line"></span>
+        <span class="header-label">{{ t('home.project_label') || 'PROJECT' }}</span>
         <span v-if="data.isFeatured === 1" class="featured-tag">
           <svg-icon icon-class="hot" /> {{ t('home.featured') }}
         </span>
       </div>
+
+      <h3 class="portfolio-name">{{ data.name || placeholder.name }}</h3>
 
       <p class="portfolio-desc">{{ data.description || placeholder.desc }}</p>
 
@@ -30,12 +43,17 @@
         <li># {{ data.language || 'Code' }}</li>
       </ul>
 
+      <div class="portfolio-divider"></div>
+
       <div class="portfolio-meta">
         <span class="lang-dot" :style="{ background: langColor }"></span>
         <span class="meta-text">{{ data.language || t('home.unknown_lang') }}</span>
-        <span class="meta-divider">·</span>
+        <span class="meta-divider"></span>
         <svg-icon icon-class="clock" class="meta-icon" />
         <span class="meta-text">{{ relativeTime }}</span>
+        <span class="meta-divider"></span>
+        <svg-icon icon-class="github" class="meta-icon" />
+        <span class="meta-text">{{ formatCount(data.forksCount) }} forks</span>
       </div>
 
       <div class="portfolio-actions">
@@ -108,7 +126,7 @@ export default defineComponent({
     })
 
     const coverStyle = computed(() => ({
-      background: `linear-gradient(135deg, ${langColor.value}22 0%, ${langColor.value}44 100%)`,
+      background: `linear-gradient(135deg, ${langColor.value}18 0%, ${langColor.value}30 100%)`,
       borderColor: langColor.value
     }))
 
@@ -160,42 +178,92 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+/* ============ HOK 风格变量 ============ */
+$gold: #c9a961;
+$gold-bright: #f4d47c;
+$cyan: #00d4ff;
+$cyan-dim: #0099cc;
+$bg-deep: #0a0e1a;
+$bg-card: #0f1424;
+$bg-cover: #1a2240;
+$border-dim: #1f2942;
+$border-mid: #2a3454;
+$text-primary: #e8ecf5;
+$text-secondary: #8a93b0;
+$text-tertiary: #5a6488;
+
 .portfolio-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--background-secondary, #fff);
-  border-radius: 16px;
+  background: $bg-card;
+  border-radius: 2px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   height: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 0.5px solid rgba(201, 169, 97, 0.25);
+
+  /* 切角装饰 */
+  .corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    z-index: 3;
+    pointer-events: none;
+
+    &.corner-tl {
+      top: 0;
+      left: 0;
+      background: $gold;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+
+    &.corner-br {
+      bottom: 0;
+      right: 0;
+      background: $gold;
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+  }
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    transform: translateY(-6px);
+    border-color: $cyan;
+    box-shadow:
+      0 8px 32px rgba(0, 212, 255, 0.15),
+      0 0 0 0.5px rgba(0, 212, 255, 0.4);
+
+    .corner-tl,
+    .corner-br {
+      background: $cyan;
+    }
+
     .portfolio-cover img {
-      transform: scale(1.05);
+      transform: scale(1.06);
     }
     .cover-fallback {
       transform: scale(1.03);
     }
+    .lang-bar {
+      height: 4px;
+    }
   }
 }
 
+/* ============ 封面 ============ */
 .portfolio-cover {
   position: relative;
   width: 100%;
-  height: 160px;
+  height: 170px;
   overflow: hidden;
-  background: #1a1a2e;
+  background: $bg-cover;
 
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.4s ease;
+    transition: transform 0.5s ease;
   }
 
   .cover-fallback {
@@ -205,51 +273,77 @@ export default defineComponent({
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    transition: transform 0.4s ease;
-    border-bottom: 3px solid;
+    gap: 10px;
+    transition: transform 0.5s ease;
+    border-bottom: 0.5px solid;
 
     .cover-letter {
       font-size: 56px;
       font-weight: 700;
       color: #fff;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
       line-height: 1;
+      letter-spacing: 0.02em;
     }
 
     .cover-lang {
-      font-size: 12px;
-      letter-spacing: 0.1em;
-      color: rgba(255, 255, 255, 0.7);
-      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: rgba(255, 255, 255, 0.65);
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
     }
   }
 
+  /* 渐变遮罩 */
+  .cover-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(10, 14, 26, 0) 0%,
+      rgba(10, 14, 26, 0.3) 50%,
+      rgba(15, 20, 36, 0.95) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* star 角标 */
   .star-badge {
     position: absolute;
     top: 12px;
     right: 12px;
     padding: 4px 10px;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(8px);
-    border-radius: 999px;
-    color: #fbbf24;
-    font-size: 12px;
+    background: rgba(10, 14, 26, 0.85);
+    border: 0.5px solid rgba(201, 169, 97, 0.4);
+    border-radius: 2px;
+    color: $gold-bright;
+    font-size: 11px;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 4px;
+    backdrop-filter: blur(4px);
 
     svg {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
     }
+  }
+
+  /* 底部语言色条 */
+  .lang-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    transition: height 0.3s ease;
   }
 }
 
+/* ============ 内容区 ============ */
 .portfolio-content {
   flex: 1;
-  padding: 18px 20px 20px;
+  padding: 20px 22px 22px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -259,23 +353,22 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 2px;
 
-  .repo-icon {
-    width: 18px;
-    height: 18px;
-    color: var(--text-secondary, #666);
+  .header-line {
+    width: 20px;
+    height: 1.5px;
+    background: $gold;
     flex-shrink: 0;
   }
 
-  .portfolio-name {
-    font-size: 17px;
-    font-weight: 600;
-    color: var(--text-primary, #1a1a1a);
-    margin: 0;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .header-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: $gold;
+    font-weight: 500;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    text-transform: uppercase;
   }
 
   .featured-tag {
@@ -285,10 +378,11 @@ export default defineComponent({
     padding: 2px 8px;
     background: linear-gradient(135deg, #f97316, #ef4444);
     color: #fff;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
-    border-radius: 999px;
-    flex-shrink: 0;
+    border-radius: 2px;
+    margin-left: auto;
+    letter-spacing: 0.05em;
 
     svg {
       width: 10px;
@@ -297,10 +391,22 @@ export default defineComponent({
   }
 }
 
+.portfolio-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .portfolio-desc {
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-secondary, #666);
+  color: $text-secondary;
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -309,6 +415,7 @@ export default defineComponent({
   min-height: 42px;
 }
 
+/* 描边标签（HOK 风格） */
 .portfolio-topics {
   display: flex;
   flex-wrap: wrap;
@@ -319,109 +426,177 @@ export default defineComponent({
 
   li {
     font-size: 11px;
-    color: var(--text-tertiary, #999);
-    padding: 3px 8px;
-    background: var(--background-tertiary, #f5f5f5);
-    border-radius: 6px;
+    color: $cyan;
+    padding: 3px 9px;
+    background: transparent;
+    border: 0.5px solid rgba(0, 212, 255, 0.35);
+    border-radius: 1px;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    letter-spacing: 0.02em;
   }
+}
+
+.portfolio-divider {
+  height: 0.5px;
+  background: $border-dim;
+  margin: 4px 0;
 }
 
 .portfolio-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary, #888);
-  margin-top: 2px;
+  gap: 8px;
+  font-size: 11px;
+  color: $text-secondary;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
 
   .lang-dot {
     display: inline-block;
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
   }
 
   .meta-text {
-    color: var(--text-secondary, #888);
+    color: $text-secondary;
   }
 
   .meta-divider {
-    color: var(--text-tertiary, #ccc);
+    width: 0.5px;
+    height: 8px;
+    background: $border-mid;
   }
 
   .meta-icon {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
+    color: $text-tertiary;
   }
 }
 
+/* 按钮区 */
 .portfolio-actions {
   display: flex;
   gap: 8px;
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 10px;
 
   a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    padding: 7px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
+    gap: 6px;
+    padding: 9px 14px;
+    border-radius: 1px;
+    font-size: 12px;
+    font-weight: 600;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 
     svg {
-      width: 14px;
-      height: 14px;
+      width: 13px;
+      height: 13px;
     }
   }
 
+  /* 主按钮：金色实心 */
   .btn-primary {
     flex: 1;
-    background: #24292e;
-    color: #fff;
+    background: linear-gradient(135deg, $gold 0%, darken($gold, 12%) 100%);
+    color: $bg-deep;
+    border: 0.5px solid $gold;
 
     &:hover {
-      background: #1a1e22;
+      background: linear-gradient(135deg, $gold-bright 0%, $gold 100%);
+      box-shadow: 0 0 16px rgba(201, 169, 97, 0.4);
       transform: translateY(-1px);
     }
   }
 
+  /* 次按钮：描边幽灵 */
   .btn-ghost {
     flex: 1;
     background: transparent;
-    color: var(--text-primary, #333);
-    border: 1px solid var(--border-color, #e5e7eb);
+    color: $text-secondary;
+    border: 0.5px solid $border-mid;
 
     &:hover {
-      background: var(--background-tertiary, #f5f5f5);
-      border-color: var(--text-tertiary, #ccc);
+      border-color: $cyan;
+      color: $cyan;
+      background: rgba(0, 212, 255, 0.05);
     }
   }
 }
 
-/* 深色主题适配 */
-:global(html.dark) .portfolio-card {
-  background: var(--background-secondary, #1f2937);
-  border-color: rgba(255, 255, 255, 0.06);
+/* ============ 浅色主题适配 ============ */
+:global(html:not(.dark)) .portfolio-card {
+  background: #ffffff;
+  border-color: rgba(201, 169, 97, 0.3);
+
+  .portfolio-cover {
+    background: #f5f7fa;
+
+    .cover-overlay {
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.2) 60%,
+        rgba(255, 255, 255, 0.9) 100%
+      );
+    }
+
+    .star-badge {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(201, 169, 97, 0.4);
+      color: #a88a4a;
+    }
+  }
 
   .portfolio-name {
-    color: var(--text-primary, #f3f4f6);
+    color: #1a1f36;
   }
+
   .portfolio-desc {
-    color: var(--text-secondary, #9ca3af);
+    color: #5a6488;
   }
-  .btn-ghost {
-    color: var(--text-primary, #e5e7eb);
-    border-color: rgba(255, 255, 255, 0.1);
+
+  .portfolio-divider {
+    background: #e5e8f0;
   }
-  .portfolio-topics li {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-tertiary, #9ca3af);
+
+  .portfolio-meta {
+    color: #8a93b0;
+
+    .meta-divider {
+      background: #d5dae5;
+    }
+    .meta-icon {
+      color: #aab2c8;
+    }
+  }
+
+  .portfolio-actions {
+    .btn-primary {
+      color: #ffffff;
+    }
+    .btn-ghost {
+      color: #5a6488;
+      border-color: #d5dae5;
+
+      &:hover {
+        border-color: #0099cc;
+        color: #0099cc;
+        background: rgba(0, 153, 204, 0.04);
+      }
+    }
+  }
+
+  &:hover {
+    border-color: #0099cc;
+    box-shadow: 0 8px 32px rgba(0, 153, 204, 0.12);
   }
 }
 </style>

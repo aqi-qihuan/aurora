@@ -4,7 +4,7 @@
       v-if="list && list.length > 0"
       name="stagger-fade"
       tag="ul"
-      class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      class="portfolio-grid">
       <li
         v-for="(item, index) in list"
         :key="item.id"
@@ -12,7 +12,7 @@
         <PortfolioCard :data="item" />
       </li>
     </transition-group>
-    <ul v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <ul v-else class="portfolio-grid">
       <li v-for="n in 4" :key="n">
         <PortfolioCard :data="{}" />
       </li>
@@ -38,18 +38,32 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .stagger-fade-enter-active {
-  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-  animation: cardFadeIn 0.4s ease both;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: cardFadeIn 0.5s ease both;
 }
 .stagger-fade-enter-from {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(24px);
 }
 @keyframes cardFadeIn {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.98);
+    transform: translateY(20px) scale(0.97);
   }
   to {
     opacity: 1;

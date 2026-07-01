@@ -18,7 +18,8 @@
     "featured": "精选",
     "view_repo": "查看仓库",
     "demo": "在线演示",
-    "unknown_lang": "代码"
+    "unknown_lang": "代码",
+    "project_label": "项目"
   },
   "titles": {
     "articles": "文章列表",

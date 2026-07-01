@@ -18,7 +18,8 @@
     "featured": "Featured",
     "view_repo": "View Repo",
     "demo": "Live Demo",
-    "unknown_lang": "Code"
+    "unknown_lang": "Code",
+    "project_label": "Project"
   },
   "titles": {
     "articles": "Articles",
