@@ -10,6 +10,7 @@ import (
 
 	"github.com/aurora-go/aurora/internal/dto"
 	"github.com/aurora-go/aurora/internal/model"
+	"github.com/aurora-go/aurora/internal/util"
 	"gorm.io/gorm"
 )
 
@@ -36,134 +37,110 @@ func (s *AuroraInfoService) GetHomeInfo(ctx context.Context) (*dto.HomeInfoDTO, 
 	var wg sync.WaitGroup
 
 	// 1. 置顶/推荐文章 (5篇)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		topArticles, err := s.getTopArticles(ctx)
 		if err != nil {
 			slog.Warn("获取置顶文章失败", "error", err.Error())
 			return
 		}
 		info.TopArticles = topArticles
-	}()
+	})
 
 	// 2. 最新文章 (10篇)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		latestArticles, err := s.getLatestArticles(ctx)
 		if err != nil {
 			slog.Warn("获取最新文章失败", "error", err.Error())
 			return
 		}
 		info.LatestArticles = latestArticles
-	}()
+	})
 
 	// 3. 分类列表
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		categories, err := s.getCategories(ctx)
 		if err != nil {
 			slog.Warn("获取分类失败", "error", err.Error())
 			return
 		}
 		info.Categories = categories
-	}()
+	})
 
 	// 4. 标签云(前20个)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		tags, err := s.getTags(ctx)
 		if err != nil {
 			slog.Warn("获取标签失败", "error", err.Error())
 			return
 		}
 		info.Tags = tags
-	}()
+	})
 
 	// 5. 友链列表
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		links, err := s.getFriendLinks(ctx)
 		if err != nil {
 			slog.Warn("获取友链失败", "error", err.Error())
 			return
 		}
 		info.FriendLinks = links
-	}()
+	})
 
 	// 6. 最新说说(5条)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		talks, err := s.getTalks(ctx)
 		if err != nil {
 			slog.Warn("获取说说失败", "error", err.Error())
 			return
 		}
 		info.Talks = talks
-	}()
+	})
 
 	// 7. 网站配置（对标Java getWebsiteConfig）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		config, err := s.getWebsiteConfig(ctx)
 		if err != nil {
 			slog.Warn("获取网站配置失败", "error", err.Error())
 			return
 		}
 		info.WebsiteConfig = config
-	}()
+	})
 
 	// 8. 文章总数（is_delete=0，对标Java第97行）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Article{}).Where("is_delete = 0").Count(&count)
 		info.ArticleCount = int(count)
-	}()
+	})
 
 	// 9. 分类总数（对标Java第104行）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Category{}).Count(&count)
 		info.CategoryCount = int(count)
-	}()
+	})
 
 	// 10. 标签总数（对标Java第111行）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Tag{}).Count(&count)
 		info.TagCount = int(count)
-	}()
+	})
 
 	// 11. 说说总数（对标Java第118行）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Talk{}).Count(&count)
 		info.TalkCount = int(count)
-	}()
+	})
 
 	// 12. 总浏览量（从 Redis 获取，对标Java第132-133行）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		if s.statsService != nil {
 			views, _ := s.statsService.GetTotalViews(ctx)
 			info.ViewCount = int(views)
 		}
-	}()
+	})
 
 	wg.Wait()
 
@@ -184,42 +161,34 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 	}
 
 	// 2. 留言量：文章评论(type=1) + 留言板(type=2) + 说说评论(type=5) 的总和（对标Java但扩展为全部评论）
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Comment{}).
 			Where("is_delete = 0 AND type IN (1, 2, 5)").
 			Count(&count)
 		info.MessageCount = int(count)
-	}()
+	})
 
 	// 3. 用户数 (对标 Java 第156行)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.UserInfo{}).Count(&count)
 		info.UserCount = int(count)
-	}()
+	})
 
 	// 4. 文章数 (is_delete=0，对标 Java 第157-158行)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		var count int64
 		s.db.WithContext(ctx).Model(&model.Article{}).
 			Where("is_delete = 0").
 			Count(&count)
 		info.ArticleCount = int(count)
-	}()
+	})
 
 	// 5. 独立访客统计 (最近7天，对标 Java UniqueViewServiceImpl.listUniqueViews)
 	// Java: uniqueViewService.listUniqueViews() → UniqueViewMapper.xml 直接查 t_unique_view 表
 	// Go增强: 合并数据库历史数据 + 今天Redis实时数据，确保数据及时性
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		
 		// 对标 Java: DateUtil.beginOfDay(DateUtil.offsetDay(new Date(), -7)) ~ DateUtil.endOfDay(new Date())
 		// 关键修复: 使用 beginOfDay 和 endOfDay 确保查询完整的日期范围
@@ -266,12 +235,10 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 		}
 		
 		info.UniqueViewDTOs = result
-	}()
+	})
 
 	// 6. 文章统计 (按日期分组，对标 Java 第160行)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		type Result struct {
 			Date  string
 			Count int
@@ -293,12 +260,10 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 				Count: r.Count,
 			}
 		}
-	}()
+	})
 
 	// 7. 分类列表 (对标Java CategoryMapper.xml listCategories: SQL JOIN统计)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		
 		// 使用 SQL 直接统计每个分类的文章数量（对标 Java Mapper XML）
 		type CategoryWithCount struct {
@@ -323,12 +288,10 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 				ArticleCount: c.ArticleCount,
 			}
 		}
-	}()
+	})
 
 	// 8. 标签列表 (对标Java TagMapper.xml listTags: SQL JOIN统计文章数)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	util.SafeGo(&wg, func() {
 		
 		// 对标Java: SELECT t.id, tag_name, COUNT(aat.article_id) AS count FROM t_tag t
 		// LEFT JOIN (SELECT a.id AS article_id, at.tag_id AS tag_id FROM t_article_tag at
@@ -361,7 +324,7 @@ func (s *AuroraInfoService) GetAdminDashboard(ctx context.Context) (*dto.AuroraA
 				ArticleCount: t.ArticleCount,
 			}
 		}
-	}()
+	})
 
 	wg.Wait()
 

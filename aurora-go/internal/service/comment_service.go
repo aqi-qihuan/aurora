@@ -146,15 +146,15 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uint, vo vo.C
 	})
 
 	// 发送评论通知 (对标Java: CompletableFuture.runAsync(() -> notice(comment, fromNickname)))
-	// 在事务外异步发送, 避免阻塞主流程
+	// 在事务外异步发送, 避免阻塞主流程（带 recover 防止 goroutine panic 导致进程崩溃）
 	if err == nil {
-		go func() {
+		util.SafeGoAsync(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := s.SendCommentNotification(ctx, &comment, userID); err != nil {
 				slog.Warn("发送评论通知失败", "comment_id", comment.ID, "error", err)
 			}
-		}()
+		})
 	}
 
 	return &comment, err
@@ -818,17 +818,29 @@ func (s *CommentService) ListRepliesByCommentId(ctx context.Context, commentId u
 func (s *CommentService) GetCommentStats(ctx context.Context) (*CommentStats, error) {
 	stats := &CommentStats{}
 
-	// 使用goroutine并发查询4个统计 (errgroup模式替代CompletableFuture)
+	// 使用goroutine并发查询5个统计 (errgroup模式替代CompletableFuture)
+	// 每个 goroutine 带 recover，panic 时写入零值避免 channel deadlock
 	ch := make(chan struct {
 		key string
 		val int64
 	}, 5)
 
-	go func() { ch <- struct{ key string; val int64 }{"total", s.countAll(ctx)} }()
-	go func() { ch <- struct{ key string; val int64 }{"article", s.countByType(ctx, 1)} }()
-	go func() { ch <- struct{ key string; val int64 }{"talk", s.countByType(ctx, 5)} }()
-	go func() { ch <- struct{ key string; val int64 }{"pending", s.countByReview(ctx, 0)} }()
-	go func() { ch <- struct{ key string; val int64 }{"approved", s.countByReview(ctx, 1)} }()
+	sendStat := func(key string, fn func() int64) {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("评论统计 goroutine panic recovered", "key", key, "panic", r)
+					ch <- struct{ key string; val int64 }{key, 0}
+				}
+			}()
+			ch <- struct{ key string; val int64 }{key, fn()}
+		}()
+	}
+	sendStat("total", func() int64 { return s.countAll(ctx) })
+	sendStat("article", func() int64 { return s.countByType(ctx, 1) })
+	sendStat("talk", func() int64 { return s.countByType(ctx, 5) })
+	sendStat("pending", func() int64 { return s.countByReview(ctx, 0) })
+	sendStat("approved", func() int64 { return s.countByReview(ctx, 1) })
 
 	for i := 0; i < 5; i++ {
 		r := <-ch

@@ -13,6 +13,7 @@ import (
 	"github.com/aurora-go/aurora/internal/errors"
 	"github.com/aurora-go/aurora/internal/infrastructure/mq"
 	"github.com/aurora-go/aurora/internal/model"
+	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
 	"gorm.io/gorm"
 )
@@ -1135,12 +1136,12 @@ func (s *ArticleService) GetTopArticles(ctx context.Context, limit int) ([]dto.A
 // IncrementViewCount 增加浏览量 (使用 Redis)
 func (s *ArticleService) IncrementViewCount(ctx context.Context, articleID uint) {
 	if s.statsService != nil {
-		// 异步执行，不阻塞主流程
-		go func() {
+		// 异步执行，不阻塞主流程（带 recover 防止 goroutine panic 导致进程崩溃）
+		util.SafeGoAsync(func() {
 			if err := s.statsService.IncrementArticleView(context.Background(), articleID); err != nil {
 				slog.Error("增加文章浏览量失败", "article_id", articleID, "error", err)
 			}
-		}()
+		})
 	}
 }
 
