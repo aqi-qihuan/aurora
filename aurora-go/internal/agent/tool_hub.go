@@ -14,6 +14,8 @@ import (
 	"github.com/aurora-go/aurora/internal/strategy"
 	"github.com/aurora-go/aurora/internal/util"
 	"github.com/aurora-go/aurora/internal/vo"
+
+	"trpc.group/trpc-go/trpc-agent-go/tool"
 )
 
 // ========== Tool 工具集Hub ==========
@@ -91,6 +93,83 @@ func (h *ToolHub) ToolCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.tools)
+}
+
+// ========== tRPC tool.Tool 接口兼容 ==========
+
+// Declaration 实现 tRPC tool.Tool 接口，返回工具元数据
+// 使 aurora Tool 可直接传给 llmagent.WithTools([]tool.Tool{...})
+func (t *Tool) Declaration() *tool.Declaration {
+	return &tool.Declaration{
+		Name:        t.Definition.Name,
+		Description: t.Definition.Description,
+		InputSchema: toTRPCSchema(t.Definition.Parameters),
+	}
+}
+
+// GetTRPCTools 返回所有工具的 tRPC tool.Tool 接口切片
+// 用于 llmagent.New(llmagent.WithTools(hub.GetTRPCTools()))
+func (h *ToolHub) GetTRPCTools() []tool.Tool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	tools := make([]tool.Tool, 0, len(h.tools))
+	for _, t := range h.tools {
+		tools = append(tools, t)
+	}
+	return tools
+}
+
+// toTRPCSchema 将 aurora 的 map[string]interface{} JSON Schema 转为 tRPC *tool.Schema
+func toTRPCSchema(m map[string]interface{}) *tool.Schema {
+	if m == nil {
+		return &tool.Schema{Type: "object"}
+	}
+	schema := &tool.Schema{
+		Type:        getStringFromMap(m, "type"),
+		Description: getStringFromMap(m, "description"),
+	}
+
+	// required 字段
+	if req, ok := m["required"].([]string); ok {
+		schema.Required = req
+	} else if req, ok := m["required"].([]interface{}); ok {
+		schema.Required = make([]string, 0, len(req))
+		for _, r := range req {
+			if s, ok := r.(string); ok {
+				schema.Required = append(schema.Required, s)
+			}
+		}
+	}
+
+	// properties 字段
+	if props, ok := m["properties"].(map[string]interface{}); ok {
+		schema.Properties = make(map[string]*tool.Schema, len(props))
+		for name, prop := range props {
+			if propMap, ok := prop.(map[string]interface{}); ok {
+				schema.Properties[name] = toTRPCSchema(propMap)
+			}
+		}
+	}
+
+	// items 字段（数组类型）
+	if items, ok := m["items"].(map[string]interface{}); ok {
+		schema.Items = toTRPCSchema(items)
+	}
+
+	// enum 字段
+	if enum, ok := m["enum"].([]interface{}); ok {
+		schema.Enum = enum
+	}
+
+	return schema
+}
+
+// getStringFromMap 从 map 中安全读取字符串
+func getStringFromMap(m map[string]interface{}, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
 }
 
 // ExecuteAnalysis 分析工具快捷执行方法
