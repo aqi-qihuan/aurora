@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -162,7 +163,7 @@ func detectAll(cfg *config.Config, db *gorm.DB, rdb *redis.Client) []ServiceResu
 		if cfg.RabbitMQ.Host == "" {
 			return 0, nil
 		}
-		addr := fmt.Sprintf("%s:%d", cfg.RabbitMQ.Host, cfg.RabbitMQ.Port)
+		addr := net.JoinHostPort(cfg.RabbitMQ.Host, strconv.Itoa(cfg.RabbitMQ.Port))
 		start := time.Now()
 		conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
 		if err != nil {
@@ -216,7 +217,7 @@ func detectAll(cfg *config.Config, db *gorm.DB, rdb *redis.Client) []ServiceResu
 		if !cfg.Email.Enabled || cfg.Email.Host == "" {
 			return 0, nil
 		}
-		addr := fmt.Sprintf("%s:%d", cfg.Email.Host, cfg.Email.Port)
+		addr := net.JoinHostPort(cfg.Email.Host, strconv.Itoa(cfg.Email.Port))
 		start := time.Now()
 		conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
 		if err != nil {
@@ -256,7 +257,7 @@ func detectAll(cfg *config.Config, db *gorm.DB, rdb *redis.Client) []ServiceResu
 		start := time.Now()
 		resp, err := http.Get(fmt.Sprintf("http://%s:%d/api/exchanges/%%2F/maxwell", cfg.RabbitMQ.Host, rmqMgmtPort))
 		if err != nil {
-			addr := fmt.Sprintf("%s:%d", cfg.RabbitMQ.Host, cfg.RabbitMQ.Port)
+			addr := net.JoinHostPort(cfg.RabbitMQ.Host, strconv.Itoa(cfg.RabbitMQ.Port))
 			conn, err := net.DialTimeout("tcp", addr, 3*time.Second)
 			if err != nil {
 				return 0, err
