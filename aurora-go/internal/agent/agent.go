@@ -1,4 +1,4 @@
-// Package agent 基于 tRPC-Agent-Go v1.8 实现的 AI 引擎核心
+// Package agent 基于 tRPC-Agent-Go v1.10.0 实现的 AI 引擎核心
 //
 // 隔离保证（5级防护）:
 //   - L1 编译隔离: //go:build aurora_agent tag 控制是否编译
@@ -7,11 +7,12 @@
 //   - L4 故障隔离: goroutine+recover, panic不杀主进程
 //   - L5 依赖隔离: 核心代码零import agent包
 //
-// 架构:
+// 架构 (基于 tRPC-Agent-Go v1.10.0):
 //
-//	AuroraAgentFactory (入口)
-//	   ├── LLM Router (多模型路由: OpenAI/DeepSeek/Qwen/Claude)
-//	   ├── Tool Hub (6个Aurora业务工具 + MCP工具支持)
+//	AuroraAgent (入口)
+//	   ├── tRPC Runner (llmagent + runner.NewRunner) ← 阶段4新增
+//	   ├── LLM Router (model/openai: OpenAI/DeepSeek/Qwen/Hunyuan + Claude手搓)
+//	   ├── Tool Hub (6个Aurora业务工具, 实现 tRPC tool.Tool 接口)
 //	   ├── Memory Service (InMemory/Redis持久化会话记忆)
 //	   └── RAG Pipeline (ES混合检索 + LLM生成)
 package agent
@@ -27,6 +28,10 @@ import (
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/dto"
 	apperrors "github.com/aurora-go/aurora/internal/errors"
+
+	"trpc.group/trpc-go/trpc-agent-go/agent/llmagent"
+	"trpc.group/trpc-go/trpc-agent-go/model"
+	"trpc.group/trpc-go/trpc-agent-go/runner"
 )
 
 // ========== AuroraAgentFactory 唯一入口 (~80行) ==========
@@ -34,11 +39,12 @@ import (
 
 // AuroraAgent Agent引擎实例（全局单例）
 type AuroraAgent struct {
-	config     *config.AgentConfig
-	llmRouter  *LLMRouter
-	toolHub    *ToolHub
-	memorySvc  MemoryService
+	config      *config.AgentConfig
+	llmRouter   *LLMRouter
+	toolHub     *ToolHub
+	memorySvc   MemoryService
 	ragPipeline *RAGPipeline
+	trpcRunner  runner.Runner // tRPC runner（阶段4新增，未来 Chat 可切换到 runner.Run）
 }
 
 var globalAgent *AuroraAgent
@@ -50,22 +56,22 @@ func InitAgent(cfg *config.AgentConfig) error {
 		return nil // 零初始化
 	}
 
-	slog.Info("Initializing Aurora Agent Engine...")
+	slog.Info("Initializing Aurora Agent Engine (tRPC-Agent-Go v1.10.0)...")
 
-	// 1. LLM Router - 多模型路由
+	// 1. LLM Router - 多模型路由 (model/openai)
 	llmRouter, err := NewLLMRouter(&cfg.LLM)
 	if err != nil {
 		return fmt.Errorf("LLM router init failed: %w", err)
 	}
-	slog.Info("  [1/4] LLM Router ready",
+	slog.Info("  [1/5] LLM Router ready",
 		"default", cfg.LLM.DefaultProvider,
 		"providers", len(cfg.LLM.Providers),
 	)
 
-	// 2. Tool Hub - 业务工具集
+	// 2. Tool Hub - 业务工具集 (实现 tRPC tool.Tool 接口)
 	toolHub := NewToolHub()
 	RegisterAuroraTools(toolHub) // 注册6个业务工具
-	slog.Info("  [2/4] Tool Hub ready",
+	slog.Info("  [2/5] Tool Hub ready",
 		"tools", toolHub.ToolCount(),
 	)
 
@@ -74,13 +80,33 @@ func InitAgent(cfg *config.AgentConfig) error {
 	if err != nil {
 		return fmt.Errorf("memory service init failed: %w", err)
 	}
-	slog.Info("  [3/4] Memory Service ready",
+	slog.Info("  [3/5] Memory Service ready",
 		"type", cfg.Memory.Type,
 	)
 
 	// 4. RAG Pipeline - 检索增强生成
 	ragPipeline := NewRAGPipeline(llmRouter)
-	slog.Info("  [4/4] RAG Pipeline ready")
+	slog.Info("  [4/5] RAG Pipeline ready")
+
+	// 5. tRPC Runner - 创建 llmagent + runner（阶段4新增）
+	// 使用默认 provider 的 model 实例 + 全部业务工具
+	var trpcRunner runner.Runner
+	if defaultModel := llmRouter.GetDefaultTRPCModel(); defaultModel != nil {
+		agent := llmagent.New("aurora-assistant",
+			llmagent.WithModel(defaultModel),
+			llmagent.WithTools(toolHub.GetTRPCTools()),
+			llmagent.WithGenerationConfig(model.GenerationConfig{
+				Stream: true,
+			}),
+		)
+		trpcRunner = runner.NewRunner("aurora-blog", agent)
+		slog.Info("  [5/5] tRPC Runner ready",
+			"agent", "llmagent",
+			"model", llmRouter.GetCurrentModel(),
+		)
+	} else {
+		slog.Warn("  [5/5] tRPC Runner skipped (default provider is Claude or no model available)")
+	}
 
 	globalAgent = &AuroraAgent{
 		config:      cfg,
@@ -88,6 +114,7 @@ func InitAgent(cfg *config.AgentConfig) error {
 		toolHub:     toolHub,
 		memorySvc:   memorySvc,
 		ragPipeline: ragPipeline,
+		trpcRunner:  trpcRunner,
 	}
 
 	slog.Info("Aurora Agent Engine initialized successfully")
@@ -97,6 +124,15 @@ func InitAgent(cfg *config.AgentConfig) error {
 // GetAgent 获取全局Agent实例（nil表示未初始化）
 func GetAgent() *AuroraAgent {
 	return globalAgent
+}
+
+// GetRunner 获取 tRPC Runner 实例（nil表示未创建或默认provider是Claude）
+// 未来 Chat 方法可切换到 runner.Run() 使用 tRPC 原生事件流
+func (a *AuroraAgent) GetRunner() runner.Runner {
+	if a == nil {
+		return nil
+	}
+	return a.trpcRunner
 }
 
 // Chat 执行AI对话（核心方法，对标 Runner.Run()）

@@ -252,6 +252,21 @@ func (r *LLMRouter) GetCurrentModel() string {
 	return "unknown"
 }
 
+// GetDefaultTRPCModel 获取默认 provider 的 tRPC model.Model 实例
+// 用于创建 tRPC llmagent + runner
+func (r *LLMRouter) GetDefaultTRPCModel() model.Model {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	client, ok := r.clients[r.defaultProvider]
+	if !ok {
+		return nil
+	}
+	if oc, ok := client.(*OpenAICompatibleClient); ok {
+		return oc.model
+	}
+	return nil // ClaudeClient 无 tRPC model
+}
+
 // GetAvailableProviders 获取所有可用Provider列表
 func (r *LLMRouter) GetAvailableProviders() []string {
 	r.mu.RLock()
