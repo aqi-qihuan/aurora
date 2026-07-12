@@ -14,7 +14,16 @@ import (
 )
 
 // ========== Memory 会话记忆服务 ==========
-// 对标 tRPC memory/memorysvc + Redis持久化适配器 (~60行)
+// 架构对应关系（tRPC-Agent-Go v1.10.0）:
+//   - aurora MemoryService ≈ tRPC session.Service（会话状态/消息历史）
+//   - tRPC memory.Service 是长期记忆（用户偏好/事实），与 aurora MemoryService 职责不同
+//
+// 迁移决策（阶段3评估）:
+//   - 保留 aurora MemoryService 不变（InMemory + Redis 双模式已稳定）
+//   - 阶段4 Agent 入口重写时，若用 tRPC runner 则 session 由 runner 内部管理
+//   - aurora MemoryService 退化为 handler 层的会话列表查询接口
+//   - tRPC memory.Service 可后续作为长期记忆扩展（当前无需求）
+//
 // 支持: InMemory(开发) / Redis持久化(生产) 两种模式
 
 // SessionMessage 会话中的单条消息
