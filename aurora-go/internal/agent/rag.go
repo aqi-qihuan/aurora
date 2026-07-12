@@ -12,7 +12,11 @@ import (
 )
 
 // ========== RAG 检索增强生成管道 ==========
-// 对标 tRPC knowledge 包 (文档检索增强生成内置支持)
+// 架构对应（tRPC-Agent-Go v1.10.0）:
+//   - tRPC knowledge 包主要支持 sqlite vec，不支持 Elasticsearch
+//   - aurora RAG 使用 ES 混合检索 + LLM 生成，与 aurora 基础设施深度集成
+//   - 保留自研实现，LLM 调用部分已通过 LLMRouter 间接使用 tRPC model/openai
+//
 // 流程: 用户Query → ES语义检索 → 上下文构建 → LLM生成答案
 
 // RAGPipeline RAG管道实例
