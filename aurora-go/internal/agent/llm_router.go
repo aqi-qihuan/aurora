@@ -14,11 +14,17 @@ import (
 
 	"github.com/aurora-go/aurora/internal/config"
 	"github.com/aurora-go/aurora/internal/dto"
+
+	"trpc.group/trpc-go/trpc-agent-go/model"
+	"trpc.group/trpc-go/trpc-agent-go/model/openai"
 )
 
 // ========== LLM 多模型路由器 ==========
-// 对标 tRPC model/openai + model/deepseek (配置即插, 支持VariantDeepSeek)
-// 支持: OpenAI GPT / DeepSeek / 阿里通义千问(Qwen) / Anthropic Claude
+// 基于 tRPC-Agent-Go model/openai (v1.10.0) 实现
+// 支持: OpenAI GPT / DeepSeek / 阿里通义千问(Qwen) / 腾讯混元(Hunyuan) / Anthropic Claude
+//
+// OpenAI/DeepSeek/Qwen/Hunyuan → tRPC model/openai (WithVariant)
+// Claude → 保留手搓 Anthropic API 适配 (tRPC 无 VariantClaude)
 
 // ChatMessage 对话消息（对标 OpenAI ChatCompletion message format）
 type ChatMessage struct {
@@ -27,37 +33,7 @@ type ChatMessage struct {
 	Name    string `json:"name,omitempty"`
 }
 
-// chatCompletionRequest OpenAI兼容的请求格式
-type chatCompletionRequest struct {
-	Model       string        `json:"model"`
-	Messages    []ChatMessage `json:"messages"`
-	Temperature float64       `json:"temperature,omitempty"`
-	MaxTokens   int           `json:"max_tokens,omitempty"`
-	Stream      bool          `json:"stream,omitempty"`
-}
-
-// chatCompletionResponse OpenAI兼容的响应格式
-type chatCompletionResponse struct {
-	ID      string `json:"id"`
-	Object  string `json:"object"`
-	Created int64  `json:"created"`
-	Model   string `json:"model"`
-	Choices []struct {
-		Index   int `json:"index"`
-		Message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		} `json:"message"`
-		FinishReason string `json:"finish_reason"`
-	} `json:"choices"`
-	Usage struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
-		TotalTokens      int `json:"total_tokens"`
-	} `json:"usage"`
-}
-
-// streamChunk SSE流式数据块
+// streamChunk SSE流式数据块（handler 层依赖此结构）
 type streamChunk struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
@@ -72,7 +48,33 @@ type streamChunk struct {
 	} `json:"choices"`
 }
 
-// anthropicRequest Claude专用请求格式
+// newStreamChunk 构造 streamChunk 的辅助函数（简化匿名结构体构造）
+func newStreamChunk(id, object, modelName string, created int64, content string, finishReason *string) streamChunk {
+	return streamChunk{
+		ID:      id,
+		Object:  object,
+		Created: created,
+		Model:   modelName,
+		Choices: []struct {
+			Delta        struct {
+				Role    string `json:"role,omitempty"`
+				Content string `json:"content,omitempty"`
+			} `json:"delta"`
+			FinishReason *string `json:"finish_reason"`
+		}{
+			{
+				Delta: struct {
+					Role    string `json:"role,omitempty"`
+					Content string `json:"content,omitempty"`
+				}{Role: "assistant", Content: content},
+				FinishReason: finishReason,
+			},
+		},
+	}
+}
+
+// ========== Anthropic Claude 专用类型（ClaudeClient 依赖） ==========
+
 type anthropicRequest struct {
 	Model     string         `json:"model"`
 	MaxTokens int            `json:"max_messages"`
@@ -84,11 +86,10 @@ type anthropicMsg struct {
 	Content string `json:"content"`
 }
 
-// anthropicResponse Claude响应格式
 type anthropicResponse struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"`
-	Role  string `json:"role"`
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Role    string `json:"role"`
 	Content []struct {
 		Type string `json:"type"`
 		Text string `json:"text"`
@@ -99,6 +100,8 @@ type anthropicResponse struct {
 	} `json:"usage"`
 }
 
+// ========== LLM 客户端接口 ==========
+
 // LLMClient 单个LLM提供商客户端接口
 type LLMClient interface {
 	Chat(ctx context.Context, messages []ChatMessage, opts *config.LLMProvider) (string, *dto.TokenUsageDTO, error)
@@ -106,21 +109,23 @@ type LLMClient interface {
 	Close()
 }
 
+// ========== LLMRouter 多模型路由器 ==========
+
 // LLMRouter 多模型路由器（全局单例）
 type LLMRouter struct {
-	mu            sync.RWMutex
+	mu              sync.RWMutex
 	defaultProvider string
-	providers     map[string]*config.LLMProvider
-	clients       map[string]LLMClient
-	httpClient    *http.Client
+	providers       map[string]*config.LLMProvider
+	clients         map[string]LLMClient
+	httpClient      *http.Client // 仅 ClaudeClient 使用
 }
 
 // NewLLMRouter 创建多模型路由器
 func NewLLMRouter(llmCfg *config.AgentLLMConfig) (*LLMRouter, error) {
 	router := &LLMRouter{
 		defaultProvider: llmCfg.DefaultProvider,
-		providers:      make(map[string]*config.LLMProvider),
-		clients:        make(map[string]LLMClient),
+		providers:       make(map[string]*config.LLMProvider),
+		clients:         make(map[string]LLMClient),
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
@@ -138,9 +143,12 @@ func NewLLMRouter(llmCfg *config.AgentLLMConfig) (*LLMRouter, error) {
 		var client LLMClient
 		switch name {
 		case "claude":
+			// Claude 保留手搓 Anthropic API 适配（tRPC 无 VariantClaude）
 			client = &ClaudeClient{httpClient: router.httpClient}
 		default:
-			client = &OpenAICompatibleClient{httpClient: router.httpClient}
+			// OpenAI/DeepSeek/Qwen/Hunyuan 使用 tRPC model/openai
+			trpcModel := newTRPCModel(name, &provider)
+			client = &OpenAICompatibleClient{model: trpcModel}
 		}
 
 		router.clients[name] = client
@@ -152,6 +160,39 @@ func NewLLMRouter(llmCfg *config.AgentLLMConfig) (*LLMRouter, error) {
 	}
 
 	return router, nil
+}
+
+// newTRPCModel 根据provider名称创建 tRPC model/openai 实例
+func newTRPCModel(providerName string, opts *config.LLMProvider) model.Model {
+	variant := inferVariant(providerName, opts.BaseURL)
+
+	m := openai.New(opts.Model,
+		openai.WithAPIKey(opts.APIKey),
+		openai.WithBaseURL(opts.BaseURL),
+		openai.WithVariant(variant),
+	)
+
+	slog.Info("tRPC model created",
+		"provider", providerName,
+		"model", opts.Model,
+		"variant", variant,
+	)
+	return m
+}
+
+// inferVariant 根据provider名称或BaseURL推断模型变体
+func inferVariant(providerName, baseURL string) openai.Variant {
+	switch strings.ToLower(providerName) {
+	case "deepseek":
+		return openai.VariantDeepSeek
+	case "qwen":
+		return openai.VariantQwen
+	case "hunyuan":
+		return openai.VariantHunyuan
+	default:
+		// 也通过 BaseURL 推断（tRPC openai 包内部也有此逻辑，这里提前设置）
+		return openai.VariantOpenAI
+	}
 }
 
 // Chat 同步对话（自动路由到默认模型）
@@ -231,95 +272,118 @@ func (r *LLMRouter) Close() {
 	}
 }
 
-// ========== OpenAI 兼容客户端 (GPT/DeepSeek/Qwen) ==========
+// ========== OpenAI 兼容客户端（基于 tRPC-Agent-Go model/openai） ==========
+// 替换原手搓 HTTP 实现，使用 tRPC model/openai 的 GenerateContent API
+// 支持: OpenAI GPT / DeepSeek / Qwen / Hunyuan
 
 type OpenAICompatibleClient struct {
-	httpClient *http.Client
+	model model.Model // tRPC model/openai 实例
+}
+
+// toModelMessages 将 ChatMessage 转换为 tRPC model.Message
+func toModelMessages(messages []ChatMessage) []model.Message {
+	msgs := make([]model.Message, len(messages))
+	for i, msg := range messages {
+		msgs[i] = model.Message{
+			Role:    model.Role(msg.Role),
+			Content: msg.Content,
+		}
+	}
+	return msgs
+}
+
+// buildGenerationConfig 从 LLMProvider 配置构建 GenerationConfig
+func buildGenerationConfig(opts *config.LLMProvider, stream bool) model.GenerationConfig {
+	cfg := model.GenerationConfig{
+		Stream: stream,
+	}
+	if opts.Temperature > 0 {
+		cfg.Temperature = &opts.Temperature
+	}
+	if opts.MaxTokens > 0 {
+		cfg.MaxTokens = &opts.MaxTokens
+	}
+	return cfg
 }
 
 func (c *OpenAICompatibleClient) Chat(ctx context.Context, messages []ChatMessage, opts *config.LLMProvider) (string, *dto.TokenUsageDTO, error) {
-	reqBody := chatCompletionRequest{
-		Model:       opts.Model,
-		Messages:    messages,
-		Temperature: opts.Temperature,
-		MaxTokens:   opts.MaxTokens,
+	req := &model.Request{
+		Messages:         toModelMessages(messages),
+		GenerationConfig: buildGenerationConfig(opts, false),
 	}
 
-	bodyBytes, _ := json.Marshal(reqBody)
-	url := strings.TrimRight(opts.BaseURL, "/") + "/chat/completions"
-
-	resp, err := c.doRequest(ctx, url, opts.APIKey, bodyBytes)
+	respCh, err := c.model.GenerateContent(ctx, req)
 	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	var result chatCompletionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", nil, fmt.Errorf("decode response: %w", err)
+		return "", nil, fmt.Errorf("tRPC generate content: %w", err)
 	}
 
-	if len(result.Choices) == 0 {
-		return "", nil, fmt.Errorf("no choices in response")
+	// 收集完整响应（GenerateContent 返回 channel，非流式时只有一个响应）
+	var content strings.Builder
+	var usage *dto.TokenUsageDTO
+
+	for resp := range respCh {
+		if len(resp.Choices) > 0 {
+			content.WriteString(resp.Choices[0].Delta.Content)
+		}
+		if resp.Usage != nil {
+			usage = &dto.TokenUsageDTO{
+				PromptTokens:     resp.Usage.PromptTokens,
+				CompletionTokens: resp.Usage.CompletionTokens,
+				TotalTokens:      resp.Usage.TotalTokens,
+			}
+		}
 	}
 
-	content := result.Choices[0].Message.Content
-	usage := &dto.TokenUsageDTO{
-		PromptTokens:     result.Usage.PromptTokens,
-		CompletionTokens: result.Usage.CompletionTokens,
-		TotalTokens:      result.Usage.TotalTokens,
+	if content.Len() == 0 {
+		return "", nil, fmt.Errorf("empty response from model")
 	}
 
-	return content, usage, nil
+	return content.String(), usage, nil
 }
 
 func (c *OpenAICompatibleClient) ChatStream(ctx context.Context, messages []ChatMessage, opts *config.LLMProvider) (<-chan streamChunk, error) {
-	reqBody := chatCompletionRequest{
-		Model:       opts.Model,
-		Messages:    messages,
-		Temperature: opts.Temperature,
-		MaxTokens:   opts.MaxTokens,
-		Stream:      true,
+	req := &model.Request{
+		Messages:         toModelMessages(messages),
+		GenerationConfig: buildGenerationConfig(opts, true),
 	}
 
-	bodyBytes, _ := json.Marshal(reqBody)
-	url := strings.TrimRight(opts.BaseURL, "/") + "/chat/completions"
-
-	resp, err := c.doRequest(ctx, url, opts.APIKey, bodyBytes)
+	respCh, err := c.model.GenerateContent(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tRPC generate content: %w", err)
 	}
 
+	// 转换 tRPC model.Response → aurora streamChunk
 	ch := make(chan streamChunk, 50)
 
 	go func() {
 		defer close(ch)
-		defer resp.Body.Close()
-		defer recoverPanic("openai_stream")
+		defer recoverPanic("trpc_openai_stream")
 
-		scanner := newSSEScanner(resp.Body)
-		for scanner.Scan() {
-			data := scanner.Data()
-			if data == "[DONE]" {
-				break
-			}
-
-			var chunk streamChunk
-			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+		for resp := range respCh {
+			if len(resp.Choices) == 0 {
 				continue
 			}
-			if len(chunk.Choices) > 0 {
-				ch <- chunk
-			}
+
+			choice := resp.Choices[0]
+			chunk := newStreamChunk(
+				resp.ID,
+				resp.Object,
+				resp.Model,
+				resp.Created,
+				choice.Delta.Content,
+				choice.FinishReason,
+			)
+			ch <- chunk
 		}
 	}()
 
 	return ch, nil
 }
 
-func (c *OpenAICompatibleClient) Close() {} // http.Client 无需显式关闭
+func (c *OpenAICompatibleClient) Close() {} // tRPC model 无需显式关闭
 
-// ========== Claude 客户端 (Anthropic API) ==========
+// ========== Claude 客户端 (Anthropic API，保留手搓实现) ==========
+// tRPC-Agent-Go 无 VariantClaude，Claude 保留手搓 Anthropic API 适配
 
 type ClaudeClient struct {
 	httpClient *http.Client
@@ -401,49 +465,9 @@ func (c *ClaudeClient) ChatStream(ctx context.Context, messages []ChatMessage, o
 	go func() {
 		defer close(ch)
 		finishReason := "end_turn"
-		ch <- streamChunk{
-			Choices: []struct {
-				Delta        struct {
-					Role    string `json:"role,omitempty"`
-					Content string `json:"content,omitempty"`
-				} `json:"delta"`
-				FinishReason *string `json:"finish_reason"`
-			}{
-				{
-					Delta: struct {
-						Role    string `json:"role,omitempty"`
-						Content string `json:"content,omitempty"`
-					}{Role: "assistant", Content: reply},
-					FinishReason: &finishReason,
-				},
-			},
-		}
+		ch <- newStreamChunk("", "chat.completion.chunk", opts.Model, time.Now().Unix(), reply, &finishReason)
 	}()
 	return ch, nil
 }
 
 func (c *ClaudeClient) Close() {}
-
-// ========== HTTP 辅助方法 ==========
-
-func (c *OpenAICompatibleClient) doRequest(ctx context.Context, url, apiKey string, body []byte) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("llm request failed: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		return nil, fmt.Errorf("llm error %d: %s", resp.StatusCode, string(b))
-	}
-
-	return resp, nil
-}
