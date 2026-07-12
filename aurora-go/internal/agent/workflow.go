@@ -118,6 +118,39 @@ type WorkflowError struct {
 	Error   error  `json:"-"`
 }
 
+// ===== WorkflowContext 线程安全访问方法 =====
+// 并行节点（executeParallelNodes）启动多个 goroutine 同时读写 WorkflowContext，
+// 必须用锁保护 Variables 和 NodeResults，否则 data race。
+
+// SetVariable 线程安全地设置共享变量
+func (c *WorkflowContext) SetVariable(key string, value interface{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Variables[key] = value
+}
+
+// GetVariable 线程安全地读取共享变量
+func (c *WorkflowContext) GetVariable(key string) interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Variables[key]
+}
+
+// SetNodeResult 线程安全地写入节点结果
+func (c *WorkflowContext) SetNodeResult(nodeID string, result *NodeResult) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.NodeResults[nodeID] = result
+}
+
+// GetNodeResult 线程安全地读取节点结果
+func (c *WorkflowContext) GetNodeResult(nodeID string) (*NodeResult, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	r, ok := c.NodeResults[nodeID]
+	return r, ok
+}
+
 // ========== 工作流引擎 ==========
 
 // Engine 工作流引擎
@@ -199,7 +232,10 @@ func (e *Engine) Execute(ctx context.Context, workflowID string, input map[strin
 	}
 
 	wfCtx.Status = StatusCompleted
-	wfCtx.Output["result"] = wfCtx.NodeResults[wf.StartNode].Output
+	startResult, _ := wfCtx.GetNodeResult(wf.StartNode)
+	if startResult != nil {
+		wfCtx.Output["result"] = startResult.Output
+	}
 	slog.Info("Workflow execution completed", "wf_id", workflowID, "ctx_id", wfCtx.ID, "duration_ms", wfCtx.FinishedAt.Sub(wfCtx.StartedAt).Milliseconds())
 
 	return wfCtx, nil
@@ -262,14 +298,13 @@ func (e *Engine) executeNode(ctx context.Context, nodeID string, wf *Workflow, w
 				lastErr = nil
 			}
 		case FailRetry:
+			// 重试已在上方 for 循环中耗尽，此处与 FailAbort 行为一致（直接中止）
 			return lastErr
 		}
 	}
 
 	nodeResult.Duration = time.Since(startTime)
-	wfCtx.mu.Lock()
-	wfCtx.NodeResults[nodeID] = nodeResult
-	wfCtx.mu.Unlock()
+	wfCtx.SetNodeResult(nodeID, nodeResult)
 
 	// 路由到下一个节点
 	if lastErr == nil {
@@ -404,7 +439,7 @@ func (e *Engine) registerBuiltinWorkflows() {
 func (e *Engine) registerBuiltinHandlers() {
 	// 文章发布流水线处理器
 	e.RegisterHandler("workflow_start", func(_ context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		wfCtx.Variables["started_at"] = time.Now().Format(time.RFC3339)
+		wfCtx.SetVariable("started_at", time.Now().Format(time.RFC3339))
 		return map[string]interface{}{"message": "工作流开始"}, nil
 	})
 
@@ -429,7 +464,7 @@ func (e *Engine) registerBuiltinHandlers() {
 	})
 
 	e.RegisterHandler("quality_check", func(_ context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		genResult, ok := wfCtx.NodeResults["ai_generate"]
+		genResult, ok := wfCtx.GetNodeResult("ai_generate")
 		if !ok || genResult.Output == nil {
 			return "needs_review", nil
 		}
@@ -444,7 +479,7 @@ func (e *Engine) registerBuiltinHandlers() {
 	})
 
 	e.RegisterHandler("content_review", func(ctx context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		genResult, ok := wfCtx.NodeResults["ai_generate"]
+		genResult, ok := wfCtx.GetNodeResult("ai_generate")
 		if !ok || genResult.Output == nil {
 			return &ModerationResult{Passed: true, Score: 70}, nil
 		}
@@ -461,7 +496,7 @@ func (e *Engine) registerBuiltinHandlers() {
 
 	e.RegisterHandler("seo_optimize", func(ctx context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
 		topic, _ := wfCtx.Input["topic"].(string)
-		genResult, _ := wfCtx.NodeResults["ai_generate"]
+		genResult, _ := wfCtx.GetNodeResult("ai_generate")
 
 		content := ""
 		if genResult != nil && genResult.Output != nil {
@@ -483,13 +518,13 @@ func (e *Engine) registerBuiltinHandlers() {
 		var content string
 
 		// 优先使用SEO优化结果
-		if seoResult, ok := wfCtx.NodeResults["seo_optimize"]; ok && seoResult.Output != nil {
+		if seoResult, ok := wfCtx.GetNodeResult("seo_optimize"); ok && seoResult.Output != nil {
 			if seoResp, ok := seoResult.Output.(*dto.WriteResponse); ok {
 				content = seoResp.Content
 			}
 		}
 		if content == "" {
-			if genResult, ok := wfCtx.NodeResults["ai_generate"]; ok && genResult.Output != nil {
+			if genResult, ok := wfCtx.GetNodeResult("ai_generate"); ok && genResult.Output != nil {
 				if genResp, ok := genResult.Output.(*dto.WriteResponse); ok {
 					content = genResp.Content
 				}
@@ -511,25 +546,25 @@ func (e *Engine) registerBuiltinHandlers() {
 		if err != nil {
 			return nil, fmt.Errorf("save article failed: %w", err)
 		}
-		wfCtx.Variables["article_id"] = result.ID
+		wfCtx.SetVariable("article_id", result.ID)
 		return map[string]interface{}{"article_id": result.ID, "status": "published"}, nil
 	})
 
 	e.RegisterHandler("publish_notify", func(_ context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		articleID, _ := wfCtx.Variables["article_id"].(uint)
+		articleID, _ := wfCtx.GetVariable("article_id").(uint)
 		slog.Info("Article published notification", "article_id", articleID)
 		return map[string]interface{}{"notified": true, "article_id": articleID}, nil
 	})
 
 	e.RegisterHandler("workflow_end", func(_ context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		wfCtx.Variables["completed_at"] = time.Now().Format(time.RFC3339)
+		wfCtx.SetVariable("completed_at", time.Now().Format(time.RFC3339))
 		duration := time.Since(wfCtx.StartedAt).String()
 		return map[string]interface{}{"status": "completed", "duration": duration}, nil
 	})
 
 	// 评论审核流水线处理器
 	e.RegisterHandler("receive_comment", func(_ context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		wfCtx.Variables["received_at"] = time.Now().Format(time.RFC3339)
+		wfCtx.SetVariable("received_at", time.Now().Format(time.RFC3339))
 		return wfCtx.Input, nil
 	})
 
@@ -544,7 +579,7 @@ func (e *Engine) registerBuiltinHandlers() {
 	})
 
 	e.RegisterHandler("check_rule_result", func(_ context.Context, _ *WorkflowNode, wfCtx *WorkflowContext) (interface{}, error) {
-		filterResult, ok := wfCtx.NodeResults["rule_filter"]
+		filterResult, ok := wfCtx.GetNodeResult("rule_filter")
 		if !ok {
 			return "needs_ai", nil
 		}
@@ -599,13 +634,13 @@ func (e *Engine) registerBuiltinHandlers() {
 		var finalScore float64
 
 		// 收集最终审核结论
-		if filterResult, ok := wfCtx.NodeResults["rule_filter"]; ok {
+		if filterResult, ok := wfCtx.GetNodeResult("rule_filter"); ok {
 			if mr, ok := filterResult.Output.(*ModerationResult); ok {
 				finalAction = string(mr.Action)
 				finalScore = float64(mr.Score)
 			}
 		}
-		if aiResult, ok := wfCtx.NodeResults["ai_analyze"]; ok {
+		if aiResult, ok := wfCtx.GetNodeResult("ai_analyze"); ok {
 			if cr, ok := aiResult.Output.(*CommentReviewResult); ok && !cr.Passed {
 				finalAction = "reject"
 				finalScore = cr.Score
@@ -640,7 +675,7 @@ func findNextNodes(wf *Workflow, fromNodeID string, wfCtx *WorkflowContext) []st
 				nextNodes = append(nextNodes, edge.To)
 			} else {
 				// 条件边: 检查上一个节点的输出是否匹配条件
-				if prevResult, ok := wfCtx.NodeResults[fromNodeID]; ok {
+				if prevResult, ok := wfCtx.GetNodeResult(fromNodeID); ok {
 					if outputStr, ok := prevResult.Output.(string); ok && outputStr == edge.Cond {
 						nextNodes = append(nextNodes, edge.To)
 					}
