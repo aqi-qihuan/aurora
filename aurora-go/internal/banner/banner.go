@@ -195,18 +195,22 @@ func detectAll(cfg *config.Config, db *gorm.DB, rdb *redis.Client) []ServiceResu
 		return time.Since(start), nil
 	}))
 
-	// MinIO
-	results = append(results, detectService("MinIO", cfg.MinIO.Endpoint, func() (time.Duration, error) {
+	// Object Storage（RustFS/MinIO 通用探活）
+	// /minio/health/live 是 MinIO 专属端点，RustFS 不支持；
+	// 改用 GET 根路径：S3 服务对匿名请求返回 403（AccessDenied），收到 HTTP 响应即视为存活
+	results = append(results, detectService("Storage", cfg.MinIO.Endpoint, func() (time.Duration, error) {
 		if cfg.MinIO.Endpoint == "" {
 			return 0, nil
 		}
 		start := time.Now()
-		resp, err := http.Get(fmt.Sprintf("%s/minio/health/live", cfg.MinIO.Endpoint))
+		client := &http.Client{Timeout: 3 * time.Second}
+		resp, err := client.Get(cfg.MinIO.Endpoint)
 		if err != nil {
 			return 0, err
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
+		// 2xx-4xx 均视为存活（403 = 服务正常但拒绝匿名），仅 5xx 视为异常
+		if resp.StatusCode >= http.StatusInternalServerError {
 			return 0, fmt.Errorf("status %d", resp.StatusCode)
 		}
 		return time.Since(start), nil
