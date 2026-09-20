@@ -19,7 +19,10 @@ services:
     command: --innodb_buffer_pool_size=128M --innodb_log_buffer_size=8M --innodb_flush_log_at_trx_commit=2 --sync_binlog=100 --max_connections=50 --table_open_cache=200 --thread_cache_size=10 --performance_schema=OFF --skip-name-resolve --tmp_table_size=8M --max_heap_table_size=8M --innodb_flush_method=O_DSYNC
 
   redis:
-    image: redis/redis-stack-server:latest
+    # 官方 Redis 固定 tag（弃用 redis-stack:latest 浮动 tag，不可复现构建）
+    # 项目仅做缓存（save "" + allkeys-lru），无 RediSearch/JSON 等 stack 模块依赖
+    # 8.2 线安全支持至 2030-09
+    image: redis:8.2.9-alpine
     container_name: aurora-redis
     ports:
       - "6379:6379"
@@ -49,7 +52,9 @@ services:
     restart: always
 
   elasticsearch:
-    image: elasticsearch:8.19.14
+    # 8.19.21：补齐 CVE-2026-72649（ML 反序列化 RCE, CVSS 8.8，项目已禁 ML 降险）
+    # 8.19 线支持至 2027-07-15；后续升 9.x 需以 8.19.x 为跳板（官方要求）
+    image: elasticsearch:8.19.21
     container_name: aurora-elasticsearch
     environment:
       discovery.type: single-node
@@ -120,7 +125,8 @@ services:
     restart: always
 
   nginx:
-    image: nginx:1.23.3
+    # 1.28.0 stable（2026-04-23 发布）
+    image: nginx:1.28.0-alpine
     container_name: aurora-nginx
     ports:
       - "80:80"
@@ -141,7 +147,7 @@ services:
   # 镜像仅 ~5MB (alpine) vs Java ~80MB (JRE)
   # ============================================
   aurora-go:
-    image: alpine:3.20
+    image: alpine:3.22
     container_name: aurora-go
     environment:
       TZ: Asia/Shanghai
@@ -188,6 +194,9 @@ services:
     command: ["/app/aurora-server", "--config", "configs/config.yaml"]
 
   maxwell:
+    # 注意：zendesk/maxwell 项目维护基本停滞，最新 1.41.x 对 MySQL 8.4 binlog
+    # 格式兼容性需验证。若升级 MySQL 8.4 后 maxwell 异常，备选方案：
+    # 1. 用 debezium 替代；2. 改用 MySQL 触发器 + Go 消费者
     image: zendesk/maxwell:latest
     container_name: aurora-maxwell
     volumes:
