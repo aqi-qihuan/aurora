@@ -3,7 +3,7 @@
 # ============================================
 
 # Stage 1: 构建阶段
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     ./cmd/server
 
 # Stage 2: 运行阶段 (极简alpine)
-FROM alpine:3.20
+FROM alpine:3.22
 LABEL maintainer="Aurora Team"
 LABEL description="Aurora Blog Go Backend with AI Agent (tRPC-Agent-Go)"
 LABEL version="1.0.0"
