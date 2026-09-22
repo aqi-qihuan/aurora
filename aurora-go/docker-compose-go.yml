@@ -54,11 +54,11 @@ services:
   elasticsearch:
     # 8.19.21：补齐 CVE-2026-72649（ML 反序列化 RCE, CVSS 8.8，项目已禁 ML 降险）
     # 8.19 线支持至 2027-07-15；后续升 9.x 需以 8.19.x 为跳板（官方要求）
-    image: elasticsearch:8.19.21
+    image: elasticsearch:9.5.3
     container_name: aurora-elasticsearch
     environment:
       discovery.type: single-node
-      ES_JAVA_OPTS: "-Xms96m -Xmx160m"
+      ES_JAVA_OPTS: "-Xms128m -Xmx192m"
       TZ: Asia/Shanghai
       # 安全关闭（博客无需认证）
       xpack.security.enabled: "false"
@@ -94,9 +94,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 640M
+          memory: 1G
         reservations:
-          memory: 384M
+          memory: 512M
 
   # ============================================
   # 对象存储：RustFS 1.0.0 GA（Apache-2.0，S3 API 兼容）
