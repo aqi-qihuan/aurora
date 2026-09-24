@@ -483,7 +483,7 @@ docker run -d --name aurora-go \
 
 ## AI Agent 模块 (可选)
 
-Aurora Go 的 Agent 功能基于 **腾讯开源 tRPC-Agent-Go v1.8** 构建，完全可隔离：
+Aurora Go 的 Agent 功能基于 **腾讯开源 tRPC-Agent-Go v1.11.2** 构建，完全可隔离：
 
 ```yaml
 # configs/config.yaml 中控制开关

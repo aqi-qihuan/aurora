@@ -1,13 +1,13 @@
 <div align="center">
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0--M4-6DB33F?style=for-the-badge&logo=springboot)
-![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=for-the-badge&logo=go)
+![Go](https://img.shields.io/badge/Go-1.27-00ADD8?style=for-the-badge&logo=go)
 ![JDK](https://img.shields.io/badge/JDK-25-ED8B00?style=for-the-badge&logo=openjdk)
 ![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D?style=for-the-badge&logo=vue.js)
-![MySQL](https://img.shields.io/badge/MySQL-9.x-4479A1?style=for-the-badge&logo=mysql)
-![Redis](https://img.shields.io/badge/Redis-7.x-DC382D?style=for-the-badge&logo=redis)
-![Elasticsearch](https://img.shields.io/badge/ES-8.19.14-FEC514?style=for-the-badge&logo=elasticsearch)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.x-FF6600?style=for-the-badge&logo=rabbitmq)
-![MinIO](https://img.shields.io/badge/MinIO-8.6-C72E49?style=for-the-badge&logo=minio)
+![MySQL](https://img.shields.io/badge/MySQL-8.4_LTS-4479A1?style=for-the-badge&logo=mysql)
+![Redis](https://img.shields.io/badge/Redis-8.x-DC382D?style=for-the-badge&logo=redis)
+![Elasticsearch](https://img.shields.io/badge/ES-9.5-FEC514?style=for-the-badge&logo=elasticsearch)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-4.x-FF6600?style=for-the-badge&logo=rabbitmq)
+![RustFS](https://img.shields.io/badge/RustFS-1.0.0-DE5843?style=for-the-badge)
 
 <br/>
 
@@ -15,7 +15,7 @@
 
 **前后端分离博客系统 · 双后端架构**
 
-*Spring Boot 4.x / Go 1.26 · JDK 25 · Vue 3 · Elasticsearch 8.x*
+*Spring Boot 4.x / Go 1.27 · JDK 25 · Vue 3 · Elasticsearch 9.x*
 
 🚀 [快速开始](#-快速开始) · 🌐 [在线演示](#-在线地址) · 🛠️ [技术栈](#-技术栈) · 📦 [部署指南](#-部署)
 
@@ -82,7 +82,7 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 | 启动时间 | ~8s | ~0.3s (**↓96%**) |
 | Docker 镜像 | ~180 MB (JRE) | ~5 MB (**↓97.2%**) |
 | 总内存占用 | ~1,587 MiB | ~1,336 MiB (**↓15.8%**) |
-| AI Agent | — | tRPC-Agent-Go v1.8 (可选) |
+| AI Agent | — | tRPC-Agent-Go v1.11.2 (可选) |
 | 适用场景 | 功能优先、团队熟悉 Java | 资源受限、追求极致性能 |
 
 > 💡 两个后端 API 完全兼容，前端无需修改即可切换。
@@ -101,9 +101,9 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 | ☕ 运行环境 | **JDK** | 25 | 最新版 |
 | 🗄️ 持久化框架 | MyBatis-Plus | 3.5.16 | — |
 | 🐬 数据库 | MySQL | 9.x | Connector 9.6.0 |
-| 🔴 缓存中间件 | Redis Stack | 7.x | — |
-| 🐇 消息中间件 | RabbitMQ | 3.x | — |
-| 🔍 搜索引擎 | Elasticsearch | 8.19.14 | 原生 Java Client |
+| 🔴 缓存中间件 | Redis | 8.2.9 | redis-stack 弃用，换官方固定 tag（双栈共享） |
+| 🐇 消息中间件 | RabbitMQ | 4.3.6 | 4.x 支持线（双栈共享） |
+| 🔍 搜索引擎 | Elasticsearch | 8.19.14 Client | 原生 Java Client（服务端已升 9.5.3） |
 | ⏰ 任务调度 | Quartz | 6.x | — |
 | 🔒 权限框架 | Spring Security | 6.x | — |
 | 📚 API 文档 | SpringDoc OpenAPI | 2.8.0 | OpenAPI 3.x |
@@ -117,18 +117,18 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 | 📦 分类 | 🛠️ 技术 | 📌 版本 | 📝 说明 |
 |:--------|:--------|:--------|:--------|
 | 🏗️ Web 框架 | Gin | 1.10 | — |
-| ☕ 运行环境 | Go | 1.26 | — |
+| ☕ 运行环境 | Go | 1.27 | — |
 | 🗄️ ORM | GORM | 1.30 | — |
-| 🐬 数据库 | MySQL | 9.x | GORM Driver |
-| 🔴 缓存 | go-redis | 9.7 | — |
-| 🐇 消息队列 | amqp091-go | 1.10 | — |
-| 🔍 搜索引擎 | go-elasticsearch | 8.19.14 | 原生 ES 8.x Client |
-| ☁️ 对象存储 | minio-go | 7.0 | — |
+| 🐬 数据库 | MySQL | 8.4 LTS | GORM Driver |
+| 🔴 缓存 | go-redis | 9.22 | — |
+| 🐇 消息队列 | amqp091-go | 1.15 | RabbitMQ 4.x 客户端 |
+| 🔍 搜索引擎 | go-elasticsearch/v8 | 8.19 | 原生客户端（兼容 ES 9.x 服务端） |
+| ☁️ 对象存储 | minio-go/v7 | 7.3 | S3 兼容客户端（RustFS/MinIO 通用） |
 | 🔐 JWT | golang-jwt | 5.2 | — |
 | 📅 定时任务 | robfig/cron | 3.0 | — |
 | ⚙️ 配置管理 | Viper | 1.19 | — |
 | 📝 日志 | Zap | 1.27 | 结构化日志 |
-| 🤖 AI Agent | tRPC-Agent-Go | 1.8 | 腾讯开源，可选插件 |
+| 🤖 AI Agent | tRPC-Agent-Go | 1.11 | 腾讯开源，可选插件 |
 
 ### 🎭 前端
 
@@ -172,7 +172,7 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 
 ```
 ┌──────────┐    ┌──────────────────┐    ┌──────────────┐    ┌─────────┐
-│  Nginx   │──▶│ Spring Boot / Go │──▶│ Elasticsearch │    │  MinIO  │
+│  Nginx   │──▶│ Spring Boot / Go │──▶│ Elasticsearch │    │ RustFS  │
 │ (反向代理) │    │    (后端服务)      │    │   (全文检索)   │    │ (对象存储)│
 └──────────┘    └────┬─────────────┘    └──────────────┘    └─────────┘
                      │
@@ -432,13 +432,13 @@ CMD ["nginx", "-g", "daemon off;"]
 | 组件 | 版本要求 | 必需 |
 |:-----|:---------|:----:|
 | JDK | 25+ | ✅ (Java 后端) |
-| Go | 1.26+ | ✅ (Go 后端) |
+| Go | 1.27+ | ✅ (Go 后端) |
 | Node.js | 18+ | ✅ (前端) |
-| MySQL | 8.0+ | ✅ |
-| Redis | 7.0+ | ✅ |
-| RabbitMQ | 3.0+ | ✅ |
-| Elasticsearch | 8.x | ⚠️ (可选,搜索功能) |
-| MinIO | 8.6+ | ⚠️ (可选,对象存储) |
+| MySQL | 8.4+ | ✅ |
+| Redis | 8.0+ | ✅ |
+| RabbitMQ | 4.0+ | ✅ |
+| Elasticsearch | 9.x | ⚠️ (可选,搜索功能) |
+| RustFS | 1.0+ | ⚠️ (可选,对象存储,S3 兼容,MinIO 亦可) |
 
 > 💡 **快速体验**: 使用 Docker Compose 可一键启动所有中间件,无需手动安装!
 
@@ -453,7 +453,7 @@ CMD ["nginx", "-g", "daemon off;"]
 git clone https://github.com/your-repo/aurora-master.git
 cd aurora-master
 
-# 2. 启动所有服务 (MySQL + Redis + RabbitMQ + ES + MinIO + Nginx)
+# 2. 启动所有服务 (MySQL + Redis + RabbitMQ + ES + RustFS + Nginx)
 cd aurora-springboot
 docker compose up -d
 
@@ -518,7 +518,7 @@ mysql -u root -p aurora < aurora.sql
 docker run -d --name rabbitmq \
   -p 5672:5672 \
   -p 15672:15672 \
-  rabbitmq:3.11.9-management
+  rabbitmq:4.3.6-management
 
 # 默认用户: guest, 密码: guest
 ```
@@ -530,21 +530,26 @@ docker run -d --name elasticsearch \
   -p 9200:9200 \
   -e "discovery.type=single-node" \
   -e "xpack.security.enabled=false" \
-  elasticsearch:8.19.14
+  -e "ES_JAVA_OPTS=-Xms128m -Xmx192m" \
+  --memory 1g \
+  elasticsearch:9.5.3
 
 # 验证
 curl http://localhost:9200
 ```
 
-**MinIO** (可选):
+**RustFS** (可选, S3 兼容对象存储):
 ```bash
-# 启动 MinIO
-docker run -d --name minio \
+# 启动 RustFS (凭据环境变量为 RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY)
+docker run -d --name rustfs \
   -p 9000:9000 \
   -p 9001:9001 \
-  -e "MINIO_ROOT_USER=minioadmin" \
-  -e "MINIO_ROOT_PASSWORD=minioadmin" \
-  bitnami/minio:2023.12.7
+  -e "RUSTFS_ACCESS_KEY=minioadmin" \
+  -e "RUSTFS_SECRET_KEY=minioadmin" \
+  -v /opt/rustfs/data:/data \
+  rustfs/rustfs:1.0.0
+
+# 数据卷属主: 容器以非 root UID 10001 运行, 需 chown -R 10001:10001
 ```
 
 #### 步骤 3: 启动后端
@@ -1128,7 +1133,7 @@ git push origin feat/add-comment-notification
 
 **环境信息**
 - OS: [e.g., Windows 11, Ubuntu 22.04]
-- 后端: [e.g., Spring Boot 4.1.0, Go 1.26]
+- 后端: [e.g., Spring Boot 4.1.0, Go 1.27]
 - 前端: [e.g., Vue 3.4]
 - 数据库: [e.g., MySQL 8.0]
 
