@@ -1,6 +1,6 @@
 # Aurora Agent 开发指南
 
-> 基于 **tRPC-Agent-Go v1.8** (腾讯开源) 构建的 AI Agent 智能体模块
+> 基于 **tRPC-Agent-Go v1.11.2** (腾讯开源) 构建的 AI Agent 智能体模块
 
 ---
 

@@ -1,6 +1,10 @@
 # Java → Go 迁移指南
 
 > **Aurora 博客系统从 SpringBoot 4.1.0-M4 迁移至 Go 1.26 + tRPC-Agent-Go v1.8**
+>
+> 📌 **2026-09 更新**：本项目已完成全栈升级——Go 1.26 → **1.27**，中间件同步升级至
+> MySQL 8.4.10 / Redis 8.2.9 / RabbitMQ 4.3.6 / **Elasticsearch 9.5.3** / **RustFS 1.0.0**（替代 MinIO）/ Nginx 1.28。
+> 本文为迁移期历史记录，中间件样例为迁移当时版本；**当前生产配置以 [`docker-compose-go.yml`](../docker-compose-go.yml) 和 [`UPGRADE_OPERATIONS.md`](UPGRADE_OPERATIONS.md) 为准**。
 
 ---
 

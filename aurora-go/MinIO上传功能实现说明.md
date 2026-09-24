@@ -1,5 +1,8 @@
 # 相册照片MinIO上传功能实现说明
 
+> **⚠️ 存储后端更新（2026-09）**：生产环境对象存储已从 MinIO 迁移至 **RustFS 1.0.0**（S3 兼容，Apache-2.0 协议）。
+> 本文档的实现逻辑（minio-go SDK + 策略模式）**完全不变**——RustFS 兼容 S3/MinIO API，代码零改动。仅服务端镜像与部署配置更新，详见 `docs/ops/nginx.conf.server` 与 `UPGRADE_OPERATIONS.md`。
+
 ## 概述
 
 已完成Go版本相册和照片的MinIO上传功能，完全对标Java SpringBoot版本的实现逻辑。

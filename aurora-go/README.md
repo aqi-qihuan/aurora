@@ -1,12 +1,12 @@
 # Aurora Go - 博客系统 Go 后端
 
-> 从 Java SpringBoot 4.1.0 完整迁移至 **Go 1.26**，兼容 Aurora 全套前端，支持可选 AI Agent 模块
+> 从 Java SpringBoot 4.1.0 完整迁移至 **Go 1.27**，兼容 Aurora 全套前端，支持可选 AI Agent 模块
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.26-00ADD8?style=for-the-badge&logo=go" />
+  <img src="https://img.shields.io/badge/Go-1.27-00ADD8?style=for-the-badge&logo=go" />
   <img src="https://img.shields.io/badge/Gin-1.10-008ECF?style=for-the-badge" />
   <img src="https://img.shields.io/badge/GORM-1.30-7C4DFF?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/ES-8.19-FEC514?style=for-the-badge&logo=elasticsearch" />
+  <img src="https://img.shields.io/badge/ES-9.5-FEC514?style=for-the-badge&logo=elasticsearch" />
   <img src="https://img.shields.io/badge/内存-~29MiB-success?style=for-the-badge" />
 </p>
 
@@ -21,7 +21,7 @@
 | Docker 镜像 | ~180 MB (JRE) | **~5 MB** (Alpine) | **↓97.2%** |
 | API 延迟 (P99) | ~50ms | **~10ms** | **↓80%** |
 | 总内存占用 | ~1,587 MiB | **~1,336 MiB** | **↓15.8%** |
-| AI Agent | — | tRPC-Agent-Go v1.8 (可选) | **全新** |
+| AI Agent | — | tRPC-Agent-Go v1.11.2 (可选) | **全新** |
 | 前端兼容 | ✅ | ✅ **100% API 兼容** | — |
 
 ---
@@ -32,17 +32,17 @@
 |:-----|:-----|:-----|:-----|
 | Web 框架 | Gin | 1.10 | 高性能 HTTP 框架 |
 | ORM | GORM | 1.30 | MySQL 数据访问 |
-| 缓存 | go-redis | 9.7 | Redis Stack 客户端 |
-| 消息队列 | amqp091-go | 1.10 | RabbitMQ 客户端 |
-| 搜索引擎 | go-elasticsearch/v8 | 8.19 | ES 8.x 原生客户端 |
-| 对象存储 | minio-go/v7 | 7.0 | MinIO 客户端 |
+| 缓存 | go-redis | 9.22 | Redis 客户端 |
+| 消息队列 | amqp091-go | 1.15 | RabbitMQ 客户端 |
+| 搜索引擎 | go-elasticsearch/v8 | 8.19 | ES 原生客户端（兼容 ES 9.x 服务端） |
+| 对象存储 | minio-go/v7 | 7.3 | S3 兼容客户端（MinIO/RustFS 通用） |
 | 认证 | golang-jwt/v5 | 5.2 | JWT + RBAC 权限 |
 | 定时任务 | robfig/cron | 3.0 | Cron 调度器 |
 | 配置管理 | Viper | 1.19 | YAML + 环境变量 |
 | 日志 | Zap | 1.27 | 结构化日志 |
 | HTML 净化 | bluemonday | 1.0 | XSS 防护 |
 | IP 地域 | ip2region | — | IP 归属地查询 |
-| Agent 引擎 | tRPC-Agent-Go | 1.8 | 腾讯开源，可选插件 |
+| Agent 引擎 | tRPC-Agent-Go | 1.11 | 腾讯开源，可选插件 |
 
 ---
 
@@ -64,7 +64,7 @@
 | 网站配置 | ✅ | ✅ | ✅ | 全局配置管理 |
 | 关于页面 | ✅ | ✅ | ✅ | 关于我内容管理 |
 | 定时任务 | ✅ | ✅ | ✅ | Cron 任务 + 日志 |
-| 文件上传 | ✅ | ✅ | — | MinIO/OSS 策略 |
+| 文件上传 | ✅ | ✅ | — | S3 兼容存储 (RustFS/MinIO)/OSS 策略 |
 | 全文搜索 | — | ✅ | — | MySQL/ES 策略 |
 | 日志记录 | ✅ | ✅ | ✅ | 操作日志 + 异常日志 |
 | AI Agent | ✅ | — | — | tRPC-Agent-Go 对话 |
@@ -134,8 +134,8 @@ aurora-go/
 
 ### 前置要求
 
-- Go 1.26+
-- MySQL 8+ / Redis 7+ / RabbitMQ 3+ / Elasticsearch 8.x / MinIO
+- Go 1.27+
+- MySQL 8.4+ / Redis 8+ / RabbitMQ 4+ / Elasticsearch 9.x / RustFS（S3 兼容，MinIO 亦可）
 - 或直接使用 Docker Compose 一键启动
 
 ### 开发模式
@@ -203,7 +203,7 @@ docker run -d --name aurora-go \
   -v /opt/aurora/app/configs:/app/configs \
   -e TZ=Asia/Shanghai \
   --restart=always \
-  alpine:3.20 \
+  alpine:3.22 \
   /app/aurora-server --config configs/config.yaml
 ```
 
@@ -525,13 +525,13 @@ agent:
 | 模式 | 实现 | 说明 |
 |:-----|:-----|:-----|
 | `mysql` | MySQL LIKE 查询 | 无需 ES，适合小数据量 |
-| `elasticsearch` | ES 8.x 全文检索 | 推荐，支持中文分词 |
+| `elasticsearch` | ES 9.x 全文检索 (IK 中文分词) | 推荐 |
 
 ### 上传策略
 
 | 模式 | 实现 | 说明 |
 |:-----|:-----|:-----|
-| `minio` | MinIO 对象存储 | 自托管，推荐 |
+| `minio` | S3 兼容对象存储（RustFS/MinIO） | 自托管，推荐，Apache-2.0 |
 | `oss` | 阿里云 OSS | 云存储 |
 
 ---
@@ -542,16 +542,17 @@ agent:
 
 | 服务 | 镜像 | 端口 | 说明 |
 |:-----|:-----|:-----|:-----|
-| aurora-go | alpine:3.20 | 8080 | Go 后端 |
-| aurora-mysql | mysql:8.0.32 | 3306 | 数据库 |
-| aurora-redis | redis/redis-stack-server | 6379 | 缓存 |
-| aurora-rabbitmq | rabbitmq:3.11.9-management | 5672/15672 | 消息队列 |
-| aurora-elasticsearch | elasticsearch:8.19.14 | 9200 | 全文检索 |
-| aurora-minio | bitnami/minio:2023.12.7 | 9000/9001 | 对象存储 |
-| aurora-nginx | nginx:1.23.3 | 80/443 | 反向代理 |
+| aurora-go | alpine:3.22 | 8080 | Go 后端 |
+| aurora-mysql | mysql:8.4.10 LTS | 3306 | 数据库 |
+| aurora-redis | redis:8.2.9-alpine | 6379 | 缓存 |
+| aurora-rabbitmq | rabbitmq:4.3.6-management | 5672/15672 | 消息队列 |
+| aurora-elasticsearch | elasticsearch:9.5.3 | 9200 | 全文检索 (IK 9.5.3) |
+| aurora-rustfs | rustfs/rustfs:1.0.0 | 9000/9001 | 对象存储 (S3 兼容) |
+| aurora-nginx | nginx:1.28.0-alpine | 80/443 | 反向代理 |
 | aurora-maxwell | zendesk/maxwell:latest | — | MySQL→MQ 同步 |
 
-> ES 8.19.14 已深度优化：禁用 GeoIP/ML/Watcher，内存限制 640M
+> ES 9.5.3 深度优化：禁用 GeoIP/ML/Watcher，heap 128m/192m，容器内存限制 1G（实测稳态 ~547 MiB）
+> 对象存储已从 MinIO (AGPLv3) 迁移至 **RustFS 1.0.0 (Apache-2.0)**，数据经 S3 API 全量校验迁移
 
 ### 内存占用优化（实测）
 
@@ -561,8 +562,8 @@ agent:
 | aurora-mysql | ~264 MiB | 7.76% | 优化配置 (innodb_buffer_pool_size=128M) |
 | aurora-redis | ~5 MiB | 0.15% | 极致优化 (maxmemory 32mb) |
 | aurora-rabbitmq | ~110 MiB | 3.22% | 限制 Erlang VM 内存 |
-| aurora-elasticsearch | ~579 MiB / 640 MiB | 90.44% | 限制 640M，正常缓存使用 |
-| aurora-minio | ~158 MiB | 4.64% | 对象存储 |
+| aurora-elasticsearch | ~547 MiB / 1 GiB | 52.5% | heap 128m/192m，禁用 GeoIP/ML/Watcher |
+| aurora-rustfs | ~192 MiB | — | 对象存储 (S3 兼容) |
 | aurora-maxwell | ~180 MiB | 5.30% | MySQL binlog 同步 |
 | aurora-nginx | ~11 MiB | 0.34% | 反向代理 |
 
