@@ -101,12 +101,15 @@ services:
   # ============================================
   # 对象存储：RustFS 1.0.0 GA（Apache-2.0，S3 API 兼容）
   # 替代 bitnami/minio（AGPL + 2025-08 断供 + CVE-2025-62506）
+  # 2026-09-25 纳管 compose 管理（此前为 docker run 手动容器）
   # 差异要点：
   #   - 凭据 env: RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY（非 MINIO_ROOT_*）
   #   - 数据卷: /data（bitnami 是 /bitnami/minio/data，磁盘格式不互通，需 S3 API 层迁移）
   #   - 容器以非 root UID 10001 运行，宿主机目录需 chown -R 10001:10001
   #   - 无 MINIO_DEFAULT_BUCKETS 等私有特性，aurora bucket 需初始化一次
   #   - minio-go SDK 可直连（S3 API 兼容），Go 代码零改动
+  # 内存：基线 ~200MiB，运行期缓存累积 ~35MiB/天（实测 4 天 192→340MiB，重启回收）
+  #   → mem_limit 512M 兜底防挤占 ES；另有每周一 04:00 例行重启自动化
   # ============================================
   rustfs:
     image: rustfs/rustfs:1.0.0
@@ -123,6 +126,12 @@ services:
     networks:
       - aurora-network
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   nginx:
     # 1.28.0 stable（2026-04-23 发布）
