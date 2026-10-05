@@ -146,6 +146,8 @@ services:
       - /opt/aurora/vue/blog:/usr/share/nginx/blog
       - /opt/aurora/vue/admin:/usr/share/nginx/admin
       - /opt/aurora/nginx/cert:/etc/nginx/cert
+      # pan.aqi125.cn 证书权威来源（aipan-llm 项目目录，只读引用）
+      - /opt/aipan-llm/nginx/cert:/etc/nginx/cert-aipan:ro
     networks:
       - aurora-network
     restart: always

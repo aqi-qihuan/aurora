@@ -1,25 +1,35 @@
 # pan.aqi125.cn.conf（服务器 /opt/aurora/nginx/conf/conf.d/pan.aqi125.cn.conf 归档快照）
-# 归档日期：2026-10-05（HTTPS 更新后启动崩溃修复版）
+# 归档日期：2026-10-05 深夜（HTTPS 证书切换 + AI 代理补全版）
 #
 # 事故记录：
 #   2026-10-05 用户更新 HTTPS 证书并重启 aurora-nginx 后容器循环崩溃（Restarting (1)）。
-#   根因：本 conf 第 32/44 行静态 upstream "aurora-minio" —— 该容器已于 2026-09-20
+#   根因：本 conf 两处静态 upstream "aurora-minio" —— 该容器已于 2026-09-20
 #   被 RustFS（aurora-rustfs）替换，DNS 不存在 → nginx 启动期解析 emerg → 循环重启。
 #   09-20 迁移时此站点配置漏改；因 nginx 长期未重启，问题潜伏至本次重启才暴露。
+#
+# 2026-10-05 深夜二次修正（用户指正）：
+#   证书权威来源 = /opt/aipan-llm/nginx/cert/（aipan-llm 项目目录，用户 23:02 更新的新证书），
+#   非 aurora 的 cert-pan 目录。aurora-nginx compose 增加只读挂载：
+#     - /opt/aipan-llm/nginx/cert:/etc/nginx/cert-aipan:ro
+#   ssl_certificate 指向 /etc/nginx/cert-aipan/pan.aqi125.cn_bundle.pem
+#   ⚠️ 新证书有效期至 2026-12-24（腾讯云免费证书 3 个月期），到期前需在 aipan-llm 侧续期。
 #
 # 修复要点：
 #   1. server 块加 resolver 127.0.0.11（Docker 内置 DNS）+ 变量化 upstream aurora-rustfs:9000
 #   2. /minio/ 用 rewrite 去前缀（变量化 proxy_pass 带 URI 会整体替换原始 URI，不能用
 #      proxy_pass http://$up/; 的静态语义，必须 rewrite + 不带 URI 的 proxy_pass）
 #   3. /avatar/ 前缀与代理路径相同，直接透传原始 URI
-#   4. aqicloud-agent:9090 保持静态引用（同在 aurora-network，可解析）
+#   4. 依 aipan-llm 原始配置补全 /ai/（aqicloud-ai:8000）与 /ai/api/chat/stream SSE 段
+#      （aurora-nginx 版此前缺失，aipan 前端 AI 聊天会 404）
+#   5. aqicloud-agent:9090 / aqicloud-ai:8000 保持静态引用（同在 aurora-network，可解析）
 #
 # 排查工具链（TAT 验证配置注意）：
 #   一次性容器跑 nginx -t 必须加 --network aurora-network（否则所有容器名解析失败，误报）
-#   且要挂载 -v /opt/aurora/nginx/cert:/etc/nginx/cert:ro（否则证书文件缺失，误报）
+#   且挂齐全部证书目录（/opt/aurora/nginx/cert + /opt/aipan-llm/nginx/cert），否则证书缺失误报
 #   docker run --rm --network aurora-network \
 #     -v /opt/aurora/nginx/conf:/etc/nginx:ro \
 #     -v /opt/aurora/nginx/cert:/etc/nginx/cert:ro \
+#     -v /opt/aipan-llm/nginx/cert:/etc/nginx/cert-aipan:ro \
 #     nginx:1.28.0-alpine nginx -t
 
 # pan.aqi125.cn HTTP 重定向到 HTTPS
@@ -38,9 +48,9 @@ server {
     resolver 127.0.0.11 valid=10s ipv6=off;
     set $up_minio aurora-rustfs:9000;
 
-    # SSL 证书
-    ssl_certificate /etc/nginx/cert-pan/pan.aqi125.cn_bundle.pem;
-    ssl_certificate_key /etc/nginx/cert-pan/pan.aqi125.cn.key;
+    # SSL 证书（权威来源：/opt/aipan-llm/nginx/cert/，经只读挂载 cert-aipan 引用）
+    ssl_certificate /etc/nginx/cert-aipan/pan.aqi125.cn_bundle.pem;
+    ssl_certificate_key /etc/nginx/cert-aipan/pan.aqi125.cn.key;
 
     # SSL 优化参数
     ssl_session_cache shared:SSL:1m;
@@ -53,6 +63,36 @@ server {
         root   /usr/share/nginx/aipan;
         index  index.html index.htm;
         try_files $uri $uri/ /index.html;
+    }
+
+    # AqiCloud-AI API 代理 (8000)
+    location /ai/ {
+        proxy_pass http://aqicloud-ai:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_intercept_errors on;
+    }
+
+    # SSE 流式响应（AI 聊天）
+    location /ai/api/chat/stream {
+        proxy_pass http://aqicloud-ai:8000/api/chat/stream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header Connection "";
+        proxy_http_version 1.1;
+        chunked_transfer_encoding off;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 0;
+        proxy_read_timeout 0;
     }
 
     # MinIO API 代理（用于上传/下载）—— 对象存储后端为 RustFS（S3 兼容）
