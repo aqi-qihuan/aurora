@@ -112,7 +112,7 @@ http {
         ssl_certificate_key /etc/nginx/cert/ws.aqi125.cn.key;
 
         location / {
-            set $up_mio aurora-minio:9000; rewrite ^(.*)$ /aurora$1 break; proxy_pass http://$up_mio;
+            set $up_mio aurora-rustfs:9000; rewrite ^(.*)$ /aurora$1 break; proxy_pass http://$up_mio;
 
             # 代理头设置
             proxy_set_header Host $proxy_host;

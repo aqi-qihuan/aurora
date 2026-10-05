@@ -1,0 +1,93 @@
+# pan.aqi125.cn.conf（服务器 /opt/aurora/nginx/conf/conf.d/pan.aqi125.cn.conf 归档快照）
+# 归档日期：2026-10-05（HTTPS 更新后启动崩溃修复版）
+#
+# 事故记录：
+#   2026-10-05 用户更新 HTTPS 证书并重启 aurora-nginx 后容器循环崩溃（Restarting (1)）。
+#   根因：本 conf 第 32/44 行静态 upstream "aurora-minio" —— 该容器已于 2026-09-20
+#   被 RustFS（aurora-rustfs）替换，DNS 不存在 → nginx 启动期解析 emerg → 循环重启。
+#   09-20 迁移时此站点配置漏改；因 nginx 长期未重启，问题潜伏至本次重启才暴露。
+#
+# 修复要点：
+#   1. server 块加 resolver 127.0.0.11（Docker 内置 DNS）+ 变量化 upstream aurora-rustfs:9000
+#   2. /minio/ 用 rewrite 去前缀（变量化 proxy_pass 带 URI 会整体替换原始 URI，不能用
+#      proxy_pass http://$up/; 的静态语义，必须 rewrite + 不带 URI 的 proxy_pass）
+#   3. /avatar/ 前缀与代理路径相同，直接透传原始 URI
+#   4. aqicloud-agent:9090 保持静态引用（同在 aurora-network，可解析）
+#
+# 排查工具链（TAT 验证配置注意）：
+#   一次性容器跑 nginx -t 必须加 --network aurora-network（否则所有容器名解析失败，误报）
+#   且要挂载 -v /opt/aurora/nginx/cert:/etc/nginx/cert:ro（否则证书文件缺失，误报）
+#   docker run --rm --network aurora-network \
+#     -v /opt/aurora/nginx/conf:/etc/nginx:ro \
+#     -v /opt/aurora/nginx/cert:/etc/nginx/cert:ro \
+#     nginx:1.28.0-alpine nginx -t
+
+# pan.aqi125.cn HTTP 重定向到 HTTPS
+server {
+    listen       80;
+    server_name  pan.aqi125.cn;
+    return 301 https://$server_name$request_uri;
+}
+
+# pan.aqi125.cn HTTPS 配置
+server {
+    listen  443 ssl default_server;
+    server_name  pan.aqi125.cn;
+
+    # Docker 内置 DNS 动态解析（容器重建不 502；RustFS 迁移后 aurora-minio 不存在）
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $up_minio aurora-rustfs:9000;
+
+    # SSL 证书
+    ssl_certificate /etc/nginx/cert-pan/pan.aqi125.cn_bundle.pem;
+    ssl_certificate_key /etc/nginx/cert-pan/pan.aqi125.cn.key;
+
+    # SSL 优化参数
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 5m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # 前端静态文件服务
+    location / {
+        root   /usr/share/nginx/aipan;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # MinIO API 代理（用于上传/下载）—— 对象存储后端为 RustFS（S3 兼容）
+    location /minio/ {
+        rewrite ^/minio(/.*)$ $1 break;
+        proxy_pass http://$up_minio;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # 头像等静态文件代理
+    location /avatar/ {
+        proxy_pass http://$up_minio;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # API 反向代理 - 使用容器名访问后端（保留完整 URI）
+    location /api/ {
+        proxy_pass http://aqicloud-agent:9090;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+}
