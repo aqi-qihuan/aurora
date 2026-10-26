@@ -1,6 +1,6 @@
 <div align="center">
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0--M4-6DB33F?style=for-the-badge&logo=springboot)
-![Go](https://img.shields.io/badge/Go-1.27-00ADD8?style=for-the-badge&logo=go)
+![Go](https://img.shields.io/badge/Go-1.27.3-00ADD8?style=for-the-badge&logo=go)
 ![JDK](https://img.shields.io/badge/JDK-25-ED8B00?style=for-the-badge&logo=openjdk)
 ![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D?style=for-the-badge&logo=vue.js)
 ![MySQL](https://img.shields.io/badge/MySQL-8.4_LTS-4479A1?style=for-the-badge&logo=mysql)
@@ -117,7 +117,7 @@ Aurora 提供 **Java** 和 **Go** 两种后端实现，共享同一套前端和�
 | 📦 分类 | 🛠️ 技术 | 📌 版本 | 📝 说明 |
 |:--------|:--------|:--------|:--------|
 | 🏗️ Web 框架 | Gin | 1.10 | — |
-| ☕ 运行环境 | Go | 1.27 | — |
+| ☕ 运行环境 | Go | 1.27.3 | 含中间证书信任漏洞安全修复 |
 | 🗄️ ORM | GORM | 1.30 | — |
 | 🐬 数据库 | MySQL | 8.4 LTS | GORM Driver |
 | 🔴 缓存 | go-redis | 9.22 | — |
@@ -432,7 +432,7 @@ CMD ["nginx", "-g", "daemon off;"]
 | 组件 | 版本要求 | 必需 |
 |:-----|:---------|:----:|
 | JDK | 25+ | ✅ (Java 后端) |
-| Go | 1.27+ | ✅ (Go 后端) |
+| Go | 1.27.3+ | ✅ (Go 后端) |
 | Node.js | 18+ | ✅ (前端) |
 | MySQL | 8.4+ | ✅ |
 | Redis | 8.0+ | ✅ |

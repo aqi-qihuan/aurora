@@ -2,8 +2,8 @@
 # Aurora Go - 多阶段构建 (极简镜像 ~15-25MB)
 # ============================================
 
-# Stage 1: 构建阶段
-FROM golang:1.27-alpine AS builder
+# Stage 1: 构建阶段（锁定 1.27.3：含中间证书信任漏洞安全修复）
+FROM golang:1.27.3-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 

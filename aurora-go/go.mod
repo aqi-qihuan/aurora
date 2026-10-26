@@ -2,7 +2,7 @@ module github.com/aurora-go/aurora
 
 go 1.27
 
-toolchain go1.27.1
+toolchain go1.27.3
 
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.19.7

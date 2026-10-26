@@ -3,7 +3,7 @@
 > 从 Java SpringBoot 4.1.0 完整迁移至 **Go 1.27**，兼容 Aurora 全套前端，支持可选 AI Agent 模块
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.27-00ADD8?style=for-the-badge&logo=go" />
+  <img src="https://img.shields.io/badge/Go-1.27.3-00ADD8?style=for-the-badge&logo=go" />
   <img src="https://img.shields.io/badge/Gin-1.10-008ECF?style=for-the-badge" />
   <img src="https://img.shields.io/badge/GORM-1.30-7C4DFF?style=for-the-badge" />
   <img src="https://img.shields.io/badge/ES-9.5-FEC514?style=for-the-badge&logo=elasticsearch" />
@@ -134,7 +134,7 @@ aurora-go/
 
 ### 前置要求
 
-- Go 1.27+
+- Go 1.27.3+（含中间证书信任漏洞安全修复，工具链见 go.mod toolchain go1.27.3）
 - MySQL 8.4+ / Redis 8+ / RabbitMQ 4+ / Elasticsearch 9.x / RustFS（S3 兼容，MinIO 亦可）
 - 或直接使用 Docker Compose 一键启动
 
